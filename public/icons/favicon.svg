@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 147.14639 147.14639"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:180.002px;font-family:Consolas;-inkscape-font-specification:Consolas;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#2563eb;fill-opacity:1;stroke:none;stroke-width:313.601;stroke-dasharray:none"
+       x="22.50827"
+       y="131.01025"
+       id="text5"><tspan
+         id="tspan5"
+         style="fill:#2563eb;fill-opacity:1;stroke-width:313.601"
+         x="22.50827"
+         y="131.01025">D</tspan></text>
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#ffd42a;stroke-width:8.62186;stroke-dasharray:none;stroke-opacity:1"
+       id="path6"
+       cx="123.72367"
+       cy="23.710112"
+       r="13.651277" />
+    <path
+       style="fill:none;fill-opacity:1;stroke:#ffd42a;stroke-width:5.74791;stroke-dasharray:none;stroke-opacity:1"
+       d="M 48.548653,18.631878 C 67.239762,19.144704 70.115317,19.401117 86.218425,12.99079 102.32154,6.5804634 106.34732,8.1189418 124.46332,8.631768"
+       id="path7" />
+  </g>
+</svg>
