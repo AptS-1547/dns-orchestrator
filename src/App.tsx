@@ -5,7 +5,7 @@ import { SettingsPage } from "@/components/settings/SettingsPage";
 import { ToolboxPage } from "@/components/toolbox/ToolboxPage";
 import { StatusBar } from "@/components/ui/status-bar";
 import { Toaster } from "@/components/ui/sonner";
-import { initTheme } from "@/stores";
+import { initTheme, useDomainStore } from "@/stores";
 import { useUpdaterStore } from "@/stores/updaterStore";
 
 type View = "main" | "settings" | "toolbox";
@@ -13,6 +13,7 @@ type View = "main" | "settings" | "toolbox";
 function App() {
   const { t } = useTranslation();
   const { checkForUpdates } = useUpdaterStore();
+  const { selectDomain } = useDomainStore();
   const [currentView, setCurrentView] = useState<View>("main");
 
   useEffect(() => {
@@ -33,14 +34,25 @@ function App() {
 
   return (
     <>
-      <AppLayout onOpenToolbox={() => setCurrentView("toolbox")}>
+      <AppLayout
+        onOpenToolbox={() => {
+          selectDomain(null);
+          setCurrentView("toolbox");
+        }}
+        onNavigateToMain={() => setCurrentView("main")}
+      >
         {currentView === "settings" ? (
           <SettingsPage onBack={() => setCurrentView("main")} />
         ) : currentView === "toolbox" ? (
           <ToolboxPage onBack={() => setCurrentView("main")} />
         ) : null}
       </AppLayout>
-      <StatusBar onOpenSettings={() => setCurrentView("settings")} />
+      <StatusBar
+        onOpenSettings={() => {
+          selectDomain(null);
+          setCurrentView("settings");
+        }}
+      />
       <Toaster richColors position="top-right" />
     </>
   );

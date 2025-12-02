@@ -7,6 +7,7 @@ pub enum DnsProvider {
     Cloudflare,
     Aliyun,
     Dnspod,
+    Huaweicloud,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,7 +60,7 @@ pub struct Domain {
     pub record_count: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum DnsRecordType {
     A,

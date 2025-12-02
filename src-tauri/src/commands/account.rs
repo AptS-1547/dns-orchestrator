@@ -27,6 +27,7 @@ pub async fn create_account(
         DnsProvider::Cloudflare => "cloudflare",
         DnsProvider::Aliyun => "aliyun",
         DnsProvider::Dnspod => "dnspod",
+        DnsProvider::Huaweicloud => "huaweicloud",
     };
 
     // 1. 创建 provider 实例

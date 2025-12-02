@@ -149,6 +149,7 @@ fn restore_accounts(state: &AppState) -> crate::error::Result<()> {
             crate::types::DnsProvider::Cloudflare => "cloudflare",
             crate::types::DnsProvider::Aliyun => "aliyun",
             crate::types::DnsProvider::Dnspod => "dnspod",
+            crate::types::DnsProvider::Huaweicloud => "huaweicloud",
         };
 
         // 3.3 重建 Provider 实例

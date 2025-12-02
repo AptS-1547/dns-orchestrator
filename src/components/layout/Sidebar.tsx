@@ -12,9 +12,10 @@ import { Globe, Plus, Wrench } from "lucide-react";
 
 interface SidebarProps {
   onOpenToolbox?: () => void;
+  onNavigateToMain?: () => void;
 }
 
-export function Sidebar({ onOpenToolbox }: SidebarProps) {
+export function Sidebar({ onOpenToolbox, onNavigateToMain }: SidebarProps) {
   const { t } = useTranslation();
   const {
     accounts,
@@ -117,7 +118,10 @@ export function Sidebar({ onOpenToolbox }: SidebarProps) {
                 <DomainList
                   domains={domains}
                   selectedId={selectedDomainId}
-                  onSelect={selectDomain}
+                  onSelect={(id) => {
+                    selectDomain(id);
+                    onNavigateToMain?.();
+                  }}
                 />
               )}
             </div>

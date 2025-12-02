@@ -1,10 +1,12 @@
 mod aliyun;
 mod cloudflare;
 mod dnspod;
+mod huaweicloud;
 
 pub use aliyun::AliyunProvider;
 pub use cloudflare::CloudflareProvider;
 pub use dnspod::DnspodProvider;
+pub use huaweicloud::HuaweicloudProvider;
 
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -91,6 +93,7 @@ pub fn create_provider(
         "cloudflare" => Ok(Arc::new(CloudflareProvider::new(credentials))),
         "aliyun" => Ok(Arc::new(AliyunProvider::new(credentials))),
         "dnspod" => Ok(Arc::new(DnspodProvider::new(credentials))),
+        "huaweicloud" => Ok(Arc::new(HuaweicloudProvider::new(credentials))),
         _ => Err(DnsError::ProviderNotFound(provider_type.to_string())),
     }
 }
@@ -156,6 +159,28 @@ pub fn get_all_provider_metadata() -> Vec<crate::types::ProviderMetadata> {
                     label: "SecretKey".to_string(),
                     field_type: "password".to_string(),
                     placeholder: Some("输入 SecretKey".to_string()),
+                    help_text: None,
+                },
+            ],
+            features: ProviderFeatures::default(),
+        },
+        ProviderMetadata {
+            id: "huaweicloud".to_string(),
+            name: "华为云 DNS".to_string(),
+            description: "华为云云解析服务".to_string(),
+            required_fields: vec![
+                ProviderCredentialField {
+                    key: "accessKeyId".to_string(),
+                    label: "Access Key ID".to_string(),
+                    field_type: "text".to_string(),
+                    placeholder: Some("输入 Access Key ID".to_string()),
+                    help_text: None,
+                },
+                ProviderCredentialField {
+                    key: "secretAccessKey".to_string(),
+                    label: "Secret Access Key".to_string(),
+                    field_type: "password".to_string(),
+                    placeholder: Some("输入 Secret Access Key".to_string()),
                     help_text: None,
                 },
             ],
