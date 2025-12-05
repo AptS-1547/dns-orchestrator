@@ -13,7 +13,10 @@ pub struct PaginationParams {
 
 impl Default for PaginationParams {
     fn default() -> Self {
-        Self { page: 1, page_size: 20 }
+        Self {
+            page: 1,
+            page_size: 20,
+        }
     }
 }
 

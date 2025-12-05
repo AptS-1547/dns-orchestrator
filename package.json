@@ -9,7 +9,17 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "sync-version": "node scripts/sync-version.mjs"
+    "sync-version": "node scripts/sync-version.mjs",
+    "lint": "biome lint ./src",
+    "lint:fix": "biome lint --write ./src",
+    "format": "biome format --write ./src",
+    "format:check": "biome check ./src",
+    "format:fix": "biome check --write ./src",
+    "lint:rust": "cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings",
+    "format:rust": "cd src-tauri && cargo fmt",
+    "format:rust:check": "cd src-tauri && cargo fmt --check",
+    "check": "pnpm format:check && pnpm lint && pnpm format:rust:check && pnpm lint:rust",
+    "fix": "pnpm format:fix && pnpm format:rust"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -46,6 +56,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@tauri-apps/cli": "^2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",

@@ -1,17 +1,17 @@
-import { useRef, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import type { Domain, DomainStatus } from "@/types";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { Globe, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+import type { Domain, DomainStatus } from "@/types"
+import { Globe, Loader2 } from "lucide-react"
+import { useCallback, useEffect, useRef } from "react"
+import { useTranslation } from "react-i18next"
 
 interface DomainListProps {
-  domains: Domain[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  hasMore?: boolean;
-  isLoadingMore?: boolean;
-  onLoadMore?: () => void;
+  domains: Domain[]
+  selectedId: string | null
+  onSelect: (id: string | null) => void
+  hasMore?: boolean
+  isLoadingMore?: boolean
+  onLoadMore?: () => void
 }
 
 export function DomainList({
@@ -22,43 +22,44 @@ export function DomainList({
   isLoadingMore = false,
   onLoadMore,
 }: DomainListProps) {
-  const { t } = useTranslation();
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation()
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   // 设置 IntersectionObserver 用于无限滚动
   const handleObserver = useCallback(
     (entries: IntersectionObserverEntry[]) => {
-      const [entry] = entries;
+      const [entry] = entries
       if (entry.isIntersecting && hasMore && !isLoadingMore && onLoadMore) {
-        onLoadMore();
+        onLoadMore()
       }
     },
     [hasMore, isLoadingMore, onLoadMore]
-  );
+  )
 
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !onLoadMore) return;
+    const sentinel = sentinelRef.current
+    if (!(sentinel && onLoadMore)) return
 
     const observer = new IntersectionObserver(handleObserver, {
       rootMargin: "100px",
-    });
-    observer.observe(sentinel);
+    })
+    observer.observe(sentinel)
 
-    return () => observer.disconnect();
-  }, [handleObserver, onLoadMore]);
+    return () => observer.disconnect()
+  }, [handleObserver, onLoadMore])
 
-  const statusConfig: Record<DomainStatus, { labelKey: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  const statusConfig: Record<
+    DomainStatus,
+    { labelKey: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  > = {
     active: { labelKey: "domain.status.active", variant: "default" },
     paused: { labelKey: "domain.status.paused", variant: "secondary" },
     pending: { labelKey: "domain.status.pending", variant: "outline" },
     error: { labelKey: "domain.status.error", variant: "destructive" },
-  };
+  }
 
   if (domains.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground py-2">{t("domain.noDomains")}</div>
-    );
+    return <div className="py-2 text-muted-foreground text-sm">{t("domain.noDomains")}</div>
   }
 
   return (
@@ -68,25 +69,21 @@ export function DomainList({
           key={domain.id}
           onClick={() => onSelect(selectedId === domain.id ? null : domain.id)}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+            "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
             "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            selectedId === domain.id &&
-              "bg-sidebar-accent text-sidebar-accent-foreground"
+            selectedId === domain.id && "bg-sidebar-accent text-sidebar-accent-foreground"
           )}
         >
           <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <div className="flex-1 text-left truncate">
-            <div className="font-medium truncate">{domain.name}</div>
+          <div className="flex-1 truncate text-left">
+            <div className="truncate font-medium">{domain.name}</div>
             {domain.recordCount !== undefined && (
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground text-xs">
                 {t("domain.recordCount", { count: domain.recordCount })}
               </div>
             )}
           </div>
-          <Badge
-            variant={statusConfig[domain.status]?.variant ?? "secondary"}
-            className="text-xs"
-          >
+          <Badge variant={statusConfig[domain.status]?.variant ?? "secondary"} className="text-xs">
             {t(statusConfig[domain.status]?.labelKey ?? "domain.status.active")}
           </Badge>
         </button>
@@ -99,5 +96,5 @@ export function DomainList({
         </div>
       )}
     </div>
-  );
+  )
 }

@@ -1,55 +1,55 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
-import { toast } from "sonner";
-import { useToolboxStore } from "@/stores";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Search, ChevronDown, ChevronUp } from "lucide-react";
-import { HistoryChips } from "./HistoryChips";
-import type { ApiResponse, WhoisResult } from "@/types";
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { useToolboxStore } from "@/stores"
+import type { ApiResponse, WhoisResult } from "@/types"
+import { invoke } from "@tauri-apps/api/core"
+import { ChevronDown, ChevronUp, Loader2, Search } from "lucide-react"
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
+import { HistoryChips } from "./HistoryChips"
 
 export function WhoisLookup() {
-  const { t } = useTranslation();
-  const { addHistory } = useToolboxStore();
-  const [domain, setDomain] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<WhoisResult | null>(null);
-  const [showRaw, setShowRaw] = useState(false);
+  const { t } = useTranslation()
+  const { addHistory } = useToolboxStore()
+  const [domain, setDomain] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [result, setResult] = useState<WhoisResult | null>(null)
+  const [showRaw, setShowRaw] = useState(false)
 
   const handleLookup = async () => {
     if (!domain.trim()) {
-      toast.error(t("toolbox.enterDomain"));
-      return;
+      toast.error(t("toolbox.enterDomain"))
+      return
     }
 
-    setIsLoading(true);
-    setResult(null);
+    setIsLoading(true)
+    setResult(null)
 
     try {
       const response = await invoke<ApiResponse<WhoisResult>>("whois_lookup", {
         domain: domain.trim(),
-      });
+      })
 
       if (response.success && response.data) {
-        setResult(response.data);
-        addHistory({ type: "whois", query: domain.trim() });
+        setResult(response.data)
+        addHistory({ type: "whois", query: domain.trim() })
       } else {
-        toast.error(response.error?.message || t("toolbox.queryFailed"));
+        toast.error(response.error?.message || t("toolbox.queryFailed"))
       }
     } catch (err) {
-      toast.error(String(err));
+      toast.error(String(err))
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleLookup();
+      handleLookup()
     }
-  };
+  }
 
   return (
     <Card>
@@ -80,7 +80,7 @@ export function WhoisLookup() {
         <HistoryChips
           type="whois"
           onSelect={(item) => {
-            setDomain(item.query);
+            setDomain(item.query)
           }}
         />
 
@@ -106,7 +106,9 @@ export function WhoisLookup() {
               )}
               {result.expirationDate && (
                 <div>
-                  <span className="text-muted-foreground">{t("toolbox.whois.expirationDate")}:</span>
+                  <span className="text-muted-foreground">
+                    {t("toolbox.whois.expirationDate")}:
+                  </span>
                   <span className="ml-2">{result.expirationDate}</span>
                 </div>
               )}
@@ -123,10 +125,7 @@ export function WhoisLookup() {
                 <span className="text-muted-foreground">{t("toolbox.whois.nameServers")}:</span>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {result.nameServers.map((ns, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 bg-muted rounded text-xs font-mono"
-                    >
+                    <span key={i} className="rounded bg-muted px-2 py-0.5 font-mono text-xs">
                       {ns}
                     </span>
                   ))}
@@ -139,10 +138,7 @@ export function WhoisLookup() {
                 <span className="text-muted-foreground">{t("toolbox.whois.status")}:</span>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {result.status.map((s, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 bg-muted rounded text-xs"
-                    >
+                    <span key={i} className="rounded bg-muted px-2 py-0.5 text-xs">
                       {s}
                     </span>
                   ))}
@@ -155,18 +151,18 @@ export function WhoisLookup() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="px-0 h-auto text-muted-foreground hover:text-foreground"
+                  className="h-auto px-0 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowRaw(!showRaw)}
                 >
                   {showRaw ? (
-                    <ChevronUp className="h-4 w-4 mr-1" />
+                    <ChevronUp className="mr-1 h-4 w-4" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 mr-1" />
+                    <ChevronDown className="mr-1 h-4 w-4" />
                   )}
                   {t("toolbox.whois.rawData")}
                 </Button>
                 {showRaw && (
-                  <pre className="mt-2 p-3 bg-muted rounded text-xs overflow-auto max-h-64 font-mono whitespace-pre-wrap">
+                  <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-muted p-3 font-mono text-xs">
                     {result.raw}
                   </pre>
                 )}
@@ -176,5 +172,5 @@ export function WhoisLookup() {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

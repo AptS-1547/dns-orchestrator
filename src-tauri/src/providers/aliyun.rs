@@ -72,8 +72,8 @@ fn flatten_value(prefix: &str, value: &serde_json::Value, result: &mut BTreeMap<
 
 /// 将结构体序列化为排序后的 query string
 fn serialize_to_query_string<T: Serialize>(params: &T) -> Result<String> {
-    let value = serde_json::to_value(params)
-        .map_err(|e| DnsError::SerializationError(e.to_string()))?;
+    let value =
+        serde_json::to_value(params).map_err(|e| DnsError::SerializationError(e.to_string()))?;
 
     let mut flat_map = BTreeMap::new();
     flatten_value("", &value, &mut flat_map);
@@ -384,9 +384,7 @@ impl AliyunProvider {
 
     /// 将时间戳转换为 RFC3339 格式
     fn timestamp_to_rfc3339(timestamp: Option<i64>) -> Option<String> {
-        timestamp.and_then(|ts| {
-            DateTime::from_timestamp(ts / 1000, 0).map(|dt| dt.to_rfc3339())
-        })
+        timestamp.and_then(|ts| DateTime::from_timestamp(ts / 1000, 0).map(|dt| dt.to_rfc3339()))
     }
 }
 
@@ -443,8 +441,7 @@ impl DnsProvider for AliyunProvider {
             page_size: params.page_size.min(100), // 阿里云最大支持 100
         };
 
-        let response: DescribeDomainsResponse =
-            self.request("DescribeDomains", &req).await?;
+        let response: DescribeDomainsResponse = self.request("DescribeDomains", &req).await?;
 
         let total_count = response.total_count.unwrap_or(0);
         let domains = response
@@ -462,13 +459,21 @@ impl DnsProvider for AliyunProvider {
             })
             .collect();
 
-        Ok(PaginatedResponse::new(domains, params.page, params.page_size, total_count))
+        Ok(PaginatedResponse::new(
+            domains,
+            params.page,
+            params.page_size,
+            total_count,
+        ))
     }
 
     async fn get_domain(&self, domain_id: &str) -> Result<Domain> {
         // 阿里云 API 需要域名名称，先从域名列表中查找
         // 使用大页面一次性获取用于查找
-        let params = PaginationParams { page: 1, page_size: 100 };
+        let params = PaginationParams {
+            page: 1,
+            page_size: 100,
+        };
         let response = self.list_domains(&params).await?;
 
         response
@@ -536,7 +541,12 @@ impl DnsProvider for AliyunProvider {
             })
             .collect();
 
-        Ok(PaginatedResponse::new(records, params.page, params.page_size, total_count))
+        Ok(PaginatedResponse::new(
+            records,
+            params.page,
+            params.page_size,
+            total_count,
+        ))
     }
 
     async fn create_record(&self, req: &CreateDnsRecordRequest) -> Result<DnsRecord> {
@@ -568,8 +578,7 @@ impl DnsProvider for AliyunProvider {
             priority: req.priority,
         };
 
-        let response: AddDomainRecordResponse =
-            self.request("AddDomainRecord", &api_req).await?;
+        let response: AddDomainRecordResponse = self.request("AddDomainRecord", &api_req).await?;
 
         let now = chrono::Utc::now().to_rfc3339();
         Ok(DnsRecord {

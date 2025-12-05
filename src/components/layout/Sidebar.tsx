@@ -1,24 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useAccountStore, useDomainStore } from "@/stores";
-import { AccountList } from "@/components/account/AccountList";
-import { AccountForm } from "@/components/account/AccountForm";
-import { ExportDialog } from "@/components/account/ExportDialog";
-import { ImportDialog } from "@/components/account/ImportDialog";
-import { DomainList } from "@/components/domain/DomainList";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Globe, Plus, Wrench, Download, Upload } from "lucide-react";
+import { AccountForm } from "@/components/account/AccountForm"
+import { AccountList } from "@/components/account/AccountList"
+import { ExportDialog } from "@/components/account/ExportDialog"
+import { ImportDialog } from "@/components/account/ImportDialog"
+import { DomainList } from "@/components/domain/DomainList"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useAccountStore, useDomainStore } from "@/stores"
+import { Download, Globe, Plus, Upload, Wrench } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 interface SidebarProps {
-  onOpenToolbox?: () => void;
-  onNavigateToMain?: () => void;
+  onOpenToolbox?: () => void
+  onNavigateToMain?: () => void
 }
 
 export function Sidebar({ onOpenToolbox, onNavigateToMain }: SidebarProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
   const {
     accounts,
     selectedAccountId,
@@ -33,7 +33,7 @@ export function Sidebar({ onOpenToolbox, onNavigateToMain }: SidebarProps) {
     closeExportDialog,
     openImportDialog,
     closeImportDialog,
-  } = useAccountStore();
+  } = useAccountStore()
   const {
     domains,
     selectedDomainId,
@@ -44,50 +44,48 @@ export function Sidebar({ onOpenToolbox, onNavigateToMain }: SidebarProps) {
     fetchMoreDomains,
     selectDomain,
     clearDomains,
-  } = useDomainStore();
+  } = useDomainStore()
 
-  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [showAccountForm, setShowAccountForm] = useState(false)
 
   // 切换账户时先清除域名选择，避免用旧的 domainId 请求新账户
   const handleSelectAccount = useCallback(
     (id: string | null) => {
       if (id !== selectedAccountId) {
-        selectDomain(null);
+        selectDomain(null)
       }
-      selectAccount(id);
+      selectAccount(id)
     },
     [selectedAccountId, selectAccount, selectDomain]
-  );
+  )
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    fetchAccounts()
+  }, [fetchAccounts])
 
   useEffect(() => {
     if (selectedAccountId) {
-      fetchDomains(selectedAccountId);
+      fetchDomains(selectedAccountId)
     } else {
-      clearDomains();
+      clearDomains()
     }
-  }, [selectedAccountId, fetchDomains, clearDomains]);
+  }, [selectedAccountId, fetchDomains, clearDomains])
 
   return (
-    <aside className="w-64 border-r bg-sidebar flex flex-col">
+    <aside className="flex w-64 flex-col border-r bg-sidebar">
       {/* Header */}
-      <div className="p-4 border-b">
+      <div className="border-b p-4">
         <div className="flex items-center gap-2">
           <Globe className="h-6 w-6 text-primary" />
-          <h1 className="text-lg font-semibold">{t("common.appName")}</h1>
+          <h1 className="font-semibold text-lg">{t("common.appName")}</h1>
         </div>
       </div>
 
       <ScrollArea className="flex-1">
         {/* 账号列表 */}
         <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-muted-foreground">
-              {t("account.title")}
-            </h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-medium text-muted-foreground text-sm">{t("account.title")}</h2>
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -140,7 +138,7 @@ export function Sidebar({ onOpenToolbox, onNavigateToMain }: SidebarProps) {
           <>
             <Separator />
             <div className="p-4">
-              <h2 className="text-sm font-medium text-muted-foreground mb-3">
+              <h2 className="mb-3 font-medium text-muted-foreground text-sm">
                 {t("domain.title")}
               </h2>
               {isDomainLoading ? (
@@ -154,8 +152,8 @@ export function Sidebar({ onOpenToolbox, onNavigateToMain }: SidebarProps) {
                   domains={domains}
                   selectedId={selectedDomainId}
                   onSelect={(id) => {
-                    selectDomain(id);
-                    onNavigateToMain?.();
+                    selectDomain(id)
+                    onNavigateToMain?.()
                   }}
                   hasMore={hasDomainMore}
                   isLoadingMore={isDomainLoadingMore}
@@ -170,11 +168,7 @@ export function Sidebar({ onOpenToolbox, onNavigateToMain }: SidebarProps) {
       {/* 底部工具箱按钮 */}
       <Separator />
       <div className="p-3">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2"
-          onClick={onOpenToolbox}
-        >
+        <Button variant="ghost" className="w-full justify-start gap-2" onClick={onOpenToolbox}>
           <Wrench className="h-4 w-4" />
           {t("toolbox.title")}
         </Button>
@@ -193,5 +187,5 @@ export function Sidebar({ onOpenToolbox, onNavigateToMain }: SidebarProps) {
         onImportSuccess={fetchAccounts}
       />
     </aside>
-  );
+  )
 }

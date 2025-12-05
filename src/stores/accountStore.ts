@@ -1,28 +1,28 @@
-import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
-import { toast } from "sonner";
-import type { Account, CreateAccountRequest, ApiResponse } from "@/types";
-import type { ProviderInfo } from "@/types/provider";
+import type { Account, ApiResponse, CreateAccountRequest } from "@/types"
+import type { ProviderInfo } from "@/types/provider"
+import { invoke } from "@tauri-apps/api/core"
+import { toast } from "sonner"
+import { create } from "zustand"
 
 interface AccountState {
-  accounts: Account[];
-  providers: ProviderInfo[];
-  selectedAccountId: string | null;
-  isLoading: boolean;
-  isDeleting: boolean;
-  error: string | null;
-  isExportDialogOpen: boolean;
-  isImportDialogOpen: boolean;
+  accounts: Account[]
+  providers: ProviderInfo[]
+  selectedAccountId: string | null
+  isLoading: boolean
+  isDeleting: boolean
+  error: string | null
+  isExportDialogOpen: boolean
+  isImportDialogOpen: boolean
 
-  fetchAccounts: () => Promise<void>;
-  fetchProviders: () => Promise<void>;
-  createAccount: (request: CreateAccountRequest) => Promise<Account | null>;
-  deleteAccount: (id: string) => Promise<boolean>;
-  selectAccount: (id: string | null) => void;
-  openExportDialog: () => void;
-  closeExportDialog: () => void;
-  openImportDialog: () => void;
-  closeImportDialog: () => void;
+  fetchAccounts: () => Promise<void>
+  fetchProviders: () => Promise<void>
+  createAccount: (request: CreateAccountRequest) => Promise<Account | null>
+  deleteAccount: (id: string) => Promise<boolean>
+  selectAccount: (id: string | null) => void
+  openExportDialog: () => void
+  closeExportDialog: () => void
+  openImportDialog: () => void
+  closeImportDialog: () => void
 }
 
 export const useAccountStore = create<AccountState>((set) => ({
@@ -36,93 +36,91 @@ export const useAccountStore = create<AccountState>((set) => ({
   isImportDialogOpen: false,
 
   fetchAccounts: async () => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null })
     try {
-      const response = await invoke<ApiResponse<Account[]>>("list_accounts");
+      const response = await invoke<ApiResponse<Account[]>>("list_accounts")
       if (response.success && response.data) {
-        set({ accounts: response.data });
+        set({ accounts: response.data })
         // 检查是否有加载失败的账户
-        const failedAccounts = response.data.filter((a) => a.status === "error");
+        const failedAccounts = response.data.filter((a) => a.status === "error")
         if (failedAccounts.length > 0) {
-          toast.error(
-            `${failedAccounts.length} 个账号加载失败，请检查 Keychain 权限`,
-            { duration: 5000 }
-          );
+          toast.error(`${failedAccounts.length} 个账号加载失败，请检查 Keychain 权限`, {
+            duration: 5000,
+          })
         }
       } else {
-        const msg = response.error?.message || "获取账号列表失败";
-        set({ error: msg });
-        toast.error(msg);
+        const msg = response.error?.message || "获取账号列表失败"
+        set({ error: msg })
+        toast.error(msg)
       }
     } catch (err) {
-      const msg = String(err);
-      set({ error: msg });
-      toast.error(msg);
+      const msg = String(err)
+      set({ error: msg })
+      toast.error(msg)
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false })
     }
   },
 
   fetchProviders: async () => {
     try {
-      const response = await invoke<ApiResponse<ProviderInfo[]>>("list_providers");
+      const response = await invoke<ApiResponse<ProviderInfo[]>>("list_providers")
       if (response.success && response.data) {
-        set({ providers: response.data });
+        set({ providers: response.data })
       } else {
-        console.error("Failed to fetch providers:", response.error?.message);
+        console.error("Failed to fetch providers:", response.error?.message)
       }
     } catch (err) {
-      console.error("Failed to fetch providers:", err);
+      console.error("Failed to fetch providers:", err)
     }
   },
 
   createAccount: async (request) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null })
     try {
       const response = await invoke<ApiResponse<Account>>("create_account", {
         request,
-      });
+      })
       if (response.success && response.data) {
-        set((state) => ({ accounts: [...state.accounts, response.data!] }));
-        toast.success(`账号 "${response.data.name}" 添加成功`);
-        return response.data;
+        set((state) => ({ accounts: [...state.accounts, response.data!] }))
+        toast.success(`账号 "${response.data.name}" 添加成功`)
+        return response.data
       }
-      const msg = response.error?.message || "创建账号失败";
-      set({ error: msg });
-      toast.error(msg);
-      return null;
+      const msg = response.error?.message || "创建账号失败"
+      set({ error: msg })
+      toast.error(msg)
+      return null
     } catch (err) {
-      const msg = String(err);
-      set({ error: msg });
-      toast.error(msg);
-      return null;
+      const msg = String(err)
+      set({ error: msg })
+      toast.error(msg)
+      return null
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false })
     }
   },
 
   deleteAccount: async (id) => {
-    set({ isDeleting: true });
+    set({ isDeleting: true })
     try {
       const response = await invoke<ApiResponse<void>>("delete_account", {
         accountId: id,
-      });
+      })
       if (response.success) {
         set((state) => ({
           accounts: state.accounts.filter((a) => a.id !== id),
-          selectedAccountId:
-            state.selectedAccountId === id ? null : state.selectedAccountId,
-        }));
-        toast.success("账号已删除");
-        return true;
+          selectedAccountId: state.selectedAccountId === id ? null : state.selectedAccountId,
+        }))
+        toast.success("账号已删除")
+        return true
       }
-      toast.error("删除账号失败");
-      return false;
+      toast.error("删除账号失败")
+      return false
     } catch (err) {
-      toast.error(String(err));
-      return false;
+      toast.error(String(err))
+      return false
     } finally {
-      set({ isDeleting: false });
+      set({ isDeleting: false })
     }
   },
 
@@ -132,4 +130,4 @@ export const useAccountStore = create<AccountState>((set) => ({
   closeExportDialog: () => set({ isExportDialogOpen: false }),
   openImportDialog: () => set({ isImportDialogOpen: true }),
   closeImportDialog: () => set({ isImportDialogOpen: false }),
-}));
+}))

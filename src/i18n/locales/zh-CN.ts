@@ -35,12 +35,12 @@ export default {
     selectProvider: "选择提供商",
     noAccounts: "暂无账号，点击 + 添加",
     deleteConfirm: "确认删除账号？",
-    deleteConfirmDesc: "你确定要删除账号 \"{{name}}\" 吗？此操作无法撤销。",
+    deleteConfirmDesc: '你确定要删除账号 "{{name}}" 吗？此操作无法撤销。',
     loadFailed: "加载失败",
     // Toast messages
     loadFailedCount: "{{count}} 个账号加载失败，请检查 Keychain 权限",
     fetchFailed: "获取账号列表失败",
-    createSuccess: "账号 \"{{name}}\" 添加成功",
+    createSuccess: '账号 "{{name}}" 添加成功',
     createFailed: "创建账号失败",
     deleteSuccess: "账号已删除",
     deleteFailed: "删除账号失败",
@@ -126,7 +126,7 @@ export default {
     },
     // Toast messages
     fetchFailed: "获取 DNS 记录失败",
-    createSuccess: "记录 \"{{name}}\" 添加成功",
+    createSuccess: '记录 "{{name}}" 添加成功',
     createFailed: "创建记录失败",
     updateSuccess: "记录更新成功",
     updateFailed: "更新记录失败",
@@ -235,4 +235,4 @@ export default {
       rawData: "原始数据",
     },
   },
-};
+}

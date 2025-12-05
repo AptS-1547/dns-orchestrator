@@ -1,11 +1,11 @@
-import { ReactNode } from "react";
-import { Sidebar } from "./Sidebar";
-import { MainContent } from "./MainContent";
+import type { ReactNode } from "react"
+import { MainContent } from "./MainContent"
+import { Sidebar } from "./Sidebar"
 
 interface AppLayoutProps {
-  children?: ReactNode;
-  onOpenToolbox?: () => void;
-  onNavigateToMain?: () => void;
+  children?: ReactNode
+  onOpenToolbox?: () => void
+  onNavigateToMain?: () => void
 }
 
 export function AppLayout({ children, onOpenToolbox, onNavigateToMain }: AppLayoutProps) {
@@ -14,5 +14,5 @@ export function AppLayout({ children, onOpenToolbox, onNavigateToMain }: AppLayo
       <Sidebar onOpenToolbox={onOpenToolbox} onNavigateToMain={onNavigateToMain} />
       {children || <MainContent />}
     </div>
-  );
+  )
 }

@@ -1,5 +1,5 @@
-export { useAccountStore } from "./accountStore";
-export { useDomainStore } from "./domainStore";
-export { useDnsStore } from "./dnsStore";
-export { useSettingsStore, initTheme } from "./settingsStore";
-export { useToolboxStore } from "./toolboxStore";
+export { useAccountStore } from "./accountStore"
+export { useDomainStore } from "./domainStore"
+export { useDnsStore } from "./dnsStore"
+export { useSettingsStore, initTheme } from "./settingsStore"
+export { useToolboxStore } from "./toolboxStore"

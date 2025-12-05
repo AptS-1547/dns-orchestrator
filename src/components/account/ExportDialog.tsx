@@ -1,15 +1,5 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { toast } from "sonner";
-import type {
-  Account,
-  ApiResponse,
-  ExportAccountsRequest,
-  ExportAccountsResponse,
-} from "@/types";
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -17,123 +7,121 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ProviderIcon, getProviderName } from "./ProviderIcon";
-import { Loader2, Download, Lock } from "lucide-react";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Switch } from "@/components/ui/switch"
+import type { Account, ApiResponse, ExportAccountsRequest, ExportAccountsResponse } from "@/types"
+import { invoke } from "@tauri-apps/api/core"
+import { save } from "@tauri-apps/plugin-dialog"
+import { writeTextFile } from "@tauri-apps/plugin-fs"
+import { Download, Loader2, Lock } from "lucide-react"
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
+import { ProviderIcon, getProviderName } from "./ProviderIcon"
 
 interface ExportDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  accounts: Account[];
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  accounts: Account[]
 }
 
-export function ExportDialog({
-  open,
-  onOpenChange,
-  accounts,
-}: ExportDialogProps) {
-  const { t } = useTranslation();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [encrypt, setEncrypt] = useState(false);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isExporting, setIsExporting] = useState(false);
+export function ExportDialog({ open, onOpenChange, accounts }: ExportDialogProps) {
+  const { t } = useTranslation()
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [encrypt, setEncrypt] = useState(false)
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [isExporting, setIsExporting] = useState(false)
 
   // 全选/取消全选
-  const allSelected =
-    selectedIds.size === accounts.length && accounts.length > 0;
+  const allSelected = selectedIds.size === accounts.length && accounts.length > 0
 
   const handleSelectAll = () => {
     if (allSelected) {
-      setSelectedIds(new Set());
+      setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(accounts.map((a) => a.id)));
+      setSelectedIds(new Set(accounts.map((a) => a.id)))
     }
-  };
+  }
 
   const handleToggle = (id: string) => {
-    const newSet = new Set(selectedIds);
+    const newSet = new Set(selectedIds)
     if (newSet.has(id)) {
-      newSet.delete(id);
+      newSet.delete(id)
     } else {
-      newSet.add(id);
+      newSet.add(id)
     }
-    setSelectedIds(newSet);
-  };
+    setSelectedIds(newSet)
+  }
 
   const handleExport = async () => {
     if (selectedIds.size === 0) {
-      toast.error(t("export.noAccountsSelected"));
-      return;
+      toast.error(t("export.noAccountsSelected"))
+      return
     }
 
     if (encrypt) {
       if (!password) {
-        toast.error(t("export.passwordRequired"));
-        return;
+        toast.error(t("export.passwordRequired"))
+        return
       }
       if (password !== confirmPassword) {
-        toast.error(t("export.passwordMismatch"));
-        return;
+        toast.error(t("export.passwordMismatch"))
+        return
       }
       if (password.length < 6) {
-        toast.error(t("export.passwordTooShort"));
-        return;
+        toast.error(t("export.passwordTooShort"))
+        return
       }
     }
 
-    setIsExporting(true);
+    setIsExporting(true)
     try {
       // 1. 调用后端生成导出内容
       const request: ExportAccountsRequest = {
         accountIds: Array.from(selectedIds),
         encrypt,
         password: encrypt ? password : undefined,
-      };
+      }
 
-      const response = await invoke<
-        ApiResponse<ExportAccountsResponse>
-      >("export_accounts", {
+      const response = await invoke<ApiResponse<ExportAccountsResponse>>("export_accounts", {
         request,
-      });
+      })
 
-      if (!response.success || !response.data) {
-        toast.error(response.error?.message || t("export.failed"));
-        return;
+      if (!(response.success && response.data)) {
+        toast.error(response.error?.message || t("export.failed"))
+        return
       }
 
       // 2. 选择保存路径
       const filePath = await save({
         defaultPath: response.data.suggestedFilename,
         filters: [{ name: "DNS Orchestrator Backup", extensions: ["dnso"] }],
-      });
+      })
 
       if (!filePath) {
-        return; // 用户取消
+        return // 用户取消
       }
 
       // 3. 写入文件
-      await writeTextFile(filePath, response.data.content);
-      toast.success(t("export.success", { count: selectedIds.size }));
-      onOpenChange(false);
+      await writeTextFile(filePath, response.data.content)
+      toast.success(t("export.success", { count: selectedIds.size }))
+      onOpenChange(false)
 
       // 重置状态
-      setSelectedIds(new Set());
-      setEncrypt(false);
-      setPassword("");
-      setConfirmPassword("");
+      setSelectedIds(new Set())
+      setEncrypt(false)
+      setPassword("")
+      setConfirmPassword("")
     } catch (err) {
-      toast.error(String(err));
+      toast.error(String(err))
     } finally {
-      setIsExporting(false);
+      setIsExporting(false)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,21 +149,16 @@ export function ExportDialog({
                       onCheckedChange={() => handleToggle(account.id)}
                       disabled={account.status === "error"}
                     />
-                    <ProviderIcon
-                      provider={account.provider}
-                      className="h-4 w-4"
-                    />
-                    <span className="flex-1 truncate text-sm">
-                      {account.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
+                    <ProviderIcon provider={account.provider} className="h-4 w-4" />
+                    <span className="flex-1 truncate text-sm">{account.name}</span>
+                    <span className="text-muted-foreground text-xs">
                       {getProviderName(account.provider)}
                     </span>
                   </div>
                 ))}
               </div>
             </ScrollArea>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {t("export.selectedCount", { count: selectedIds.size })}
             </p>
           </div>
@@ -187,11 +170,7 @@ export function ExportDialog({
                 <Lock className="h-4 w-4" />
                 <Label htmlFor="encrypt">{t("export.encryptExport")}</Label>
               </div>
-              <Switch
-                id="encrypt"
-                checked={encrypt}
-                onCheckedChange={setEncrypt}
-              />
+              <Switch id="encrypt" checked={encrypt} onCheckedChange={setEncrypt} />
             </div>
 
             {encrypt && (
@@ -207,9 +186,7 @@ export function ExportDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">
-                    {t("export.confirmPassword")}
-                  </Label>
+                  <Label htmlFor="confirmPassword">{t("export.confirmPassword")}</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
@@ -218,9 +195,7 @@ export function ExportDialog({
                     placeholder={t("export.confirmPasswordPlaceholder")}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("export.encryptionNote")}
-                </p>
+                <p className="text-muted-foreground text-xs">{t("export.encryptionNote")}</p>
               </div>
             )}
           </div>
@@ -230,19 +205,16 @@ export function ExportDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("common.cancel")}
           </Button>
-          <Button
-            onClick={handleExport}
-            disabled={isExporting || selectedIds.size === 0}
-          >
+          <Button onClick={handleExport} disabled={isExporting || selectedIds.size === 0}>
             {isExporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="mr-2 h-4 w-4" />
             )}
             {t("export.exportButton")}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

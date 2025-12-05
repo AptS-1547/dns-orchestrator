@@ -1,97 +1,92 @@
-import { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { useAccountStore } from "@/stores";
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Loader2, Eye, EyeOff } from "lucide-react";
-import { ProviderIcon } from "./ProviderIcon";
+} from "@/components/ui/select"
+import { useAccountStore } from "@/stores"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
+import { ProviderIcon } from "./ProviderIcon"
 
 interface AccountFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export function AccountForm({ open, onOpenChange }: AccountFormProps) {
-  const { t } = useTranslation();
-  const { createAccount, isLoading, providers, fetchProviders } =
-    useAccountStore();
+  const { t } = useTranslation()
+  const { createAccount, isLoading, providers, fetchProviders } = useAccountStore()
 
-  const [provider, setProvider] = useState<string>("");
-  const [name, setName] = useState("");
-  const [credentials, setCredentials] = useState<Record<string, string>>({});
-  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [provider, setProvider] = useState<string>("")
+  const [name, setName] = useState("")
+  const [credentials, setCredentials] = useState<Record<string, string>>({})
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
 
   // 获取提供商列表
   useEffect(() => {
     if (providers.length === 0) {
-      fetchProviders();
+      fetchProviders()
     }
-  }, [providers.length, fetchProviders]);
+  }, [providers.length, fetchProviders])
 
   // 默认选中第一个提供商
   useEffect(() => {
     if (providers.length > 0 && !provider) {
-      setProvider(providers[0].id);
+      setProvider(providers[0].id)
     }
-  }, [providers, provider]);
+  }, [providers, provider])
 
-  const providerInfo = providers.find((p) => p.id === provider);
+  const providerInfo = providers.find((p) => p.id === provider)
 
   const handleProviderChange = (value: string) => {
-    setProvider(value);
-    setCredentials({});
-    setShowPasswords({});
-  };
+    setProvider(value)
+    setCredentials({})
+    setShowPasswords({})
+  }
 
   const handleCredentialChange = (key: string, value: string) => {
-    setCredentials((prev) => ({ ...prev, [key]: value }));
-  };
+    setCredentials((prev) => ({ ...prev, [key]: value }))
+  }
 
   const togglePasswordVisibility = (key: string) => {
-    setShowPasswords((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+    setShowPasswords((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
-    if (!providerInfo) return;
+    if (!providerInfo) return
 
     const result = await createAccount({
       name: name || `${providerInfo.name} 账号`,
       provider,
       credentials,
-    });
+    })
 
     if (result) {
       // 重置表单
-      setName("");
-      setCredentials({});
-      setShowPasswords({});
-      onOpenChange(false);
+      setName("")
+      setCredentials({})
+      setShowPasswords({})
+      onOpenChange(false)
     }
-  };
+  }
 
   const isValid =
-    providerInfo?.requiredFields.every((field) =>
-      credentials[field.key]?.trim()
-    ) ?? false;
+    providerInfo?.requiredFields.every((field) => credentials[field.key]?.trim()) ?? false
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,9 +119,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
               </SelectContent>
             </Select>
             {providerInfo && (
-              <p className="text-xs text-muted-foreground">
-                {providerInfo.description}
-              </p>
+              <p className="text-muted-foreground text-xs">{providerInfo.description}</p>
             )}
           </div>
 
@@ -151,14 +144,10 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
                 <Input
                   id={field.key}
                   type={
-                    field.type === "password" && !showPasswords[field.key]
-                      ? "password"
-                      : "text"
+                    field.type === "password" && !showPasswords[field.key] ? "password" : "text"
                   }
                   value={credentials[field.key] || ""}
-                  onChange={(e) =>
-                    handleCredentialChange(field.key, e.target.value)
-                  }
+                  onChange={(e) => handleCredentialChange(field.key, e.target.value)}
                   placeholder={field.placeholder}
                   className="pr-10"
                   required
@@ -168,7 +157,7 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
+                    className="absolute top-0 right-0 h-full px-3"
                     onClick={() => togglePasswordVisibility(field.key)}
                   >
                     {showPasswords[field.key] ? (
@@ -179,27 +168,21 @@ export function AccountForm({ open, onOpenChange }: AccountFormProps) {
                   </Button>
                 )}
               </div>
-              {field.helpText && (
-                <p className="text-xs text-muted-foreground">{field.helpText}</p>
-              )}
+              {field.helpText && <p className="text-muted-foreground text-xs">{field.helpText}</p>}
             </div>
           ))}
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={isLoading || !isValid}>
-              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("common.add")}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

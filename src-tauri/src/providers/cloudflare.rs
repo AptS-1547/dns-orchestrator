@@ -73,10 +73,7 @@ pub struct CloudflareProvider {
 
 impl CloudflareProvider {
     pub fn new(credentials: HashMap<String, String>) -> Self {
-        let api_token = credentials
-            .get("apiToken")
-            .cloned()
-            .unwrap_or_default();
+        let api_token = credentials.get("apiToken").cloned().unwrap_or_default();
 
         let account_id = uuid::Uuid::new_v4().to_string();
 
@@ -88,10 +85,7 @@ impl CloudflareProvider {
     }
 
     pub fn with_account_id(credentials: HashMap<String, String>, account_id: String) -> Self {
-        let api_token = credentials
-            .get("apiToken")
-            .cloned()
-            .unwrap_or_default();
+        let api_token = credentials.get("apiToken").cloned().unwrap_or_default();
 
         Self {
             client: Client::new(),
@@ -123,8 +117,8 @@ impl CloudflareProvider {
 
         log::debug!("Response Body: {}", response_text);
 
-        let cf_response: CloudflareResponse<T> = serde_json::from_str(&response_text)
-            .map_err(|e| {
+        let cf_response: CloudflareResponse<T> =
+            serde_json::from_str(&response_text).map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
                 DnsError::ApiError(format!("解析响应失败: {}", e))
@@ -153,7 +147,10 @@ impl CloudflareProvider {
         // Cloudflare zones API 最大 per_page 是 50
         let url = format!(
             "{}{}?page={}&per_page={}",
-            CF_API_BASE, path, params.page, params.page_size.min(50)
+            CF_API_BASE,
+            path,
+            params.page,
+            params.page_size.min(50)
         );
         log::debug!("GET {}", url);
 
@@ -204,8 +201,8 @@ impl CloudflareProvider {
         body: &B,
     ) -> Result<T> {
         let url = format!("{}{}", CF_API_BASE, path);
-        let body_json = serde_json::to_string_pretty(body)
-            .unwrap_or_else(|_| "无法序列化请求体".to_string());
+        let body_json =
+            serde_json::to_string_pretty(body).unwrap_or_else(|_| "无法序列化请求体".to_string());
         log::debug!("POST {}", url);
         log::debug!("Request Body: {}", body_json);
 
@@ -228,8 +225,8 @@ impl CloudflareProvider {
 
         log::debug!("Response Body: {}", response_text);
 
-        let cf_response: CloudflareResponse<T> = serde_json::from_str(&response_text)
-            .map_err(|e| {
+        let cf_response: CloudflareResponse<T> =
+            serde_json::from_str(&response_text).map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
                 DnsError::ApiError(format!("解析响应失败: {}", e))
@@ -256,8 +253,8 @@ impl CloudflareProvider {
         body: &B,
     ) -> Result<T> {
         let url = format!("{}{}", CF_API_BASE, path);
-        let body_json = serde_json::to_string_pretty(body)
-            .unwrap_or_else(|_| "无法序列化请求体".to_string());
+        let body_json =
+            serde_json::to_string_pretty(body).unwrap_or_else(|_| "无法序列化请求体".to_string());
         log::debug!("PATCH {}", url);
         log::debug!("Request Body: {}", body_json);
 
@@ -280,8 +277,8 @@ impl CloudflareProvider {
 
         log::debug!("Response Body: {}", response_text);
 
-        let cf_response: CloudflareResponse<T> = serde_json::from_str(&response_text)
-            .map_err(|e| {
+        let cf_response: CloudflareResponse<T> =
+            serde_json::from_str(&response_text).map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
                 DnsError::ApiError(format!("解析响应失败: {}", e))
@@ -324,8 +321,8 @@ impl CloudflareProvider {
 
         log::debug!("Response Body: {}", response_text);
 
-        let cf_response: CloudflareResponse<serde_json::Value> = serde_json::from_str(&response_text)
-            .map_err(|e| {
+        let cf_response: CloudflareResponse<serde_json::Value> =
+            serde_json::from_str(&response_text).map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
                 DnsError::ApiError(format!("解析响应失败: {}", e))
@@ -386,7 +383,12 @@ impl CloudflareProvider {
     }
 
     /// 将 Cloudflare 记录转换为 DnsRecord
-    fn cf_record_to_dns_record(&self, cf_record: CloudflareDnsRecord, zone_id: &str, zone_name: &str) -> Result<DnsRecord> {
+    fn cf_record_to_dns_record(
+        &self,
+        cf_record: CloudflareDnsRecord,
+        zone_id: &str,
+        zone_name: &str,
+    ) -> Result<DnsRecord> {
         let record_type = match cf_record.record_type.as_str() {
             "A" => DnsRecordType::A,
             "AAAA" => DnsRecordType::Aaaa,
@@ -396,7 +398,12 @@ impl CloudflareProvider {
             "NS" => DnsRecordType::Ns,
             "SRV" => DnsRecordType::Srv,
             "CAA" => DnsRecordType::Caa,
-            _ => return Err(DnsError::ApiError(format!("不支持的记录类型: {}", cf_record.record_type))),
+            _ => {
+                return Err(DnsError::ApiError(format!(
+                    "不支持的记录类型: {}",
+                    cf_record.record_type
+                )))
+            }
         };
 
         Ok(DnsRecord {
@@ -436,7 +443,12 @@ impl DnsProvider for CloudflareProvider {
         let (zones, total_count): (Vec<CloudflareZone>, u32) =
             self.get_paginated("/zones", params).await?;
         let domains = zones.into_iter().map(|z| self.zone_to_domain(z)).collect();
-        Ok(PaginatedResponse::new(domains, params.page, params.page_size, total_count))
+        Ok(PaginatedResponse::new(
+            domains,
+            params.page,
+            params.page_size,
+            total_count,
+        ))
     }
 
     async fn get_domain(&self, domain_id: &str) -> Result<Domain> {
@@ -479,7 +491,7 @@ impl DnsProvider for CloudflareProvider {
 
         let response = self
             .client
-            .get(&format!("{}{}", CF_API_BASE, url))
+            .get(format!("{}{}", CF_API_BASE, url))
             .header("Authorization", format!("Bearer {}", self.api_token))
             .send()
             .await
@@ -490,8 +502,9 @@ impl DnsProvider for CloudflareProvider {
             .await
             .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
 
-        let cf_response: CloudflareResponse<Vec<CloudflareDnsRecord>> = serde_json::from_str(&response_text)
-            .map_err(|e| DnsError::ApiError(format!("解析响应失败: {}", e)))?;
+        let cf_response: CloudflareResponse<Vec<CloudflareDnsRecord>> =
+            serde_json::from_str(&response_text)
+                .map_err(|e| DnsError::ApiError(format!("解析响应失败: {}", e)))?;
 
         if !cf_response.success {
             let error_msg = cf_response
@@ -509,7 +522,12 @@ impl DnsProvider for CloudflareProvider {
             .map(|r| self.cf_record_to_dns_record(r, domain_id, &zone_name))
             .collect();
 
-        Ok(PaginatedResponse::new(records?, params.page, params.page_size, total_count))
+        Ok(PaginatedResponse::new(
+            records?,
+            params.page,
+            params.page_size,
+            total_count,
+        ))
     }
 
     async fn create_record(&self, req: &CreateDnsRecordRequest) -> Result<DnsRecord> {
@@ -548,7 +566,11 @@ impl DnsProvider for CloudflareProvider {
         self.cf_record_to_dns_record(cf_record, &req.domain_id, &zone_name)
     }
 
-    async fn update_record(&self, record_id: &str, req: &UpdateDnsRecordRequest) -> Result<DnsRecord> {
+    async fn update_record(
+        &self,
+        record_id: &str,
+        req: &UpdateDnsRecordRequest,
+    ) -> Result<DnsRecord> {
         // 先获取 zone 信息
         let zone: CloudflareZone = self.get(&format!("/zones/{}", req.domain_id)).await?;
         let zone_name = zone.name;
@@ -578,13 +600,17 @@ impl DnsProvider for CloudflareProvider {
         };
 
         let cf_record: CloudflareDnsRecord = self
-            .patch(&format!("/zones/{}/dns_records/{}", req.domain_id, record_id), &body)
+            .patch(
+                &format!("/zones/{}/dns_records/{}", req.domain_id, record_id),
+                &body,
+            )
             .await?;
 
         self.cf_record_to_dns_record(cf_record, &req.domain_id, &zone_name)
     }
 
     async fn delete_record(&self, record_id: &str, domain_id: &str) -> Result<()> {
-        self.delete(&format!("/zones/{}/dns_records/{}", domain_id, record_id)).await
+        self.delete(&format!("/zones/{}/dns_records/{}", domain_id, record_id))
+            .await
     }
 }

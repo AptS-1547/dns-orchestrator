@@ -29,8 +29,7 @@ impl KeychainStore {
 
         match entry.get_password() {
             Ok(json) => {
-                serde_json::from_str(&json)
-                    .map_err(|e| DnsError::SerializationError(e.to_string()))
+                serde_json::from_str(&json).map_err(|e| DnsError::SerializationError(e.to_string()))
             }
             Err(keyring::Error::NoEntry) => {
                 // 没有存储的凭证，返回空 map
@@ -88,12 +87,9 @@ impl CredentialStore for KeychainStore {
     fn load(&self, account_id: &str) -> Result<HashMap<String, String>> {
         let all_credentials = self.read_all_internal()?;
 
-        all_credentials
-            .get(account_id)
-            .cloned()
-            .ok_or_else(|| DnsError::CredentialError(format!(
-                "No credentials found for account: {}", account_id
-            )))
+        all_credentials.get(account_id).cloned().ok_or_else(|| {
+            DnsError::CredentialError(format!("No credentials found for account: {}", account_id))
+        })
     }
 
     fn delete(&self, account_id: &str) -> Result<()> {

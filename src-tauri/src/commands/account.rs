@@ -9,7 +9,9 @@ use crate::AppState;
 
 /// 列出所有账号
 #[tauri::command]
-pub async fn list_accounts(state: State<'_, AppState>) -> Result<ApiResponse<Vec<Account>>, String> {
+pub async fn list_accounts(
+    state: State<'_, AppState>,
+) -> Result<ApiResponse<Vec<Account>>, String> {
     let accounts = state.accounts.read().await.clone();
     Ok(ApiResponse::success(accounts))
 }
@@ -32,8 +34,8 @@ pub async fn create_account(
     };
 
     // 1. 创建 provider 实例
-    let provider = create_provider(provider_type, request.credentials.clone())
-        .map_err(|e| e.to_string())?;
+    let provider =
+        create_provider(provider_type, request.credentials.clone()).map_err(|e| e.to_string())?;
 
     // 2. 验证凭证
     let is_valid = provider
@@ -177,10 +179,7 @@ pub async fn export_accounts(
     let app_version = env!("CARGO_PKG_VERSION").to_string();
 
     let export_file = if request.encrypt {
-        let password = request
-            .password
-            .as_ref()
-            .ok_or("加密导出需要提供密码")?;
+        let password = request.password.as_ref().ok_or("加密导出需要提供密码")?;
 
         let plaintext = serde_json::to_vec(&accounts_json).map_err(|e| e.to_string())?;
 
@@ -297,14 +296,11 @@ pub async fn import_accounts(
     request: ImportAccountsRequest,
 ) -> Result<ApiResponse<ImportResult>, String> {
     // 1. 解析和解密（逻辑与 preview_import 类似）
-    let export_file: ExportFile = serde_json::from_str(&request.content)
-        .map_err(|e| format!("无效的导入文件: {}", e))?;
+    let export_file: ExportFile =
+        serde_json::from_str(&request.content).map_err(|e| format!("无效的导入文件: {}", e))?;
 
     let accounts: Vec<ExportedAccount> = if export_file.header.encrypted {
-        let password = request
-            .password
-            .as_ref()
-            .ok_or("加密文件需要提供密码")?;
+        let password = request.password.as_ref().ok_or("加密文件需要提供密码")?;
         let ciphertext = export_file.data.as_str().ok_or("无效的加密数据")?;
         let salt = export_file.header.salt.as_ref().ok_or("缺少加密盐值")?;
         let nonce = export_file.header.nonce.as_ref().ok_or("缺少加密 nonce")?;
@@ -346,7 +342,10 @@ pub async fn import_accounts(
         let account_id = uuid::Uuid::new_v4().to_string();
 
         // 2.3 保存凭证到 Keychain
-        if let Err(e) = state.credential_store.save(&account_id, &exported.credentials) {
+        if let Err(e) = state
+            .credential_store
+            .save(&account_id, &exported.credentials)
+        {
             failures.push(ImportFailure {
                 name: exported.name.clone(),
                 reason: format!("保存凭证失败: {}", e),

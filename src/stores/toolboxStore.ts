@@ -1,14 +1,14 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { QueryHistoryItem } from "@/types";
+import type { QueryHistoryItem } from "@/types"
+import { create } from "zustand"
+import { persist } from "zustand/middleware"
 
-const MAX_HISTORY_ITEMS = 50;
+const MAX_HISTORY_ITEMS = 50
 
 interface ToolboxState {
-  history: QueryHistoryItem[];
-  addHistory: (item: Omit<QueryHistoryItem, "id" | "timestamp">) => void;
-  removeHistory: (id: string) => void;
-  clearHistory: () => void;
+  history: QueryHistoryItem[]
+  addHistory: (item: Omit<QueryHistoryItem, "id" | "timestamp">) => void
+  removeHistory: (id: string) => void
+  clearHistory: () => void
 }
 
 export const useToolboxStore = create<ToolboxState>()(
@@ -22,35 +22,33 @@ export const useToolboxStore = create<ToolboxState>()(
             ...item,
             id: crypto.randomUUID(),
             timestamp: Date.now(),
-          };
+          }
 
           // 检查是否已存在相同的查询
           const existingIndex = state.history.findIndex(
             (h) =>
-              h.type === item.type &&
-              h.query === item.query &&
-              h.recordType === item.recordType
-          );
+              h.type === item.type && h.query === item.query && h.recordType === item.recordType
+          )
 
-          let newHistory: QueryHistoryItem[];
+          let newHistory: QueryHistoryItem[]
 
           if (existingIndex >= 0) {
             // 更新时间戳并移到最前面
             newHistory = [
               { ...state.history[existingIndex], timestamp: Date.now() },
               ...state.history.filter((_, i) => i !== existingIndex),
-            ];
+            ]
           } else {
             // 添加新记录到最前面
-            newHistory = [newItem, ...state.history];
+            newHistory = [newItem, ...state.history]
           }
 
           // 限制最大数量
           if (newHistory.length > MAX_HISTORY_ITEMS) {
-            newHistory = newHistory.slice(0, MAX_HISTORY_ITEMS);
+            newHistory = newHistory.slice(0, MAX_HISTORY_ITEMS)
           }
 
-          return { history: newHistory };
+          return { history: newHistory }
         }),
 
       removeHistory: (id) =>
@@ -65,4 +63,4 @@ export const useToolboxStore = create<ToolboxState>()(
       partialize: (state) => ({ history: state.history }),
     }
   )
-);
+)

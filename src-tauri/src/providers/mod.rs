@@ -45,7 +45,11 @@ pub trait DnsProvider: Send + Sync {
     async fn create_record(&self, req: &CreateDnsRecordRequest) -> Result<DnsRecord>;
 
     /// 更新 DNS 记录
-    async fn update_record(&self, record_id: &str, req: &UpdateDnsRecordRequest) -> Result<DnsRecord>;
+    async fn update_record(
+        &self,
+        record_id: &str,
+        req: &UpdateDnsRecordRequest,
+    ) -> Result<DnsRecord>;
 
     /// 删除 DNS 记录
     async fn delete_record(&self, record_id: &str, domain_id: &str) -> Result<()>;
@@ -123,9 +127,7 @@ pub fn get_all_provider_metadata() -> Vec<crate::types::ProviderMetadata> {
                     "在 Cloudflare Dashboard -> My Profile -> API Tokens 创建".to_string(),
                 ),
             }],
-            features: ProviderFeatures {
-                proxy: true,
-            },
+            features: ProviderFeatures { proxy: true },
         },
         ProviderMetadata {
             id: "aliyun".to_string(),

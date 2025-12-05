@@ -1,116 +1,98 @@
-import { useTranslation } from "react-i18next";
-import { useUpdaterStore } from "@/stores/updaterStore";
-import { toast } from "sonner";
-import {
-  Check,
-  Download,
-  Loader2,
-  RefreshCw,
-  Settings,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
+import { useUpdaterStore } from "@/stores/updaterStore"
+import { Check, Download, Loader2, RefreshCw, Settings } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 interface StatusBarProps {
-  onOpenSettings: () => void;
+  onOpenSettings: () => void
 }
 
-type StatusType = "idle" | "checking" | "available" | "downloading" | "retrying" | "installing";
+type StatusType = "idle" | "checking" | "available" | "downloading" | "retrying" | "installing"
 
 export function StatusBar({ onOpenSettings }: StatusBarProps) {
-  const { t } = useTranslation();
-  const {
-    checking,
-    downloading,
-    progress,
-    available,
-    retryCount,
-    maxRetries,
-    downloadAndInstall,
-  } = useUpdaterStore();
+  const { t } = useTranslation()
+  const { checking, downloading, progress, available, retryCount, maxRetries, downloadAndInstall } =
+    useUpdaterStore()
 
   // 获取当前状态类型
   const getStatusType = (): StatusType => {
-    if (progress >= 100 && downloading) return "installing";
-    if (retryCount > 0 && downloading) return "retrying";
-    if (downloading) return "downloading";
-    if (available) return "available";
-    if (checking) return "checking";
-    return "idle";
-  };
+    if (progress >= 100 && downloading) return "installing"
+    if (retryCount > 0 && downloading) return "retrying"
+    if (downloading) return "downloading"
+    if (available) return "available"
+    if (checking) return "checking"
+    return "idle"
+  }
 
-  const statusType = getStatusType();
+  const statusType = getStatusType()
 
   // 左侧是否可点击（有更新时可点击下载）
-  const isLeftClickable = statusType === "available";
+  const isLeftClickable = statusType === "available"
 
   // 处理点击更新
   const handleClickUpdate = async () => {
-    if (!isLeftClickable) return;
+    if (!isLeftClickable) return
     try {
-      await downloadAndInstall();
+      await downloadAndInstall()
     } catch {
       toast.error(t("settings.retryFailed"), {
         description: t("settings.retryFailedDesc", { count: maxRetries }),
-      });
+      })
     }
-  };
+  }
 
   // 获取左侧图标
   const getStatusIcon = () => {
     switch (statusType) {
       case "idle":
-        return <Check className="h-3.5 w-3.5" />;
+        return <Check className="h-3.5 w-3.5" />
       case "checking":
       case "installing":
-        return <Loader2 className="h-3.5 w-3.5 animate-spin" />;
+        return <Loader2 className="h-3.5 w-3.5 animate-spin" />
       case "available":
       case "downloading":
-        return <Download className="h-3.5 w-3.5" />;
+        return <Download className="h-3.5 w-3.5" />
       case "retrying":
-        return <RefreshCw className="h-3.5 w-3.5 animate-spin" />;
+        return <RefreshCw className="h-3.5 w-3.5 animate-spin" />
     }
-  };
+  }
 
   // 获取左侧文本
   const getStatusText = () => {
     switch (statusType) {
       case "idle":
-        return t("statusBar.ready");
+        return t("statusBar.ready")
       case "checking":
-        return t("statusBar.checking");
+        return t("statusBar.checking")
       case "available":
-        return `${t("statusBar.available")} v${available?.version}`;
+        return `${t("statusBar.available")} v${available?.version}`
       case "downloading":
-        return `${t("statusBar.downloading")} ${progress}%`;
+        return `${t("statusBar.downloading")} ${progress}%`
       case "retrying":
-        return `${t("statusBar.retrying")} (${retryCount}/${maxRetries})`;
+        return `${t("statusBar.retrying")} (${retryCount}/${maxRetries})`
       case "installing":
-        return t("statusBar.installing");
+        return t("statusBar.installing")
     }
-  };
+  }
 
   // 获取背景样式
   const getBackgroundClass = () => {
     switch (statusType) {
       case "available":
-        return "bg-primary/10 text-primary border-primary/20";
+        return "bg-primary/10 text-primary border-primary/20"
       case "retrying":
-        return "bg-yellow-500/20 border-yellow-500/50 text-foreground";
+        return "bg-yellow-500/20 border-yellow-500/50 text-foreground"
       default:
-        return "bg-muted text-muted-foreground";
+        return "bg-muted text-muted-foreground"
     }
-  };
+  }
 
   return (
-    <footer
-      className={cn(
-        "fixed bottom-0 left-0 right-0 h-6 z-50 border-t",
-        getBackgroundClass()
-      )}
-    >
+    <footer className={cn("fixed right-0 bottom-0 left-0 z-50 h-6 border-t", getBackgroundClass())}>
       {/* 进度条（下载时显示在顶部） */}
       {downloading && statusType !== "installing" && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-muted/50">
+        <div className="absolute top-0 right-0 left-0 h-0.5 bg-muted/50">
           <div
             className={cn(
               "h-full transition-all duration-300 ease-out",
@@ -122,13 +104,13 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
       )}
 
       {/* 状态栏内容 */}
-      <div className="flex items-center justify-between h-full px-3 text-xs">
+      <div className="flex h-full items-center justify-between px-3 text-xs">
         {/* 左侧状态区（有更新时可点击下载） */}
         {isLeftClickable ? (
           <button
             type="button"
             onClick={handleClickUpdate}
-            className="flex items-center gap-1.5 h-full px-2 -ml-2 hover:bg-primary/20 rounded transition-colors"
+            className="-ml-2 flex h-full items-center gap-1.5 rounded px-2 transition-colors hover:bg-primary/20"
           >
             {getStatusIcon()}
             <span>{getStatusText()}</span>
@@ -146,12 +128,12 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
           type="button"
           onClick={onOpenSettings}
           className={cn(
-            "flex items-center gap-1.5 h-full px-2 -mr-2 rounded transition-colors",
+            "-mr-2 flex h-full items-center gap-1.5 rounded px-2 transition-colors",
             statusType === "retrying"
               ? "hover:bg-yellow-500/30"
               : statusType === "available"
-              ? "hover:bg-primary/20"
-              : "hover:bg-muted-foreground/10"
+                ? "hover:bg-primary/20"
+                : "hover:bg-muted-foreground/10"
           )}
         >
           <span className="tabular-nums">v{__APP_VERSION__}</span>
@@ -159,5 +141,5 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
         </button>
       </div>
     </footer>
-  );
+  )
 }

@@ -1,15 +1,5 @@
-import { useState, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
-import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
-import { toast } from "sonner";
-import type {
-  ApiResponse,
-  ImportPreview,
-  ImportResult,
-  ImportAccountsRequest,
-} from "@/types";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -17,160 +7,147 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { ProviderIcon, getProviderName } from "./ProviderIcon";
-import { Loader2, Upload, FileText, Lock, AlertTriangle } from "lucide-react";
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import type { ApiResponse, ImportAccountsRequest, ImportPreview, ImportResult } from "@/types"
+import { invoke } from "@tauri-apps/api/core"
+import { open as openFileDialog } from "@tauri-apps/plugin-dialog"
+import { readTextFile } from "@tauri-apps/plugin-fs"
+import { AlertTriangle, FileText, Loader2, Lock, Upload } from "lucide-react"
+import { useCallback, useState } from "react"
+import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
+import { ProviderIcon, getProviderName } from "./ProviderIcon"
 
 interface ImportDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onImportSuccess: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onImportSuccess: () => void
 }
 
-type ImportStep = "select" | "password" | "preview" | "importing";
+type ImportStep = "select" | "password" | "preview" | "importing"
 
-export function ImportDialog({
-  open,
-  onOpenChange,
-  onImportSuccess,
-}: ImportDialogProps) {
-  const { t } = useTranslation();
-  const [step, setStep] = useState<ImportStep>("select");
-  const [fileContent, setFileContent] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [password, setPassword] = useState("");
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDialogProps) {
+  const { t } = useTranslation()
+  const [step, setStep] = useState<ImportStep>("select")
+  const [fileContent, setFileContent] = useState<string | null>(null)
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [password, setPassword] = useState("")
+  const [preview, setPreview] = useState<ImportPreview | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   const resetState = useCallback(() => {
-    setStep("select");
-    setFileContent(null);
-    setFileName(null);
-    setPassword("");
-    setPreview(null);
-    setIsLoading(false);
-  }, []);
+    setStep("select")
+    setFileContent(null)
+    setFileName(null)
+    setPassword("")
+    setPreview(null)
+    setIsLoading(false)
+  }, [])
 
   const handleSelectFile = async () => {
     try {
       const filePath = await openFileDialog({
         multiple: false,
         filters: [{ name: "DNS Orchestrator Backup", extensions: ["dnso"] }],
-      });
+      })
 
-      if (!filePath) return;
+      if (!filePath) return
 
-      setIsLoading(true);
-      const content = await readTextFile(filePath as string);
-      setFileContent(content);
-      setFileName((filePath as string).split("/").pop() || "file.json");
+      setIsLoading(true)
+      const content = await readTextFile(filePath as string)
+      setFileContent(content)
+      setFileName((filePath as string).split("/").pop() || "file.json")
 
       // 尝试预览（不带密码）
-      const response = await invoke<ApiResponse<ImportPreview>>(
-        "preview_import",
-        {
-          content,
-          password: null,
-        }
-      );
+      const response = await invoke<ApiResponse<ImportPreview>>("preview_import", {
+        content,
+        password: null,
+      })
 
       if (response.success && response.data) {
-        setPreview(response.data);
+        setPreview(response.data)
         if (response.data.encrypted && !response.data.accounts) {
-          setStep("password");
+          setStep("password")
         } else {
-          setStep("preview");
+          setStep("preview")
         }
       } else {
-        toast.error(response.error?.message || t("import.invalidFile"));
+        toast.error(response.error?.message || t("import.invalidFile"))
       }
     } catch (err) {
-      toast.error(String(err));
+      toast.error(String(err))
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleDecrypt = async () => {
-    if (!fileContent || !password) return;
+    if (!(fileContent && password)) return
 
-    setIsLoading(true);
+    setIsLoading(true)
     try {
-      const response = await invoke<ApiResponse<ImportPreview>>(
-        "preview_import",
-        {
-          content: fileContent,
-          password,
-        }
-      );
+      const response = await invoke<ApiResponse<ImportPreview>>("preview_import", {
+        content: fileContent,
+        password,
+      })
 
       if (response.success && response.data?.accounts) {
-        setPreview(response.data);
-        setStep("preview");
+        setPreview(response.data)
+        setStep("preview")
       } else {
-        toast.error(response.error?.message || t("import.decryptFailed"));
+        toast.error(response.error?.message || t("import.decryptFailed"))
       }
     } catch (err) {
-      toast.error(String(err));
+      toast.error(String(err))
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleImport = async () => {
-    if (!fileContent) return;
+    if (!fileContent) return
 
-    setStep("importing");
+    setStep("importing")
     try {
       const request: ImportAccountsRequest = {
         content: fileContent,
         password: preview?.encrypted ? password : undefined,
-      };
+      }
 
-      const response = await invoke<ApiResponse<ImportResult>>(
-        "import_accounts",
-        {
-          request,
-        }
-      );
+      const response = await invoke<ApiResponse<ImportResult>>("import_accounts", {
+        request,
+      })
 
       if (response.success && response.data) {
-        const { successCount, failures } = response.data;
+        const { successCount, failures } = response.data
         if (successCount > 0) {
-          toast.success(t("import.success", { count: successCount }));
-          onImportSuccess();
+          toast.success(t("import.success", { count: successCount }))
+          onImportSuccess()
         }
         if (failures.length > 0) {
-          toast.warning(
-            t("import.partialFailure", { count: failures.length }),
-            {
-              description: failures
-                .map((f) => `${f.name}: ${f.reason}`)
-                .join("\n"),
-            }
-          );
+          toast.warning(t("import.partialFailure", { count: failures.length }), {
+            description: failures.map((f) => `${f.name}: ${f.reason}`).join("\n"),
+          })
         }
-        onOpenChange(false);
-        resetState();
+        onOpenChange(false)
+        resetState()
       } else {
-        toast.error(response.error?.message || t("import.failed"));
-        setStep("preview");
+        toast.error(response.error?.message || t("import.failed"))
+        setStep("preview")
       }
     } catch (err) {
-      toast.error(String(err));
-      setStep("preview");
+      toast.error(String(err))
+      setStep("preview")
     }
-  };
+  }
 
   const handleClose = () => {
-    onOpenChange(false);
-    resetState();
-  };
+    onOpenChange(false)
+    resetState()
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -194,9 +171,9 @@ export function ImportDialog({
               </div>
               <Button onClick={handleSelectFile} disabled={isLoading}>
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="mr-2 h-4 w-4" />
                 )}
                 {t("import.selectFile")}
               </Button>
@@ -206,7 +183,7 @@ export function ImportDialog({
           {/* Step 2: 输入密码 */}
           {step === "password" && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 p-3 rounded-md bg-muted">
+              <div className="flex items-center gap-2 rounded-md bg-muted p-3">
                 <Lock className="h-4 w-4" />
                 <span className="text-sm">{t("import.fileEncrypted")}</span>
               </div>
@@ -237,14 +214,9 @@ export function ImportDialog({
                 <div className="space-y-2">
                   {preview.accounts.map((account, index) => (
                     <div key={index} className="flex items-center gap-3 py-1">
-                      <ProviderIcon
-                        provider={account.provider}
-                        className="h-4 w-4"
-                      />
-                      <span className="flex-1 truncate text-sm">
-                        {account.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
+                      <ProviderIcon provider={account.provider} className="h-4 w-4" />
+                      <span className="flex-1 truncate text-sm">{account.name}</span>
+                      <span className="text-muted-foreground text-xs">
                         {getProviderName(account.provider)}
                       </span>
                       {account.hasConflict && (
@@ -257,7 +229,7 @@ export function ImportDialog({
                 </div>
               </ScrollArea>
               {preview.accounts.some((a) => a.hasConflict) && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <p className="flex items-center gap-1 text-muted-foreground text-xs">
                   <AlertTriangle className="h-3 w-3" />
                   {t("import.conflictNote")}
                 </p>
@@ -269,9 +241,7 @@ export function ImportDialog({
           {step === "importing" && (
             <div className="flex flex-col items-center justify-center gap-4 py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">
-                {t("import.importing")}
-              </p>
+              <p className="text-muted-foreground text-sm">{t("import.importing")}</p>
             </div>
           )}
         </div>
@@ -284,18 +254,18 @@ export function ImportDialog({
           )}
           {step === "password" && (
             <Button onClick={handleDecrypt} disabled={!password || isLoading}>
-              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("import.decrypt")}
             </Button>
           )}
           {step === "preview" && (
             <Button onClick={handleImport}>
-              <Upload className="h-4 w-4 mr-2" />
+              <Upload className="mr-2 h-4 w-4" />
               {t("import.importButton")}
             </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

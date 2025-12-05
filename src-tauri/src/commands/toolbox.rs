@@ -13,11 +13,11 @@ const WHOIS_SERVERS: &str = include_str!("../resources/whois_servers.json");
 /// WHOIS 查询
 #[tauri::command]
 pub async fn whois_lookup(domain: String) -> Result<ApiResponse<WhoisResult>, String> {
-    let whois = WhoIs::from_string(WHOIS_SERVERS)
-        .map_err(|e| format!("初始化 WHOIS 客户端失败: {}", e))?;
+    let whois =
+        WhoIs::from_string(WHOIS_SERVERS).map_err(|e| format!("初始化 WHOIS 客户端失败: {}", e))?;
 
-    let options = WhoIsLookupOptions::from_string(&domain)
-        .map_err(|e| format!("无效的域名: {}", e))?;
+    let options =
+        WhoIsLookupOptions::from_string(&domain).map_err(|e| format!("无效的域名: {}", e))?;
 
     let raw = whois
         .lookup_async(options)
@@ -34,29 +34,41 @@ pub async fn whois_lookup(domain: String) -> Result<ApiResponse<WhoisResult>, St
 fn parse_whois_response(domain: &str, raw: &str) -> WhoisResult {
     WhoisResult {
         domain: domain.to_string(),
-        registrar: extract_field(raw, &[
-            r"(?i)Registrar:\s*(.+)",
-            r"(?i)Registrar Name:\s*(.+)",
-            r"(?i)Sponsoring Registrar:\s*(.+)",
-        ]),
-        creation_date: extract_field(raw, &[
-            r"(?i)Creation Date:\s*(.+)",
-            r"(?i)Created Date:\s*(.+)",
-            r"(?i)Created:\s*(.+)",
-            r"(?i)Registration Time:\s*(.+)",
-            r"(?i)Registration Date:\s*(.+)",
-        ]),
-        expiration_date: extract_field(raw, &[
-            r"(?i)Expir(?:y|ation) Date:\s*(.+)",
-            r"(?i)Registry Expiry Date:\s*(.+)",
-            r"(?i)Expiration Time:\s*(.+)",
-            r"(?i)paid-till:\s*(.+)",
-        ]),
-        updated_date: extract_field(raw, &[
-            r"(?i)Updated Date:\s*(.+)",
-            r"(?i)Last Updated:\s*(.+)",
-            r"(?i)Last Modified:\s*(.+)",
-        ]),
+        registrar: extract_field(
+            raw,
+            &[
+                r"(?i)Registrar:\s*(.+)",
+                r"(?i)Registrar Name:\s*(.+)",
+                r"(?i)Sponsoring Registrar:\s*(.+)",
+            ],
+        ),
+        creation_date: extract_field(
+            raw,
+            &[
+                r"(?i)Creation Date:\s*(.+)",
+                r"(?i)Created Date:\s*(.+)",
+                r"(?i)Created:\s*(.+)",
+                r"(?i)Registration Time:\s*(.+)",
+                r"(?i)Registration Date:\s*(.+)",
+            ],
+        ),
+        expiration_date: extract_field(
+            raw,
+            &[
+                r"(?i)Expir(?:y|ation) Date:\s*(.+)",
+                r"(?i)Registry Expiry Date:\s*(.+)",
+                r"(?i)Expiration Time:\s*(.+)",
+                r"(?i)paid-till:\s*(.+)",
+            ],
+        ),
+        updated_date: extract_field(
+            raw,
+            &[
+                r"(?i)Updated Date:\s*(.+)",
+                r"(?i)Last Updated:\s*(.+)",
+                r"(?i)Last Modified:\s*(.+)",
+            ],
+        ),
         name_servers: extract_name_servers(raw),
         status: extract_status(raw),
         raw: raw.to_string(),
@@ -120,7 +132,11 @@ fn extract_status(text: &str) -> Vec<String> {
                 if let Some(m) = caps.get(1) {
                     let status = m.as_str().trim().to_string();
                     // 只取状态名，去掉后面的 URL
-                    let status = status.split_whitespace().next().unwrap_or(&status).to_string();
+                    let status = status
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or(&status)
+                        .to_string();
                     if !status.is_empty() && !statuses.contains(&status) {
                         statuses.push(status);
                     }
@@ -151,7 +167,12 @@ pub async fn dns_lookup(
                         record_type: "A".to_string(),
                         name: domain.clone(),
                         value: ip.to_string(),
-                        ttl: response.as_lookup().record_iter().next().map(|r| r.ttl()).unwrap_or(0),
+                        ttl: response
+                            .as_lookup()
+                            .record_iter()
+                            .next()
+                            .map(|r| r.ttl())
+                            .unwrap_or(0),
                         priority: None,
                     });
                 }
@@ -164,7 +185,12 @@ pub async fn dns_lookup(
                         record_type: "AAAA".to_string(),
                         name: domain.clone(),
                         value: ip.to_string(),
-                        ttl: response.as_lookup().record_iter().next().map(|r| r.ttl()).unwrap_or(0),
+                        ttl: response
+                            .as_lookup()
+                            .record_iter()
+                            .next()
+                            .map(|r| r.ttl())
+                            .unwrap_or(0),
                         priority: None,
                     });
                 }
@@ -177,7 +203,12 @@ pub async fn dns_lookup(
                         record_type: "MX".to_string(),
                         name: domain.clone(),
                         value: mx.exchange().to_string().trim_end_matches('.').to_string(),
-                        ttl: response.as_lookup().record_iter().next().map(|r| r.ttl()).unwrap_or(0),
+                        ttl: response
+                            .as_lookup()
+                            .record_iter()
+                            .next()
+                            .map(|r| r.ttl())
+                            .unwrap_or(0),
                         priority: Some(mx.preference()),
                     });
                 }
@@ -186,7 +217,8 @@ pub async fn dns_lookup(
         "TXT" => {
             if let Ok(response) = resolver.txt_lookup(&domain).await {
                 for txt in response.iter() {
-                    let txt_data: String = txt.iter()
+                    let txt_data: String = txt
+                        .iter()
                         .map(|data| String::from_utf8_lossy(data).to_string())
                         .collect::<Vec<_>>()
                         .join("");
@@ -194,7 +226,12 @@ pub async fn dns_lookup(
                         record_type: "TXT".to_string(),
                         name: domain.clone(),
                         value: txt_data,
-                        ttl: response.as_lookup().record_iter().next().map(|r| r.ttl()).unwrap_or(0),
+                        ttl: response
+                            .as_lookup()
+                            .record_iter()
+                            .next()
+                            .map(|r| r.ttl())
+                            .unwrap_or(0),
                         priority: None,
                     });
                 }
@@ -207,14 +244,22 @@ pub async fn dns_lookup(
                         record_type: "NS".to_string(),
                         name: domain.clone(),
                         value: ns.to_string().trim_end_matches('.').to_string(),
-                        ttl: response.as_lookup().record_iter().next().map(|r| r.ttl()).unwrap_or(0),
+                        ttl: response
+                            .as_lookup()
+                            .record_iter()
+                            .next()
+                            .map(|r| r.ttl())
+                            .unwrap_or(0),
                         priority: None,
                     });
                 }
             }
         }
         "CNAME" => {
-            if let Ok(response) = resolver.lookup(&domain, hickory_resolver::proto::rr::RecordType::CNAME).await {
+            if let Ok(response) = resolver
+                .lookup(&domain, hickory_resolver::proto::rr::RecordType::CNAME)
+                .await
+            {
                 for record in response.record_iter() {
                     if let Some(cname) = record.data().and_then(|d| d.as_cname()) {
                         records.push(DnsLookupRecord {
@@ -245,7 +290,12 @@ pub async fn dns_lookup(
                         record_type: "SOA".to_string(),
                         name: domain.clone(),
                         value,
-                        ttl: response.as_lookup().record_iter().next().map(|r| r.ttl()).unwrap_or(0),
+                        ttl: response
+                            .as_lookup()
+                            .record_iter()
+                            .next()
+                            .map(|r| r.ttl())
+                            .unwrap_or(0),
                         priority: None,
                     });
                 }
@@ -264,14 +314,22 @@ pub async fn dns_lookup(
                         record_type: "SRV".to_string(),
                         name: domain.clone(),
                         value,
-                        ttl: response.as_lookup().record_iter().next().map(|r| r.ttl()).unwrap_or(0),
+                        ttl: response
+                            .as_lookup()
+                            .record_iter()
+                            .next()
+                            .map(|r| r.ttl())
+                            .unwrap_or(0),
                         priority: Some(srv.priority()),
                     });
                 }
             }
         }
         "CAA" => {
-            if let Ok(response) = resolver.lookup(&domain, hickory_resolver::proto::rr::RecordType::CAA).await {
+            if let Ok(response) = resolver
+                .lookup(&domain, hickory_resolver::proto::rr::RecordType::CAA)
+                .await
+            {
                 for record in response.record_iter() {
                     if let Some(caa) = record.data().and_then(|d| d.as_caa()) {
                         let value = format!(
@@ -292,7 +350,10 @@ pub async fn dns_lookup(
             }
         }
         "PTR" => {
-            if let Ok(response) = resolver.lookup(&domain, hickory_resolver::proto::rr::RecordType::PTR).await {
+            if let Ok(response) = resolver
+                .lookup(&domain, hickory_resolver::proto::rr::RecordType::PTR)
+                .await
+            {
                 for record in response.record_iter() {
                     if let Some(ptr) = record.data().and_then(|d| d.as_ptr()) {
                         records.push(DnsLookupRecord {
@@ -310,8 +371,10 @@ pub async fn dns_lookup(
             // 查询所有常见类型
             let types = vec!["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA"];
             for t in types {
-                if let Ok(ApiResponse { data: Some(mut type_records), .. }) =
-                    Box::pin(dns_lookup(domain.clone(), t.to_string())).await
+                if let Ok(ApiResponse {
+                    data: Some(mut type_records),
+                    ..
+                }) = Box::pin(dns_lookup(domain.clone(), t.to_string())).await
                 {
                     records.append(&mut type_records);
                 }

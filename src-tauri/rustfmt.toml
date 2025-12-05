@@ -1,0 +1,31 @@
+# Rust Edition
+edition = "2021"
+
+# 格式化基本设置（稳定版本支持的选项）
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+
+# 函数和闭包
+fn_params_layout = "Tall"
+
+# 代码风格
+use_small_heuristics = "Default"
+match_block_trailing_comma = false
+
+# 注释和字符串相关配置需要 nightly 版本
+# 如果需要使用这些功能，请运行：rustup default nightly
+# 然后取消下面这些选项的注释：
+
+# imports_granularity = "Crate"
+# group_imports = "StdExternalCrate"
+# reorder_imports = true
+# format_code_in_doc_comments = true
+# normalize_comments = true
+# normalize_doc_attributes = true
+# wrap_comments = true
+# comment_width = 80
+# format_strings = true
+# format_macro_matchers = true
+# format_macro_bodies = true
+

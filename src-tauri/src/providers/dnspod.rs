@@ -194,10 +194,16 @@ impl DnspodProvider {
         );
 
         // 3. 计算签名
-        let secret_date = Self::hmac_sha256(format!("TC3{}", self.secret_key).as_bytes(), date.as_bytes());
+        let secret_date = Self::hmac_sha256(
+            format!("TC3{}", self.secret_key).as_bytes(),
+            date.as_bytes(),
+        );
         let secret_service = Self::hmac_sha256(&secret_date, DNSPOD_SERVICE.as_bytes());
         let secret_signing = Self::hmac_sha256(&secret_service, b"tc3_request");
-        let signature = hex::encode(Self::hmac_sha256(&secret_signing, string_to_sign.as_bytes()));
+        let signature = hex::encode(Self::hmac_sha256(
+            &secret_signing,
+            string_to_sign.as_bytes(),
+        ));
 
         // 4. 拼接 Authorization
         format!(
@@ -218,8 +224,8 @@ impl DnspodProvider {
         action: &str,
         body: &B,
     ) -> Result<T> {
-        let payload = serde_json::to_string(body)
-            .map_err(|e| DnsError::SerializationError(e.to_string()))?;
+        let payload =
+            serde_json::to_string(body).map_err(|e| DnsError::SerializationError(e.to_string()))?;
 
         let timestamp = Utc::now().timestamp();
         let authorization = self.sign(action, &payload, timestamp);
@@ -252,11 +258,12 @@ impl DnspodProvider {
 
         log::debug!("Response Body: {}", response_text);
 
-        let tc_response: TencentResponse<T> = serde_json::from_str(&response_text).map_err(|e| {
-            log::error!("JSON 解析失败: {}", e);
-            log::error!("原始响应: {}", response_text);
-            DnsError::ApiError(format!("解析响应失败: {}", e))
-        })?;
+        let tc_response: TencentResponse<T> =
+            serde_json::from_str(&response_text).map_err(|e| {
+                log::error!("JSON 解析失败: {}", e);
+                log::error!("原始响应: {}", response_text);
+                DnsError::ApiError(format!("解析响应失败: {}", e))
+            })?;
 
         if let Some(error) = tc_response.response.error {
             log::error!("API 错误: {} - {}", error.code, error.message);
@@ -387,12 +394,20 @@ impl DnsProvider for DnspodProvider {
             })
             .collect();
 
-        Ok(PaginatedResponse::new(domains, params.page, params.page_size, total_count))
+        Ok(PaginatedResponse::new(
+            domains,
+            params.page,
+            params.page_size,
+            total_count,
+        ))
     }
 
     async fn get_domain(&self, domain_id: &str) -> Result<Domain> {
         // DNSPod API 需要域名字符串，先从域名列表中查找
-        let params = PaginationParams { page: 1, page_size: 100 };
+        let params = PaginationParams {
+            page: 1,
+            page_size: 100,
+        };
         let response = self.list_domains(&params).await?;
 
         response
@@ -467,12 +482,17 @@ impl DnsProvider for DnspodProvider {
                     })
                     .collect();
 
-                Ok(PaginatedResponse::new(records, params.page, params.page_size, total_count))
+                Ok(PaginatedResponse::new(
+                    records,
+                    params.page,
+                    params.page_size,
+                    total_count,
+                ))
             }
             // "NoDataOfRecord" 表示记录列表为空，返回空结果而不是错误
-            Err(DnsError::ApiError(msg)) if msg.contains("NoDataOfRecord") => {
-                Ok(PaginatedResponse::new(vec![], params.page, params.page_size, 0))
-            }
+            Err(DnsError::ApiError(msg)) if msg.contains("NoDataOfRecord") => Ok(
+                PaginatedResponse::new(vec![], params.page, params.page_size, 0),
+            ),
             Err(e) => Err(e),
         }
     }

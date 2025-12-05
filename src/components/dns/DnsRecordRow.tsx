@@ -1,27 +1,22 @@
-import type { DnsRecord } from "@/types";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { MoreHorizontal, Pencil, Trash2, Shield, ShieldOff } from "lucide-react";
+} from "@/components/ui/dropdown-menu"
+import { TableCell, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import type { DnsRecord } from "@/types"
+import { MoreHorizontal, Pencil, Shield, ShieldOff, Trash2 } from "lucide-react"
 
 interface DnsRecordRowProps {
-  record: DnsRecord;
-  onEdit: () => void;
-  onDelete: () => void;
-  disabled?: boolean;
-  showProxy?: boolean;
+  record: DnsRecord
+  onEdit: () => void
+  onDelete: () => void
+  disabled?: boolean
+  showProxy?: boolean
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -33,14 +28,14 @@ const TYPE_COLORS: Record<string, string> = {
   NS: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
   SRV: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300",
   CAA: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-};
+}
 
 function formatTTL(ttl: number): string {
-  if (ttl === 1) return "自动";
-  if (ttl < 60) return `${ttl} 秒`;
-  if (ttl < 3600) return `${Math.floor(ttl / 60)} 分钟`;
-  if (ttl < 86400) return `${Math.floor(ttl / 3600)} 小时`;
-  return `${Math.floor(ttl / 86400)} 天`;
+  if (ttl === 1) return "自动"
+  if (ttl < 60) return `${ttl} 秒`
+  if (ttl < 3600) return `${Math.floor(ttl / 60)} 分钟`
+  if (ttl < 86400) return `${Math.floor(ttl / 3600)} 小时`
+  return `${Math.floor(ttl / 86400)} 天`
 }
 
 export function DnsRecordRow({
@@ -53,73 +48,51 @@ export function DnsRecordRow({
   return (
     <TableRow>
       <TableCell>
-        <Badge
-          variant="secondary"
-          className={TYPE_COLORS[record.type] || ""}
-        >
+        <Badge variant="secondary" className={TYPE_COLORS[record.type] || ""}>
           {record.type}
         </Badge>
       </TableCell>
       <TableCell className="font-mono text-sm">
-        {record.name === "@" ? (
-          <span className="text-muted-foreground">@</span>
-        ) : (
-          record.name
-        )}
+        {record.name === "@" ? <span className="text-muted-foreground">@</span> : record.name}
       </TableCell>
       <TableCell>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="font-mono text-sm truncate block max-w-xs">
+              <span className="block max-w-xs truncate font-mono text-sm">
                 {record.priority !== undefined && (
-                  <span className="text-muted-foreground mr-2">
-                    [{record.priority}]
-                  </span>
+                  <span className="mr-2 text-muted-foreground">[{record.priority}]</span>
                 )}
                 {record.value}
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="font-mono text-xs max-w-md break-all">
-                {record.value}
-              </p>
+              <p className="max-w-md break-all font-mono text-xs">{record.value}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
-        {formatTTL(record.ttl)}
-      </TableCell>
+      <TableCell className="text-muted-foreground text-sm">{formatTTL(record.ttl)}</TableCell>
       {showProxy && (
         <TableCell>
-          {record.proxied !== undefined && (
-            record.proxied ? (
+          {record.proxied !== undefined &&
+            (record.proxied ? (
               <Shield className="h-4 w-4 text-orange-500" />
             ) : (
               <ShieldOff className="h-4 w-4 text-muted-foreground" />
-            )
-          )}
+            ))}
         </TableCell>
       )}
       <TableCell className="text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              disabled={disabled}
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={disabled}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onSelect={onEdit}
-              disabled={disabled}
-            >
-              <Pencil className="h-4 w-4 mr-2" />
+            <DropdownMenuItem onSelect={onEdit} disabled={disabled}>
+              <Pencil className="mr-2 h-4 w-4" />
               编辑
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -127,12 +100,12 @@ export function DnsRecordRow({
               disabled={disabled}
               className="text-destructive focus:text-destructive"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="mr-2 h-4 w-4" />
               删除
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>
     </TableRow>
-  );
+  )
 }

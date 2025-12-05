@@ -151,7 +151,12 @@ impl HuaweicloudProvider {
         // 5. 构造规范请求
         let canonical_request = format!(
             "{}\n{}\n{}\n{}\n{}\n{}",
-            method, canonical_uri, canonical_query, canonical_headers, signed_headers, hashed_payload
+            method,
+            canonical_uri,
+            canonical_query,
+            canonical_headers,
+            signed_headers,
+            hashed_payload
         );
 
         log::debug!("CanonicalRequest:\n{}", canonical_request);
@@ -230,7 +235,10 @@ impl HuaweicloudProvider {
                     error.error_msg.unwrap_or_default()
                 )));
             }
-            return Err(DnsError::ApiError(format!("HTTP {}: {}", status, response_text)));
+            return Err(DnsError::ApiError(format!(
+                "HTTP {}: {}",
+                status, response_text
+            )));
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
@@ -245,8 +253,8 @@ impl HuaweicloudProvider {
         path: &str,
         body: &B,
     ) -> Result<T> {
-        let payload = serde_json::to_string(body)
-            .map_err(|e| DnsError::SerializationError(e.to_string()))?;
+        let payload =
+            serde_json::to_string(body).map_err(|e| DnsError::SerializationError(e.to_string()))?;
 
         let now = Utc::now();
         let timestamp = now.format("%Y%m%dT%H%M%SZ").to_string();
@@ -290,7 +298,10 @@ impl HuaweicloudProvider {
                     error.error_msg.unwrap_or_default()
                 )));
             }
-            return Err(DnsError::ApiError(format!("HTTP {}: {}", status, response_text)));
+            return Err(DnsError::ApiError(format!(
+                "HTTP {}: {}",
+                status, response_text
+            )));
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
@@ -305,8 +316,8 @@ impl HuaweicloudProvider {
         path: &str,
         body: &B,
     ) -> Result<T> {
-        let payload = serde_json::to_string(body)
-            .map_err(|e| DnsError::SerializationError(e.to_string()))?;
+        let payload =
+            serde_json::to_string(body).map_err(|e| DnsError::SerializationError(e.to_string()))?;
 
         let now = Utc::now();
         let timestamp = now.format("%Y%m%dT%H%M%SZ").to_string();
@@ -350,7 +361,10 @@ impl HuaweicloudProvider {
                     error.error_msg.unwrap_or_default()
                 )));
             }
-            return Err(DnsError::ApiError(format!("HTTP {}: {}", status, response_text)));
+            return Err(DnsError::ApiError(format!(
+                "HTTP {}: {}",
+                status, response_text
+            )));
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
@@ -399,7 +413,10 @@ impl HuaweicloudProvider {
                     error.error_msg.unwrap_or_default()
                 )));
             }
-            return Err(DnsError::ApiError(format!("HTTP {}: {}", status, response_text)));
+            return Err(DnsError::ApiError(format!(
+                "HTTP {}: {}",
+                status, response_text
+            )));
         }
 
         Ok(())
@@ -475,7 +492,10 @@ impl DnsProvider for HuaweicloudProvider {
     }
 
     async fn validate_credentials(&self) -> Result<bool> {
-        match self.get::<ListZonesResponse>("/v2/zones", "type=public&limit=1").await {
+        match self
+            .get::<ListZonesResponse>("/v2/zones", "type=public&limit=1")
+            .await
+        {
             Ok(_) => Ok(true),
             Err(DnsError::ApiError(msg))
                 if msg.contains("401") || msg.contains("403") || msg.contains("Unauthorized") =>
@@ -497,10 +517,7 @@ impl DnsProvider for HuaweicloudProvider {
 
         let response: ListZonesResponse = self.get("/v2/zones", &query).await?;
 
-        let total_count = response
-            .metadata
-            .and_then(|m| m.total_count)
-            .unwrap_or(0);
+        let total_count = response.metadata.and_then(|m| m.total_count).unwrap_or(0);
 
         let domains = response
             .zones
@@ -516,12 +533,20 @@ impl DnsProvider for HuaweicloudProvider {
             })
             .collect();
 
-        Ok(PaginatedResponse::new(domains, params.page, params.page_size, total_count))
+        Ok(PaginatedResponse::new(
+            domains,
+            params.page,
+            params.page_size,
+            total_count,
+        ))
     }
 
     async fn get_domain(&self, domain_id: &str) -> Result<Domain> {
         // 使用大页面一次性获取用于查找
-        let params = PaginationParams { page: 1, page_size: 100 };
+        let params = PaginationParams {
+            page: 1,
+            page_size: 100,
+        };
         let response = self.list_domains(&params).await?;
 
         response
@@ -561,10 +586,7 @@ impl DnsProvider for HuaweicloudProvider {
         let path = format!("/v2/zones/{}/recordsets", domain_id);
         let response: ListRecordSetsResponse = self.get(&path, &query).await?;
 
-        let total_count = response
-            .metadata
-            .and_then(|m| m.total_count)
-            .unwrap_or(0);
+        let total_count = response.metadata.and_then(|m| m.total_count).unwrap_or(0);
 
         let records = response
             .recordsets
@@ -606,7 +628,12 @@ impl DnsProvider for HuaweicloudProvider {
             })
             .collect();
 
-        Ok(PaginatedResponse::new(records, params.page, params.page_size, total_count))
+        Ok(PaginatedResponse::new(
+            records,
+            params.page,
+            params.page_size,
+            total_count,
+        ))
     }
 
     async fn create_record(&self, req: &CreateDnsRecordRequest) -> Result<DnsRecord> {

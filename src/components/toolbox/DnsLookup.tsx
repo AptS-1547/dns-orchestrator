@@ -1,18 +1,13 @@
-import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { invoke } from "@tauri-apps/api/core";
-import { toast } from "sonner";
-import { useToolboxStore } from "@/stores";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -20,64 +15,66 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Loader2, Search } from "lucide-react";
-import { HistoryChips } from "./HistoryChips";
-import type { ApiResponse, DnsLookupRecord, DnsLookupType } from "@/types";
-import { DNS_RECORD_TYPES } from "@/types";
+} from "@/components/ui/table"
+import { useToolboxStore } from "@/stores"
+import type { ApiResponse, DnsLookupRecord, DnsLookupType } from "@/types"
+import { DNS_RECORD_TYPES } from "@/types"
+import { invoke } from "@tauri-apps/api/core"
+import { Loader2, Search } from "lucide-react"
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
+import { HistoryChips } from "./HistoryChips"
 
 export function DnsLookup() {
-  const { t } = useTranslation();
-  const { addHistory } = useToolboxStore();
-  const [domain, setDomain] = useState("");
-  const [recordType, setRecordType] = useState<DnsLookupType>("ALL");
-  const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<DnsLookupRecord[]>([]);
+  const { t } = useTranslation()
+  const { addHistory } = useToolboxStore()
+  const [domain, setDomain] = useState("")
+  const [recordType, setRecordType] = useState<DnsLookupType>("ALL")
+  const [isLoading, setIsLoading] = useState(false)
+  const [results, setResults] = useState<DnsLookupRecord[]>([])
 
   const handleLookup = async () => {
     if (!domain.trim()) {
-      toast.error(t("toolbox.enterDomain"));
-      return;
+      toast.error(t("toolbox.enterDomain"))
+      return
     }
 
-    setIsLoading(true);
-    setResults([]);
+    setIsLoading(true)
+    setResults([])
 
     try {
-      const response = await invoke<ApiResponse<DnsLookupRecord[]>>(
-        "dns_lookup",
-        {
-          domain: domain.trim(),
-          recordType,
-        }
-      );
+      const response = await invoke<ApiResponse<DnsLookupRecord[]>>("dns_lookup", {
+        domain: domain.trim(),
+        recordType,
+      })
 
       if (response.success && response.data) {
-        setResults(response.data);
+        setResults(response.data)
         addHistory({
           type: "dns",
           query: domain.trim(),
           recordType,
-        });
+        })
 
         if (response.data.length === 0) {
-          toast.info(t("toolbox.noRecords"));
+          toast.info(t("toolbox.noRecords"))
         }
       } else {
-        toast.error(response.error?.message || t("toolbox.queryFailed"));
+        toast.error(response.error?.message || t("toolbox.queryFailed"))
       }
     } catch (err) {
-      toast.error(String(err));
+      toast.error(String(err))
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleLookup();
+      handleLookup()
     }
-  };
+  }
 
   return (
     <Card>
@@ -125,16 +122,16 @@ export function DnsLookup() {
         <HistoryChips
           type="dns"
           onSelect={(item) => {
-            setDomain(item.query);
+            setDomain(item.query)
             if (item.recordType) {
-              setRecordType(item.recordType as DnsLookupType);
+              setRecordType(item.recordType as DnsLookupType)
             }
           }}
         />
 
         {/* 查询结果 */}
         {results.length > 0 && (
-          <div className="border rounded-md">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -149,28 +146,24 @@ export function DnsLookup() {
                 {results.map((record, index) => (
                   <TableRow key={index}>
                     <TableCell>
-                      <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">
+                      <span className="rounded bg-primary/10 px-2 py-0.5 font-medium text-primary text-xs">
                         {record.recordType}
                       </span>
                     </TableCell>
-                    <TableCell className="font-mono text-sm w-48">
-                      {record.name}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm max-w-0">
+                    <TableCell className="w-48 font-mono text-sm">{record.name}</TableCell>
+                    <TableCell className="max-w-0 font-mono text-sm">
                       <div
-                        className="truncate cursor-pointer hover:underline"
+                        className="cursor-pointer truncate hover:underline"
                         title={record.value}
                         onClick={() => {
-                          navigator.clipboard.writeText(record.value);
-                          toast.success(t("common.copied"));
+                          navigator.clipboard.writeText(record.value)
+                          toast.success(t("common.copied"))
                         }}
                       >
                         {record.value}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {record.ttl}
-                    </TableCell>
+                    <TableCell className="text-muted-foreground">{record.ttl}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {record.priority ?? "-"}
                     </TableCell>
@@ -182,5 +175,5 @@ export function DnsLookup() {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

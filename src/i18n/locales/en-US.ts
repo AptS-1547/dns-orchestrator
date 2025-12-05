@@ -35,12 +35,13 @@ export default {
     selectProvider: "Select Provider",
     noAccounts: "No accounts, click + to add",
     deleteConfirm: "Delete Account?",
-    deleteConfirmDesc: "Are you sure you want to delete account \"{{name}}\"? This action cannot be undone.",
+    deleteConfirmDesc:
+      'Are you sure you want to delete account "{{name}}"? This action cannot be undone.',
     loadFailed: "Load failed",
     // Toast messages
     loadFailedCount: "{{count}} account(s) failed to load, please check Keychain permissions",
     fetchFailed: "Failed to fetch accounts",
-    createSuccess: "Account \"{{name}}\" added successfully",
+    createSuccess: 'Account "{{name}}" added successfully',
     createFailed: "Failed to create account",
     deleteSuccess: "Account deleted",
     deleteFailed: "Failed to delete account",
@@ -77,7 +78,8 @@ export default {
     decrypt: "Decrypt",
     accountCount: "{{count}} account(s)",
     nameConflict: "Name conflicts with existing account",
-    conflictNote: "Marked accounts have the same name as existing ones, they will coexist after import",
+    conflictNote:
+      "Marked accounts have the same name as existing ones, they will coexist after import",
     importButton: "Import",
     importing: "Importing...",
     success: "Successfully imported {{count}} account(s)",
@@ -92,7 +94,8 @@ export default {
     editRecord: "Edit DNS Record",
     deleteRecord: "Delete Record",
     deleteConfirm: "Confirm Delete",
-    deleteConfirmDesc: "Are you sure you want to delete record {{name}}? This action cannot be undone.",
+    deleteConfirmDesc:
+      "Are you sure you want to delete record {{name}}? This action cannot be undone.",
     noRecords: "No DNS records",
     searchPlaceholder: "Search name...",
     // Fields
@@ -126,7 +129,7 @@ export default {
     },
     // Toast messages
     fetchFailed: "Failed to fetch DNS records",
-    createSuccess: "Record \"{{name}}\" added successfully",
+    createSuccess: 'Record "{{name}}" added successfully',
     createFailed: "Failed to create record",
     updateSuccess: "Record updated successfully",
     updateFailed: "Failed to update record",
@@ -195,7 +198,8 @@ export default {
   },
   main: {
     selectDomain: "Please select a domain from the left",
-    selectDomainHint: "After selecting an account, all domains under that account will be displayed",
+    selectDomainHint:
+      "After selecting an account, all domains under that account will be displayed",
     manageDns: "Manage DNS records for {{domain}}",
   },
   statusBar: {
@@ -235,4 +239,4 @@ export default {
       rawData: "Raw Data",
     },
   },
-};
+}

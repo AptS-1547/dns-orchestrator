@@ -50,7 +50,12 @@ pub fn encrypt(plaintext: &[u8], password: &str) -> Result<(String, String, Stri
 }
 
 /// 解密数据
-pub fn decrypt(ciphertext_b64: &str, password: &str, salt_b64: &str, nonce_b64: &str) -> Result<Vec<u8>> {
+pub fn decrypt(
+    ciphertext_b64: &str,
+    password: &str,
+    salt_b64: &str,
+    nonce_b64: &str,
+) -> Result<Vec<u8>> {
     // 解码 Base64
     let salt = BASE64
         .decode(salt_b64)
@@ -71,11 +76,9 @@ pub fn decrypt(ciphertext_b64: &str, password: &str, salt_b64: &str, nonce_b64: 
     let nonce = Nonce::from_slice(&nonce_bytes);
 
     // 解密
-    cipher
-        .decrypt(nonce, ciphertext.as_ref())
-        .map_err(|_| {
-            DnsError::SerializationError(
-                "Decryption failed: invalid password or corrupted data".to_string(),
-            )
-        })
+    cipher.decrypt(nonce, ciphertext.as_ref()).map_err(|_| {
+        DnsError::SerializationError(
+            "Decryption failed: invalid password or corrupted data".to_string(),
+        )
+    })
 }
