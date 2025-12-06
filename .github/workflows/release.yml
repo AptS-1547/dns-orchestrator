@@ -190,7 +190,7 @@ jobs:
         env:
           NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-          SIGNING_STORE_FILE: app/release.keystore
+          SIGNING_STORE_FILE: release.keystore
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
