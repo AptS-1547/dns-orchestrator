@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { useDnsStore } from "@/stores"
 import type { DnsRecord } from "@/types"
@@ -42,6 +43,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useDebouncedCallback } from "use-debounce"
+import { DnsRecordCard } from "./DnsRecordCard"
 import { DnsRecordForm } from "./DnsRecordForm"
 import { DnsRecordRow } from "./DnsRecordRow"
 
@@ -59,6 +61,7 @@ const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"]
 
 export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecordTableProps) {
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const {
     records,
     isLoading,
@@ -82,8 +85,13 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
   const [searchInput, setSearchInput] = useState("")
   // 选中的类型（本地状态）
   const [selectedType, setSelectedType] = useState("")
-  const sentinelRef = useRef<HTMLTableRowElement>(null)
+  const sentinelRef = useRef<HTMLElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  // 统一的 ref callback
+  const setSentinelRef = useCallback((node: HTMLElement | null) => {
+    sentinelRef.current = node
+  }, [])
 
   // 防抖搜索
   const debouncedSearch = useDebouncedCallback((keyword: string) => {
@@ -232,9 +240,9 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
     setEditingRecord(null)
   }
 
-  // 只有初次加载（domain 切换）才显示全屏 loading
-  // 搜索时即使结果为空也不显示全屏 loading
-  const isInitialLoading = isLoading && records.length === 0 && currentDomainId !== domainId
+  // 只有域名切换时才显示全屏 loading
+  // 搜索时不显示全屏 loading（保持列表可见）
+  const isInitialLoading = isLoading && currentDomainId !== domainId
 
   if (isInitialLoading) {
     return (
@@ -320,65 +328,25 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table / Card List */}
       <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-auto">
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-background">
-            <TableRow>
-              <TableHead
-                className="w-16 cursor-pointer select-none hover:bg-muted/50"
-                onClick={() => handleSort("type")}
-              >
-                <div className="flex items-center">
-                  {t("common.type")}
-                  <SortIcon field="type" />
-                </div>
-              </TableHead>
-              <TableHead
-                className="w-28 cursor-pointer select-none hover:bg-muted/50"
-                onClick={() => handleSort("name")}
-              >
-                <div className="flex items-center">
-                  {t("dns.name")}
-                  <SortIcon field="name" />
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none hover:bg-muted/50"
-                onClick={() => handleSort("value")}
-              >
-                <div className="flex items-center">
-                  {t("dns.value")}
-                  <SortIcon field="value" />
-                </div>
-              </TableHead>
-              <TableHead
-                className="w-20 cursor-pointer select-none hover:bg-muted/50"
-                onClick={() => handleSort("ttl")}
-              >
-                <div className="flex items-center">
-                  {t("dns.ttl")}
-                  <SortIcon field="ttl" />
-                </div>
-              </TableHead>
-              {supportsProxy && <TableHead className="w-12">{t("dns.proxy")}</TableHead>}
-              <TableHead className="w-16 text-right">{t("dns.actions")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {isMobile ? (
+          // 移动端：卡片列表
+          <div className="flex flex-col gap-3 p-4">
             {sortedRecords.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={supportsProxy ? 6 : 5}
-                  className="py-8 text-center text-muted-foreground"
-                >
+              isLoading ? (
+                <div className="py-8 text-center">
+                  <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
                   {hasActiveFilters ? t("common.noMatch") : t("dns.noRecords")}
-                </TableCell>
-              </TableRow>
+                </div>
+              )
             ) : (
               <>
                 {sortedRecords.map((record) => (
-                  <DnsRecordRow
+                  <DnsRecordCard
                     key={record.id}
                     record={record}
                     onEdit={() => handleEdit(record)}
@@ -387,21 +355,105 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
                     showProxy={supportsProxy}
                   />
                 ))}
-                {/* 无限滚动触发行 */}
-                <TableRow ref={sentinelRef} className="h-1 border-0">
-                  <TableCell colSpan={supportsProxy ? 6 : 5} className="p-0" />
-                </TableRow>
+                {/* 无限滚动触发元素 */}
+                <div ref={setSentinelRef} className="h-1" />
                 {isLoadingMore && (
-                  <TableRow className="border-0">
-                    <TableCell colSpan={supportsProxy ? 6 : 5} className="py-4 text-center">
-                      <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
-                    </TableCell>
-                  </TableRow>
+                  <div className="py-4 text-center">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
                 )}
               </>
             )}
-          </TableBody>
-        </Table>
+          </div>
+        ) : (
+          // 桌面端：表格
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-background">
+              <TableRow>
+                <TableHead
+                  className="w-16 cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("type")}
+                >
+                  <div className="flex items-center">
+                    {t("common.type")}
+                    <SortIcon field="type" />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="w-28 cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("name")}
+                >
+                  <div className="flex items-center">
+                    {t("dns.name")}
+                    <SortIcon field="name" />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("value")}
+                >
+                  <div className="flex items-center">
+                    {t("dns.value")}
+                    <SortIcon field="value" />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="w-20 cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => handleSort("ttl")}
+                >
+                  <div className="flex items-center">
+                    {t("dns.ttl")}
+                    <SortIcon field="ttl" />
+                  </div>
+                </TableHead>
+                {supportsProxy && <TableHead className="w-12">{t("dns.proxy")}</TableHead>}
+                <TableHead className="w-16 text-right">{t("dns.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedRecords.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={supportsProxy ? 6 : 5}
+                    className="py-8 text-center text-muted-foreground"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+                    ) : hasActiveFilters ? (
+                      t("common.noMatch")
+                    ) : (
+                      t("dns.noRecords")
+                    )}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <>
+                  {sortedRecords.map((record) => (
+                    <DnsRecordRow
+                      key={record.id}
+                      record={record}
+                      onEdit={() => handleEdit(record)}
+                      onDelete={() => handleDelete(record)}
+                      disabled={isDeleting}
+                      showProxy={supportsProxy}
+                    />
+                  ))}
+                  {/* 无限滚动触发行 */}
+                  <TableRow ref={setSentinelRef} className="h-1 border-0">
+                    <TableCell colSpan={supportsProxy ? 6 : 5} className="p-0" />
+                  </TableRow>
+                  {isLoadingMore && (
+                    <TableRow className="border-0">
+                      <TableCell colSpan={supportsProxy ? 6 : 5} className="py-4 text-center">
+                        <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Add/Edit Form Dialog */}
