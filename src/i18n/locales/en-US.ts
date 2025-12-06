@@ -169,6 +169,11 @@ export default {
     notificationsDesc: "Manage notification preferences",
     operationNotifications: "Operation Notifications",
     operationNotificationsDesc: "Show success/failure notifications for operations",
+    // Debug
+    debug: "Debug Mode",
+    debugDesc: "Developer Options",
+    debugMode: "Show Console Errors",
+    debugModeDesc: "Display console errors as toast notifications (for Android debugging)",
     // About
     about: "About",
     aboutDesc: "Version and updates",

@@ -19,13 +19,16 @@ const getInitialLanguage = (): LanguageCode => {
 interface SettingsState {
   theme: Theme
   language: LanguageCode
+  debugMode: boolean
   setTheme: (theme: Theme) => void
   setLanguage: (lang: LanguageCode) => void
+  setDebugMode: (enabled: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
   theme: (localStorage.getItem("theme") as Theme) || "system",
   language: getInitialLanguage(),
+  debugMode: localStorage.getItem("debugMode") === "true",
 
   setTheme: (theme) => {
     set({ theme })
@@ -46,6 +49,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setLanguage: (lang) => {
     set({ language: lang })
     changeLanguage(lang)
+  },
+
+  setDebugMode: (enabled) => {
+    set({ debugMode: enabled })
+    localStorage.setItem("debugMode", String(enabled))
   },
 }))
 

@@ -77,15 +77,17 @@ pub fn run() {
         builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
 
-    // Android 启用 Stronghold
+    // Android 启用 Stronghold 和 APK Installer
     #[cfg(target_os = "android")]
     {
-        builder = builder.plugin(
-            tauri_plugin_stronghold::Builder::with_argon2(&std::path::PathBuf::from(
-                "stronghold_salt.txt",
-            ))
-            .build(),
-        );
+        builder = builder
+            .plugin(
+                tauri_plugin_stronghold::Builder::with_argon2(&std::path::PathBuf::from(
+                    "stronghold_salt.txt",
+                ))
+                .build(),
+            )
+            .plugin(tauri_plugin_apk_installer::init());
     }
 
     let builder = builder

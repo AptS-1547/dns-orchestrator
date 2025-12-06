@@ -190,12 +190,14 @@ pub async fn download_apk(
 
 /// 触发 APK 安装
 ///
-/// 使用 opener 插件打开 APK 文件，触发系统安装器
+/// 使用自定义插件通过 FileProvider 正确处理 URI 转换
 #[tauri::command]
-pub async fn install_apk(path: String) -> Result<(), String> {
-    // 使用 opener 插件打开文件
-    tauri_plugin_opener::open_path(path, Some("application/vnd.android.package-archive"))
-        .map_err(|e| format!("Failed to open APK: {}", e))
+pub async fn install_apk(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    use tauri_plugin_apk_installer::ApkInstallerExt;
+
+    app.apk_installer()
+        .install_apk(path)
+        .map_err(|e| format!("Failed to install APK: {}", e))
 }
 
 #[cfg(test)]

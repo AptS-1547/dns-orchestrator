@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { StatusBar } from "@/components/ui/status-bar"
 import { UpdateDialog } from "@/components/ui/update-dialog"
 import { useIsMobile } from "@/hooks/useMediaQuery"
+import { initDebugMode } from "@/lib/debug"
 import { initTheme, useDomainStore } from "@/stores"
 import { useUpdaterStore } from "@/stores/updaterStore"
 import { useEffect, useState } from "react"
@@ -21,6 +22,7 @@ function App() {
 
   useEffect(() => {
     initTheme()
+    initDebugMode()
 
     // 移动端不检查更新（Android 使用应用商店或手动更新）
     if (isMobile) return

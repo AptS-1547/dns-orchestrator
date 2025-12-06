@@ -166,6 +166,11 @@ export default {
     notificationsDesc: "管理通知偏好设置",
     operationNotifications: "操作通知",
     operationNotificationsDesc: "显示操作成功/失败的提示",
+    // Debug
+    debug: "调试模式",
+    debugDesc: "开发者选项",
+    debugMode: "显示控制台错误",
+    debugModeDesc: "将控制台错误以弹窗形式显示（用于 Android 调试）",
     // About
     about: "关于",
     aboutDesc: "版本与更新",

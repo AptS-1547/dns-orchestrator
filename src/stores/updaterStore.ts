@@ -171,18 +171,23 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
     if (currentPlatform === "android" && isAndroidUpdate(available)) {
       // Android 平台：下载 APK 并安装
       let lastError: Error | null = null
+      let apkPath: string | null = null
 
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      // 阶段 1: 下载 APK（可重试）
+      let downloaded = 0
+      let contentLength = 0
+
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
           if (attempt > 0) {
-            console.log(`[Updater] Retry attempt ${attempt}/${MAX_RETRIES}...`)
+            console.log(`[Updater] Download retry ${attempt}/${MAX_RETRIES - 1}...`)
             set({ retryCount: attempt, progress: 0 })
             await new Promise((resolve) => setTimeout(resolve, 2000))
           }
 
           console.log("[Updater] Starting Android APK download...")
-          let downloaded = 0
-          let contentLength = 0
+          downloaded = 0
+          contentLength = 0
 
           // 创建进度回调 Channel
           const onProgress = new Channel<DownloadProgress>()
@@ -195,7 +200,6 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
               if (contentLength > 0) {
                 const progress = Math.round((downloaded / contentLength) * 100)
                 set({ progress })
-                console.log("[Updater] Download progress:", `${progress}%`)
               }
             } else if (event.event === "Finished") {
               console.log("[Updater] Download finished")
@@ -204,33 +208,62 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
           }
 
           // 下载 APK
-          const apkPath = await invoke<string>("download_apk", {
+          apkPath = await invoke<string>("download_apk", {
             url: available.url,
             onProgress,
           })
           console.log("[Updater] APK downloaded to:", apkPath)
-
-          // 触发安装
-          console.log("[Updater] Installing APK...")
-          await invoke("install_apk", { path: apkPath })
-
-          clearSkippedVersion()
-          set({ downloading: false })
-          return
+          break // 下载成功，跳出重试循环
         } catch (e) {
           lastError = e instanceof Error ? e : new Error(String(e))
-          console.error(`[Updater] Download attempt ${attempt + 1} failed:`, lastError.message)
 
-          if (attempt === MAX_RETRIES) {
-            console.error("[Updater] All retry attempts failed")
-            break
+          // 详细错误日志
+          console.error(`[Updater] Download attempt ${attempt + 1}/${MAX_RETRIES} failed:`, {
+            error: lastError.message,
+            stack: lastError.stack,
+            url: available.url,
+            downloaded: `${downloaded} / ${contentLength} bytes`,
+            progress: contentLength > 0 ? `${Math.round((downloaded / contentLength) * 100)}%` : "unknown",
+            errorType: lastError.constructor.name,
+          })
+
+          if (attempt === MAX_RETRIES - 1) {
+            console.error("[Updater] All download retry attempts failed", {
+              totalAttempts: MAX_RETRIES,
+              lastError: {
+                message: lastError.message,
+                stack: lastError.stack,
+              },
+              url: available.url,
+              version: available.version,
+            })
+            const errorMessage = lastError?.message || "Download failed"
+            set({ error: errorMessage, downloading: false, retryCount: MAX_RETRIES })
+            throw lastError || new Error(errorMessage)
           }
         }
       }
 
-      const errorMessage = lastError?.message || "Download failed"
-      set({ error: errorMessage, downloading: false, retryCount: MAX_RETRIES })
-      throw lastError || new Error(errorMessage)
+      // 阶段 2: 安装 APK（不重试下载）
+      if (apkPath) {
+        try {
+          console.log("[Updater] Installing APK...")
+          await invoke("install_apk", { path: apkPath })
+          clearSkippedVersion()
+          set({ downloading: false })
+        } catch (e) {
+          const installError = e instanceof Error ? e : new Error(String(e))
+          console.error("[Updater] Install failed:", {
+            error: installError.message,
+            stack: installError.stack,
+            apkPath,
+            errorType: installError.constructor.name,
+          })
+          // 安装失败不重新下载，只提示错误
+          set({ error: installError.message, downloading: false })
+          throw installError
+        }
+      }
     } else if (!isAndroidUpdate(available)) {
       // 桌面平台：使用 tauri-plugin-updater
       const attemptDownload = async (): Promise<void> => {

@@ -1,0 +1,13 @@
+"$schema" = "schemas/schema.json"
+
+[[permission]]
+identifier = "allow-install-apk"
+description = "Allows the install_apk command"
+
+[permission.commands]
+allow = ["install_apk"]
+
+[[set]]
+identifier = "default"
+description = "Default permissions for APK Installer plugin"
+permissions = ["allow-install-apk"]
