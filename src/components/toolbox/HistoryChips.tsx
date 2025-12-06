@@ -4,7 +4,7 @@ import { X } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 interface HistoryChipsProps {
-  type: "whois" | "dns"
+  type: "whois" | "dns" | "traceroute"
   onSelect: (item: QueryHistoryItem) => void
   maxItems?: number
 }

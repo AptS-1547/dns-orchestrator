@@ -291,6 +291,34 @@ pub struct DnsLookupRecord {
     pub priority: Option<u16>,
 }
 
+// ============ Traceroute 相关类型 ============
+
+/// Traceroute 单跳结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TracerouteHop {
+    /// 跳数
+    pub hop: u8,
+    /// IP 地址（超时则为 None）
+    pub ip: Option<String>,
+    /// 主机名（可选）
+    pub hostname: Option<String>,
+    /// 往返时间 (ms)，多次探测
+    pub rtt: Vec<f64>,
+}
+
+/// Traceroute 进度事件
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TracerouteProgress {
+    /// 当前跳的结果
+    pub hop: Option<TracerouteHop>,
+    /// 是否已完成
+    pub done: bool,
+    /// 错误信息
+    pub error: Option<String>,
+}
+
 // ============ 导入导出相关类型 ============
 
 /// 单个账号的导出数据（包含凭证）

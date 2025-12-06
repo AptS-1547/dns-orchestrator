@@ -65,7 +65,7 @@ keyring = { version = "3", features = [
     "windows-native",    # Windows
     "sync-secret-service", "crypto-rust"  # Linux/FreeBSD/OpenBSD (DBus Secret Service)
 ] }
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "process", "io-util"] }
 reqwest = { version = "0.12", features = ["json"] }
 log = "0.4"
 futures = "0.3"

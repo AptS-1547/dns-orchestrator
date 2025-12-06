@@ -4,9 +4,10 @@ use hickory_resolver::{
     TokioResolver,
 };
 use regex::Regex;
+use tauri::ipc::Channel;
 use whois_rust::{WhoIs, WhoIsLookupOptions};
 
-use crate::types::{ApiResponse, DnsLookupRecord, WhoisResult};
+use crate::types::{ApiResponse, DnsLookupRecord, TracerouteHop, TracerouteProgress, WhoisResult};
 
 /// 嵌入 WHOIS 服务器配置
 const WHOIS_SERVERS: &str = include_str!("../resources/whois_servers.json");
@@ -390,4 +391,173 @@ pub async fn dns_lookup(
     }
 
     Ok(ApiResponse::success(records))
+}
+
+/// Traceroute 查询
+///
+/// 使用系统 traceroute/tracert 命令，实时推送每跳结果
+/// Android 平台不支持此功能
+#[tauri::command]
+pub async fn traceroute(
+    target: String,
+    on_progress: Channel<TracerouteProgress>,
+) -> Result<ApiResponse<()>, String> {
+    // Android 平台不支持
+    #[cfg(target_os = "android")]
+    {
+        let _ = on_progress;
+        return Err("当前平台不支持 traceroute 功能".to_string());
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        use std::process::Stdio;
+        use tokio::io::{AsyncBufReadExt, BufReader};
+        use tokio::process::Command;
+
+        // 验证目标格式
+        let target = target.trim();
+        if target.is_empty() {
+            return Err("目标地址不能为空".to_string());
+        }
+
+        // 根据平台选择命令
+        let (cmd, args): (&str, Vec<&str>) = if cfg!(target_os = "windows") {
+            ("tracert", vec!["-d", "-w", "3000", target]) // -d 不解析主机名, -w 超时3秒
+        } else {
+            ("traceroute", vec!["-n", "-w", "3", "-q", "1", target]) // -n 不解析, -w 超时3秒, -q 每跳1次探测
+        };
+
+        // 启动子进程
+        let mut child = Command::new(cmd)
+            .args(&args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("启动 {} 失败: {}", cmd, e))?;
+
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| "无法获取命令输出".to_string())?;
+        let mut reader = BufReader::new(stdout);
+        let mut line = String::new();
+
+        // 逐行解析输出
+        loop {
+            line.clear();
+            match reader.read_line(&mut line).await {
+                Ok(0) => break, // EOF
+                Ok(_) => {
+                    if let Some(hop) = parse_traceroute_line(&line) {
+                        let _ = on_progress.send(TracerouteProgress {
+                            hop: Some(hop),
+                            done: false,
+                            error: None,
+                        });
+                    }
+                }
+                Err(_) => break, // 读取错误
+            }
+        }
+
+        // 等待进程结束
+        let status = child.wait().await.map_err(|e| e.to_string())?;
+
+        // 发送完成事件
+        let _ = on_progress.send(TracerouteProgress {
+            hop: None,
+            done: true,
+            error: if status.success() {
+                None
+            } else {
+                Some("traceroute 执行异常".to_string())
+            },
+        });
+
+        Ok(ApiResponse::success(()))
+    }
+}
+
+/// 解析 traceroute 输出行
+///
+/// macOS/Linux 格式:
+///   1  192.168.1.1  1.234 ms  0.987 ms  1.123 ms
+///   2  * * *
+///   3  10.0.0.1  5.678 ms
+///
+/// Windows tracert 格式:
+///   1    <1 ms    <1 ms    <1 ms  192.168.1.1
+///   2     *        *        *     请求超时。
+///   3    10 ms    12 ms    11 ms  10.0.0.1
+#[cfg(not(target_os = "android"))]
+fn parse_traceroute_line(line: &str) -> Option<TracerouteHop> {
+    let line = line.trim();
+    if line.is_empty() {
+        return None;
+    }
+
+    // 跳过标题行（包含 "traceroute" 或 "Tracing"）
+    if line.to_lowercase().contains("traceroute")
+        || line.to_lowercase().contains("tracing")
+        || line.to_lowercase().contains("over a maximum")
+        || line.to_lowercase().contains("hops")
+    {
+        return None;
+    }
+
+    // 尝试解析跳数（行首的数字）
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.is_empty() {
+        return None;
+    }
+
+    // 第一个部分应该是跳数
+    let hop: u8 = parts.first()?.parse().ok()?;
+
+    // 检查是否全是超时 (*)
+    let rest = &parts[1..];
+    let all_timeout = rest.iter().all(|p| *p == "*" || p.contains("超时") || p.contains("timed"));
+
+    if all_timeout {
+        return Some(TracerouteHop {
+            hop,
+            ip: None,
+            hostname: None,
+            rtt: vec![],
+        });
+    }
+
+    // 提取 IP 地址
+    let ip_re = Regex::new(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})").ok()?;
+    let ip = ip_re
+        .captures(line)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().to_string());
+
+    // 提取 RTT 值
+    let rtt_re = Regex::new(r"(\d+(?:\.\d+)?)\s*ms").ok()?;
+    let rtt: Vec<f64> = rtt_re
+        .captures_iter(line)
+        .filter_map(|c| c.get(1))
+        .filter_map(|m| m.as_str().parse().ok())
+        .collect();
+
+    // 处理 Windows 的 "<1 ms" 格式
+    let lt_re = Regex::new(r"<(\d+)\s*ms").ok()?;
+    let mut rtt = rtt;
+    for cap in lt_re.captures_iter(line) {
+        if let Some(m) = cap.get(1) {
+            if let Ok(val) = m.as_str().parse::<f64>() {
+                rtt.push(val);
+            }
+        }
+    }
+
+    Some(TracerouteHop {
+        hop,
+        ip,
+        hostname: None, // 我们使用 -n 参数，不解析主机名
+        rtt,
+    })
 }

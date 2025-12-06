@@ -19,10 +19,25 @@ export interface DnsLookupRecord {
   priority?: number
 }
 
+/** Traceroute 单跳结果 */
+export interface TracerouteHop {
+  hop: number
+  ip: string | null
+  hostname: string | null
+  rtt: number[]
+}
+
+/** Traceroute 进度事件 */
+export interface TracerouteProgress {
+  hop: TracerouteHop | null
+  done: boolean
+  error: string | null
+}
+
 /** 查询历史项 */
 export interface QueryHistoryItem {
   id: string
-  type: "whois" | "dns"
+  type: "whois" | "dns" | "traceroute"
   query: string
   recordType?: string
   timestamp: number

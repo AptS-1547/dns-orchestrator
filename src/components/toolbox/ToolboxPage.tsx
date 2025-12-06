@@ -3,6 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { ArrowLeft, Wrench } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { DnsLookup } from "./DnsLookup"
+import { TracerouteLookup } from "./TracerouteLookup"
 import { WhoisLookup } from "./WhoisLookup"
 
 interface ToolboxPageProps {
@@ -30,6 +31,7 @@ export function ToolboxPage({ onBack }: ToolboxPageProps) {
         <div className="mx-auto max-w-4xl space-y-4 p-4 sm:space-y-6 sm:p-6">
           <WhoisLookup />
           <DnsLookup />
+          <TracerouteLookup />
         </div>
       </ScrollArea>
     </div>

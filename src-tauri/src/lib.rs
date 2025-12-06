@@ -124,6 +124,7 @@ pub fn run() {
         // Toolbox commands
         toolbox::whois_lookup,
         toolbox::dns_lookup,
+        toolbox::traceroute,
     ]);
 
     #[cfg(target_os = "android")]
@@ -147,6 +148,7 @@ pub fn run() {
         // Toolbox commands
         toolbox::whois_lookup,
         toolbox::dns_lookup,
+        toolbox::traceroute,
         // Android updater commands
         updater::check_android_update,
         updater::download_apk,
