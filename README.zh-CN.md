@@ -1,9 +1,10 @@
 # DNS Orchestrator
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/AptS-1547/dns-orchestrator)
+![GitHub Downloads](https://img.shields.io/github/downloads/AptS-1547/dns-orchestrator/total)
 ![Release Workflow](https://github.com/AptS-1547/dns-orchestrator/actions/workflows/release.yml/badge.svg)
 ![License](https://img.shields.io/github/license/AptS-1547/dns-orchestrator)
-![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android-blue)
 
 跨平台桌面应用，统一管理多个 DNS 服务商的域名解析记录。
 
