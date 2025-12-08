@@ -245,6 +245,13 @@ export default {
     enterIpOrDomain: "请输入 IP 地址或域名",
     queryFailed: "查询失败",
     noRecords: "未找到记录",
+    // DNS server
+    dnsServer: "DNS 服务器",
+    systemDefault: "系统默认",
+    custom: "自定义",
+    customDnsPlaceholder: "输入 DNS 服务器 IP",
+    enterCustomDns: "请输入自定义 DNS 服务器地址",
+    usedDnsServer: "使用 DNS 服务器",
     // History
     history: "历史记录",
     noHistory: "暂无查询记录",

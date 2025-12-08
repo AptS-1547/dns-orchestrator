@@ -121,10 +121,7 @@ export function AccountsPage({ onBack }: AccountsPageProps) {
                 <Upload className="mr-2 h-4 w-4" />
                 {t("import.title")}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={openExportDialog}
-                disabled={accounts.length === 0}
-              >
+              <DropdownMenuItem onClick={openExportDialog} disabled={accounts.length === 0}>
                 <Download className="mr-2 h-4 w-4" />
                 {t("export.title")}
               </DropdownMenuItem>

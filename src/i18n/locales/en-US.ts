@@ -250,6 +250,13 @@ export default {
     enterIpOrDomain: "Please enter an IP address or domain",
     queryFailed: "Query failed",
     noRecords: "No records found",
+    // DNS server
+    dnsServer: "DNS Server",
+    systemDefault: "System Default",
+    custom: "Custom",
+    customDnsPlaceholder: "Enter DNS server IP",
+    enterCustomDns: "Please enter custom DNS server address",
+    usedDnsServer: "DNS Server",
     // History
     history: "History",
     noHistory: "No query history",

@@ -96,7 +96,7 @@ pub fn run() {
 
         // 从持久化存储恢复账户
         if let Err(e) = restore_accounts(&state) {
-            log::error!("Failed to restore accounts: {}", e);
+            log::error!("Failed to restore accounts: {e}");
             // 不阻止应用启动，只记录错误
         }
 
@@ -171,7 +171,7 @@ pub fn run() {
 /// 1. 从 Store 加载账户元数据
 /// 2. 一次性从 Keychain 加载所有凭证（只访问一次 Keychain）
 /// 3. 重建 Provider 实例
-/// 4. 注册到 ProviderRegistry
+/// 4. 注册到 `ProviderRegistry`
 fn restore_accounts(state: &AppState) -> crate::error::Result<()> {
     use crate::providers::create_provider;
     use crate::types::AccountStatus;
@@ -190,11 +190,11 @@ fn restore_accounts(state: &AppState) -> crate::error::Result<()> {
     let all_credentials = match state.credential_store.load_all() {
         Ok(creds) => creds,
         Err(e) => {
-            log::error!("Failed to load credentials from Keychain: {}", e);
+            log::error!("Failed to load credentials from Keychain: {e}");
             // 标记所有账户为错误状态
-            for account in accounts.iter_mut() {
+            for account in &mut accounts {
                 account.status = Some(AccountStatus::Error);
-                account.error = Some(format!("凭证加载失败: {}", e));
+                account.error = Some(format!("凭证加载失败: {e}"));
             }
             futures::executor::block_on(async {
                 let mut accounts_guard = state.accounts.write().await;
@@ -208,20 +208,17 @@ fn restore_accounts(state: &AppState) -> crate::error::Result<()> {
     let mut restored_count = 0;
     let mut failed_count = 0;
 
-    for account in accounts.iter_mut() {
+    for account in &mut accounts {
         // 3.1 从已加载的凭证中获取该账户的凭证
-        let credentials = match all_credentials.get(&account.id) {
-            Some(creds) => creds.clone(),
-            None => {
-                log::warn!(
-                    "No credentials found for account {}: credential not in store",
-                    account.id
-                );
-                account.status = Some(AccountStatus::Error);
-                account.error = Some("凭证未找到".to_string());
-                failed_count += 1;
-                continue;
-            }
+        let credentials = if let Some(creds) = all_credentials.get(&account.id) { creds.clone() } else {
+            log::warn!(
+                "No credentials found for account {}: credential not in store",
+                account.id
+            );
+            account.status = Some(AccountStatus::Error);
+            account.error = Some("凭证未找到".to_string());
+            failed_count += 1;
+            continue;
         };
 
         // 3.2 确定 provider 类型
@@ -242,7 +239,7 @@ fn restore_accounts(state: &AppState) -> crate::error::Result<()> {
                     e
                 );
                 account.status = Some(AccountStatus::Error);
-                account.error = Some(format!("Provider 创建失败: {}", e));
+                account.error = Some(format!("Provider 创建失败: {e}"));
                 failed_count += 1;
                 continue;
             }
@@ -268,9 +265,7 @@ fn restore_accounts(state: &AppState) -> crate::error::Result<()> {
     });
 
     log::info!(
-        "Account restoration complete: {} succeeded, {} failed",
-        restored_count,
-        failed_count
+        "Account restoration complete: {restored_count} succeeded, {failed_count} failed"
     );
 
     if restored_count == 0 && failed_count > 0 {

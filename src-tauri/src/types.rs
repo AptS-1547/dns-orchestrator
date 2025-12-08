@@ -291,6 +291,16 @@ pub struct DnsLookupRecord {
     pub priority: Option<u16>,
 }
 
+/// DNS 查询结果（包含 nameserver 信息）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsLookupResult {
+    /// 使用的 DNS 服务器
+    pub nameserver: String,
+    /// 查询记录列表
+    pub records: Vec<DnsLookupRecord>,
+}
+
 /// IP 地理位置信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

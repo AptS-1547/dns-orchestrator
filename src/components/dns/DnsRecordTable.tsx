@@ -372,9 +372,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
                     }
                   }}
                 />
-                <span className="text-sm text-muted-foreground">
-                  {t("common.selectAll")}
-                </span>
+                <span className="text-sm text-muted-foreground">{t("common.selectAll")}</span>
               </div>
             )}
             {sortedRecords.length === 0 ? (

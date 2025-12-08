@@ -68,7 +68,7 @@ impl ProviderRegistry {
         }
     }
 
-    /// 注册提供商实例 (按 account_id)
+    /// 注册提供商实例 (按 `account_id`)
     pub async fn register(&self, account_id: String, provider: Arc<dyn DnsProvider>) {
         self.providers.write().await.insert(account_id, provider);
     }
@@ -83,7 +83,7 @@ impl ProviderRegistry {
         self.providers.read().await.get(account_id).cloned()
     }
 
-    /// 获取所有已注册的 account_id
+    /// 获取所有已注册的 `account_id`
     pub async fn list_account_ids(&self) -> Vec<String> {
         self.providers.read().await.keys().cloned().collect()
     }

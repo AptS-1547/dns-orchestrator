@@ -60,11 +60,7 @@ export function DnsRecordCard({
 
   return (
     <Card
-      className={cn(
-        "p-3",
-        isSelectMode && "cursor-pointer",
-        isSelected && "ring-2 ring-primary"
-      )}
+      className={cn("p-3", isSelectMode && "cursor-pointer", isSelected && "ring-2 ring-primary")}
       onClick={isSelectMode ? onToggleSelect : undefined}
     >
       {/* 第一行：checkbox + type + name + actions */}

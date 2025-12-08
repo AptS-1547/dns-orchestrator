@@ -19,6 +19,14 @@ export interface DnsLookupRecord {
   priority?: number
 }
 
+/** DNS 查询结果（包含 nameserver 信息） */
+export interface DnsLookupResult {
+  /** 使用的 DNS 服务器 */
+  nameserver: string
+  /** 查询记录列表 */
+  records: DnsLookupRecord[]
+}
+
 /** IP 地理位置信息 */
 export interface IpGeoInfo {
   ip: string

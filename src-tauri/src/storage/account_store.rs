@@ -10,7 +10,7 @@ const ACCOUNTS_KEY: &str = "accounts";
 /// 账户元数据存储
 ///
 /// 负责账户元数据的持久化，使用 Tauri Store 插件。
-/// 敏感凭证仍然由 KeychainStore 单独管理。
+/// 敏感凭证仍然由 `KeychainStore` 单独管理。
 pub struct AccountStore;
 
 impl AccountStore {
@@ -18,7 +18,7 @@ impl AccountStore {
     pub fn save_accounts(app: &AppHandle, accounts: &[Account]) -> Result<()> {
         let store = app
             .store(STORE_FILE_NAME)
-            .map_err(|e| DnsError::SerializationError(format!("Failed to access store: {}", e)))?;
+            .map_err(|e| DnsError::SerializationError(format!("Failed to access store: {e}")))?;
 
         // 将账户列表序列化为 JSON
         let accounts_json = serde_json::to_value(accounts)
@@ -30,7 +30,7 @@ impl AccountStore {
         // 立即持久化到磁盘
         store
             .save()
-            .map_err(|e| DnsError::SerializationError(format!("Failed to save store: {}", e)))?;
+            .map_err(|e| DnsError::SerializationError(format!("Failed to save store: {e}")))?;
 
         log::info!("Saved {} accounts to store", accounts.len());
         Ok(())
@@ -40,15 +40,12 @@ impl AccountStore {
     pub fn load_accounts(app: &AppHandle) -> Result<Vec<Account>> {
         let store = app
             .store(STORE_FILE_NAME)
-            .map_err(|e| DnsError::SerializationError(format!("Failed to access store: {}", e)))?;
+            .map_err(|e| DnsError::SerializationError(format!("Failed to access store: {e}")))?;
 
         // 从 store 获取账户数据
-        let accounts_value = match store.get(ACCOUNTS_KEY) {
-            Some(value) => value,
-            None => {
-                log::info!("No accounts found in store, returning empty list");
-                return Ok(Vec::new());
-            }
+        let accounts_value = if let Some(value) = store.get(ACCOUNTS_KEY) { value } else {
+            log::info!("No accounts found in store, returning empty list");
+            return Ok(Vec::new());
         };
 
         // 反序列化
@@ -64,7 +61,7 @@ impl AccountStore {
     /// 实际上是保存更新后的账户列表（已移除指定账户）
     pub fn delete_account(app: &AppHandle, account_id: &str, accounts: &[Account]) -> Result<()> {
         Self::save_accounts(app, accounts)?;
-        log::info!("Deleted account {} from store", account_id);
+        log::info!("Deleted account {account_id} from store");
         Ok(())
     }
 

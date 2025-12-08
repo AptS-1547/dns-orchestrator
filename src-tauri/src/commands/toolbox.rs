@@ -1,15 +1,16 @@
 use futures::future::join_all;
 use hickory_resolver::{
-    config::{ResolverConfig, ResolverOpts},
+    config::{NameServerConfigGroup, ResolverConfig, ResolverOpts},
     name_server::TokioConnectionProvider,
     TokioResolver,
 };
 use regex::Regex;
+use std::net::IpAddr;
 use whois_rust::{WhoIs, WhoIsLookupOptions};
 
 use crate::types::{
-    ApiResponse, CertChainItem, DnsLookupRecord, IpGeoInfo, IpLookupResult, SslCertInfo,
-    SslCheckResult, WhoisResult,
+    ApiResponse, CertChainItem, DnsLookupRecord, DnsLookupResult, IpGeoInfo, IpLookupResult,
+    SslCertInfo, SslCheckResult, WhoisResult,
 };
 
 /// 嵌入 WHOIS 服务器配置
@@ -158,11 +159,59 @@ fn extract_status(text: &str) -> Vec<String> {
 pub async fn dns_lookup(
     domain: String,
     record_type: String,
-) -> Result<ApiResponse<Vec<DnsLookupRecord>>, String> {
-    let provider = TokioConnectionProvider::default();
-    let resolver = TokioResolver::builder_with_config(ResolverConfig::default(), provider)
-        .with_options(ResolverOpts::default())
-        .build();
+    nameserver: Option<String>,
+) -> Result<ApiResponse<DnsLookupResult>, String> {
+    // 获取系统默认 DNS 服务器地址的辅助函数
+    fn get_system_dns() -> String {
+        let config = ResolverConfig::default();
+        let servers: Vec<String> = config
+            .name_servers()
+            .iter()
+            .map(|ns| ns.socket_addr.ip().to_string())
+            .collect();
+        if servers.is_empty() {
+            "系统默认".to_string()
+        } else {
+            servers.join(", ")
+        }
+    }
+
+    // 根据 nameserver 参数决定使用自定义还是系统默认
+    let (resolver, used_nameserver) = if let Some(ref ns) = nameserver {
+        if ns.is_empty() {
+            // 空字符串视为系统默认
+            let system_dns = get_system_dns();
+            let provider = TokioConnectionProvider::default();
+            let resolver = TokioResolver::builder_with_config(ResolverConfig::default(), provider)
+                .with_options(ResolverOpts::default())
+                .build();
+            (resolver, system_dns)
+        } else {
+            // 解析自定义 nameserver 地址
+            let ns_ip: IpAddr = ns
+                .parse()
+                .map_err(|_| format!("无效的 DNS 服务器地址: {}", ns))?;
+
+            let config = ResolverConfig::from_parts(
+                None,
+                vec![],
+                NameServerConfigGroup::from_ips_clear(&[ns_ip], 53, true),
+            );
+            let provider = TokioConnectionProvider::default();
+            let resolver = TokioResolver::builder_with_config(config, provider)
+                .with_options(ResolverOpts::default())
+                .build();
+            (resolver, ns.clone())
+        }
+    } else {
+        // 使用系统默认
+        let system_dns = get_system_dns();
+        let provider = TokioConnectionProvider::default();
+        let resolver = TokioResolver::builder_with_config(ResolverConfig::default(), provider)
+            .with_options(ResolverOpts::default())
+            .build();
+        (resolver, system_dns)
+    };
 
     let mut records: Vec<DnsLookupRecord> = Vec::new();
     let record_type_upper = record_type.to_uppercase();
@@ -380,19 +429,20 @@ pub async fn dns_lookup(
             let types = vec![
                 "A", "AAAA", "CNAME", "MX", "TXT", "NS", "SOA", "SRV", "CAA", "PTR",
             ];
+            let ns = nameserver.clone();
             let futures: Vec<_> = types
                 .into_iter()
-                .map(|t| Box::pin(dns_lookup(domain.clone(), t.to_string())))
+                .map(|t| Box::pin(dns_lookup(domain.clone(), t.to_string(), ns.clone())))
                 .collect();
 
             let results = join_all(futures).await;
             for result in results {
                 if let Ok(ApiResponse {
-                    data: Some(mut type_records),
+                    data: Some(lookup_result),
                     ..
                 }) = result
                 {
-                    records.append(&mut type_records);
+                    records.extend(lookup_result.records);
                 }
             }
         }
@@ -401,38 +451,50 @@ pub async fn dns_lookup(
         }
     }
 
-    Ok(ApiResponse::success(records))
+    Ok(ApiResponse::success(DnsLookupResult {
+        nameserver: used_nameserver,
+        records,
+    }))
 }
 
-/// ip-api.com 响应结构
+/// ipwhois.io 响应结构
 #[derive(serde::Deserialize)]
-struct IpApiResponse {
-    status: String,
+struct IpWhoisResponse {
+    ip: String,
+    success: bool,
     message: Option<String>,
-    query: Option<String>,
+    #[serde(rename = "type")]
+    ip_type: Option<String>,
     country: Option<String>,
-    #[serde(rename = "countryCode")]
     country_code: Option<String>,
     region: Option<String>,
     city: Option<String>,
-    lat: Option<f64>,
-    lon: Option<f64>,
-    timezone: Option<String>,
-    isp: Option<String>,
+    latitude: Option<f64>,
+    longitude: Option<f64>,
+    timezone: Option<IpWhoisTimezone>,
+    connection: Option<IpWhoisConnection>,
+}
+
+#[derive(serde::Deserialize)]
+struct IpWhoisTimezone {
+    id: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct IpWhoisConnection {
+    asn: Option<i64>,
     org: Option<String>,
-    #[serde(rename = "as")]
-    as_number: Option<String>,
-    asname: Option<String>,
+    isp: Option<String>,
 }
 
 /// 查询单个 IP 的地理位置
 async fn lookup_single_ip(ip: &str, client: &reqwest::Client) -> Result<IpGeoInfo, String> {
     let url = format!(
-        "http://ip-api.com/json/{}?fields=status,message,query,country,countryCode,region,city,lat,lon,timezone,isp,org,as,asname",
+        "https://ipwho.is/{}?fields=ip,success,message,type,country,country_code,region,city,latitude,longitude,timezone,connection",
         ip
     );
 
-    let response: IpApiResponse = client
+    let response: IpWhoisResponse = client
         .get(&url)
         .send()
         .await
@@ -441,31 +503,50 @@ async fn lookup_single_ip(ip: &str, client: &reqwest::Client) -> Result<IpGeoInf
         .await
         .map_err(|e| format!("解析失败: {}", e))?;
 
-    if response.status != "success" {
-        return Err(response.message.unwrap_or_else(|| "查询失败".to_string()));
+    if !response.success {
+        let error_msg = match response.message.as_deref() {
+            Some("You've hit the monthly limit") => "IP 查询服务已达本月限额，请稍后再试".to_string(),
+            Some("Invalid IP address") => "无效的 IP 地址".to_string(),
+            Some("Reserved range") => "该 IP 属于保留地址段，无法查询".to_string(),
+            Some(msg) => format!("查询失败: {}", msg),
+            None => "查询失败".to_string(),
+        };
+        return Err(error_msg);
     }
 
-    let actual_ip = response.query.unwrap_or_else(|| ip.to_string());
-    let ip_version = if actual_ip.contains(':') {
-        "IPv6"
-    } else {
-        "IPv4"
-    };
+    let ip_version = response.ip_type.unwrap_or_else(|| {
+        if response.ip.contains(':') {
+            "IPv6"
+        } else {
+            "IPv4"
+        }
+        .to_string()
+    });
+
+    let (isp, org, asn) = response.connection.map_or((None, None, None), |conn| {
+        (
+            conn.isp,
+            conn.org.clone(),
+            conn.asn.map(|n| format!("AS{}", n)),
+        )
+    });
+
+    let timezone = response.timezone.and_then(|tz| tz.id);
 
     Ok(IpGeoInfo {
-        ip: actual_ip,
-        ip_version: ip_version.to_string(),
+        ip: response.ip,
+        ip_version,
         country: response.country,
         country_code: response.country_code,
         region: response.region,
         city: response.city,
-        latitude: response.lat,
-        longitude: response.lon,
-        timezone: response.timezone,
-        isp: response.isp,
-        org: response.org,
-        asn: response.as_number,
-        as_name: response.asname,
+        latitude: response.latitude,
+        longitude: response.longitude,
+        timezone,
+        isp,
+        org: org.clone(),
+        asn,
+        as_name: org,
     })
 }
 

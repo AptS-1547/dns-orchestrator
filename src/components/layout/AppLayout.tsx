@@ -100,9 +100,7 @@ export function AppLayout({
         <div
           className={cn(
             "h-full",
-            isCollapsedRange
-              ? "absolute inset-y-0 left-0 z-50"
-              : "absolute inset-y-0 left-0"
+            isCollapsedRange ? "absolute inset-y-0 left-0 z-50" : "absolute inset-y-0 left-0"
           )}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}

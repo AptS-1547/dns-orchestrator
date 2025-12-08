@@ -15,9 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { DnsLookupRecord, DnsLookupType } from "@/types"
+import type { DnsLookupResult, DnsLookupType } from "@/types"
 import { DNS_RECORD_TYPES } from "@/types"
-import { Loader2, Search } from "lucide-react"
+import { Loader2, Search, Server } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
@@ -25,16 +25,27 @@ import { HistoryChips } from "./HistoryChips"
 import { useToolboxQuery } from "./hooks/useToolboxQuery"
 import { CopyableText, ToolCard } from "./shared"
 
+// DNS 服务器选项
+const DNS_SERVERS = [
+  { label: "toolbox.systemDefault", value: "system", isRaw: false },
+  { label: "Google (8.8.8.8)", value: "8.8.8.8", isRaw: true },
+  { label: "Cloudflare (1.1.1.1)", value: "1.1.1.1", isRaw: true },
+  { label: "AliDNS (223.5.5.5)", value: "223.5.5.5", isRaw: true },
+  { label: "Tencent (119.29.29.29)", value: "119.29.29.29", isRaw: true },
+  { label: "toolbox.custom", value: "custom", isRaw: false },
+] as const
+
 export function DnsLookup() {
   const { t } = useTranslation()
   const [domain, setDomain] = useState("")
   const [recordType, setRecordType] = useState<DnsLookupType>("ALL")
+  const [dnsServer, setDnsServer] = useState("system")
+  const [customDns, setCustomDns] = useState("")
 
-  const {
-    isLoading,
-    result: results,
-    execute,
-  } = useToolboxQuery<{ domain: string; recordType: DnsLookupType }, DnsLookupRecord[]>({
+  const { isLoading, result, execute } = useToolboxQuery<
+    { domain: string; recordType: DnsLookupType; nameserver: string | null },
+    DnsLookupResult
+  >({
     commandName: "dns_lookup",
     historyType: "dns",
     getHistoryQuery: (params) => params.domain,
@@ -47,8 +58,20 @@ export function DnsLookup() {
       return
     }
 
-    const data = await execute({ domain: domain.trim(), recordType })
-    if (data && data.length === 0) {
+    // 计算实际使用的 nameserver
+    let nameserver: string | null = null
+    if (dnsServer === "custom") {
+      if (!customDns.trim()) {
+        toast.error(t("toolbox.enterCustomDns"))
+        return
+      }
+      nameserver = customDns.trim()
+    } else if (dnsServer !== "system") {
+      nameserver = dnsServer
+    }
+
+    const data = await execute({ domain: domain.trim(), recordType, nameserver })
+    if (data && data.records.length === 0) {
       toast.info(t("toolbox.noRecords"))
     }
   }
@@ -59,9 +82,11 @@ export function DnsLookup() {
     }
   }
 
+  const records = result?.records ?? []
+
   return (
     <ToolCard title={t("toolbox.dnsLookup")}>
-      {/* 查询输入 - DNS 有特殊的内嵌 Select，不使用 QueryInput */}
+      {/* 查询输入 */}
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="flex flex-1 items-center rounded-md border bg-background">
           <Input
@@ -99,6 +124,38 @@ export function DnsLookup() {
         </Button>
       </div>
 
+      {/* DNS 服务器选择 */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <Server className="h-4 w-4" />
+          <span>{t("toolbox.dnsServer")}:</span>
+        </div>
+        <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+          <Select value={dnsServer} onValueChange={setDnsServer} disabled={isLoading}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder={t("toolbox.systemDefault")} />
+            </SelectTrigger>
+            <SelectContent>
+              {DNS_SERVERS.map((server) => (
+                <SelectItem key={server.value} value={server.value}>
+                  {server.isRaw ? server.label : t(server.label)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {dnsServer === "custom" && (
+            <Input
+              placeholder={t("toolbox.customDnsPlaceholder")}
+              value={customDns}
+              onChange={(e) => setCustomDns(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading}
+              className="flex-1"
+            />
+          )}
+        </div>
+      </div>
+
       {/* 历史记录 */}
       <HistoryChips
         type="dns"
@@ -110,10 +167,20 @@ export function DnsLookup() {
         }}
       />
 
+      {/* 显示使用的 DNS 服务器 */}
+      {result && (
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <Server className="h-4 w-4" />
+          <span>
+            {t("toolbox.usedDnsServer")}: <span className="font-mono">{result.nameserver}</span>
+          </span>
+        </div>
+      )}
+
       {/* 查询结果 - 移动端卡片 */}
-      {results && results.length > 0 && (
+      {records.length > 0 && (
         <div className="space-y-2 sm:hidden">
-          {results.map((record, index) => (
+          {records.map((record, index) => (
             <CopyableText key={index} value={record.value} className="block">
               <div className="rounded-lg border bg-card p-3">
                 <div className="mb-2 flex items-center gap-2">
@@ -138,7 +205,7 @@ export function DnsLookup() {
       )}
 
       {/* 查询结果 - 桌面端 Table */}
-      {results && results.length > 0 && (
+      {records.length > 0 && (
         <div className="hidden rounded-md border sm:block">
           <Table>
             <TableHeader>
@@ -151,7 +218,7 @@ export function DnsLookup() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {results.map((record, index) => (
+              {records.map((record, index) => (
                 <TableRow key={index}>
                   <TableCell>
                     <span className="rounded bg-primary/10 px-2 py-0.5 font-medium text-primary text-xs">
