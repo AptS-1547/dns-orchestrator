@@ -1,17 +1,5 @@
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  CheckSquare,
-  Filter,
-  Loader2,
-  Plus,
-  RefreshCw,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useDebouncedCallback } from "use-debounce"
 import {
@@ -24,16 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -42,25 +21,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { TIMING } from "@/constants"
 import { useIsMobile } from "@/hooks/useMediaQuery"
-import { cn } from "@/lib/utils"
 import { useDnsStore } from "@/stores"
 import type { DnsRecord } from "@/types"
+import { DnsBatchActionBar } from "./DnsBatchActionBar"
 import { DnsRecordCard } from "./DnsRecordCard"
 import { DnsRecordForm } from "./DnsRecordForm"
 import { DnsRecordRow } from "./DnsRecordRow"
-
-type SortField = "type" | "name" | "value" | "ttl"
-type SortDirection = "asc" | "desc" | null
+import { DnsTableToolbar } from "./DnsTableToolbar"
+import { type SortField, useDnsTableSort } from "./useDnsTableSort"
 
 interface DnsRecordTableProps {
   accountId: string
   domainId: string
   supportsProxy: boolean
 }
-
-// 可用的记录类型列表
-const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"]
 
 export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecordTableProps) {
   const { t } = useTranslation()
@@ -73,12 +49,13 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
     hasMore,
     totalCount,
     currentDomainId,
-    keyword: storeKeyword,
-    recordType: storeRecordType,
+    keyword,
+    recordType,
+    setKeyword,
+    setRecordType,
     fetchRecords,
     fetchMoreRecords,
     deleteRecord,
-    // 批量选择
     selectedRecordIds,
     isSelectMode,
     isBatchDeleting,
@@ -88,18 +65,16 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
     clearSelection,
     batchDeleteRecords,
   } = useDnsStore()
+
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingRecord, setEditingRecord] = useState<DnsRecord | null>(null)
   const [deletingRecord, setDeletingRecord] = useState<DnsRecord | null>(null)
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false)
-  const [sortField, setSortField] = useState<SortField | null>(null)
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
-  // 本地搜索输入状态（用于即时显示）
-  const [searchInput, setSearchInput] = useState("")
-  // 选中的类型（本地状态）
-  const [selectedType, setSelectedType] = useState("")
   const sentinelRef = useRef<HTMLElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  // 使用排序 hook
+  const { sortField, sortDirection, sortedRecords, handleSort } = useDnsTableSort(records)
 
   // 统一的 ref callback
   const setSentinelRef = useCallback((node: HTMLElement | null) => {
@@ -107,36 +82,33 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
   }, [])
 
   // 防抖搜索
-  const debouncedSearch = useDebouncedCallback((keyword: string) => {
-    fetchRecords(accountId, domainId, keyword, selectedType)
-  }, 300)
+  const debouncedSearch = useDebouncedCallback((searchKeyword: string) => {
+    fetchRecords(accountId, domainId, searchKeyword, recordType)
+  }, TIMING.DEBOUNCE_DELAY)
 
   // 处理搜索输入变化
   const handleSearchChange = (value: string) => {
-    setSearchInput(value)
+    setKeyword(value)
     debouncedSearch(value)
   }
 
   // 处理类型选择变化
   const handleTypeChange = (type: string) => {
-    const newType = selectedType === type ? "" : type
-    setSelectedType(newType)
-    fetchRecords(accountId, domainId, searchInput, newType)
+    const newType = recordType === type ? "" : type
+    setRecordType(newType)
+    fetchRecords(accountId, domainId, keyword, newType)
   }
 
   // 清除所有筛选
   const clearFilters = () => {
-    setSearchInput("")
-    setSelectedType("")
+    setKeyword("")
+    setRecordType("")
     fetchRecords(accountId, domainId, "", "")
   }
 
   useEffect(() => {
-    // 初始加载时重置本地状态
-    setSearchInput(storeKeyword)
-    setSelectedType(storeRecordType)
     fetchRecords(accountId, domainId)
-  }, [accountId, domainId]) // 只在账户/域名变化时重新加载
+  }, [accountId, domainId, fetchRecords])
 
   // 无限滚动 IntersectionObserver
   const handleObserver = useCallback(
@@ -163,64 +135,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
     return () => observer.disconnect()
   }, [handleObserver])
 
-  // 处理排序点击
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      // 同一列：asc -> desc -> null 循环
-      if (sortDirection === "asc") {
-        setSortDirection("desc")
-      } else if (sortDirection === "desc") {
-        setSortDirection(null)
-        setSortField(null)
-      } else {
-        setSortDirection("asc")
-      }
-    } else {
-      // 新列：从 asc 开始
-      setSortField(field)
-      setSortDirection("asc")
-    }
-  }
-
-  const hasActiveFilters = searchInput || selectedType
-
-  // 排序后的记录（搜索过滤已由后端完成）
-  const sortedRecords = useMemo(() => {
-    if (!(sortField && sortDirection)) return records
-
-    return [...records].sort((a, b) => {
-      let aVal: string | number
-      let bVal: string | number
-
-      switch (sortField) {
-        case "type":
-          aVal = a.type
-          bVal = b.type
-          break
-        case "name":
-          aVal = a.name
-          bVal = b.name
-          break
-        case "value":
-          aVal = a.value
-          bVal = b.value
-          break
-        case "ttl":
-          aVal = a.ttl
-          bVal = b.ttl
-          break
-        default:
-          return 0
-      }
-
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return sortDirection === "asc" ? aVal - bVal : bVal - aVal
-      }
-
-      const comparison = String(aVal).localeCompare(String(bVal))
-      return sortDirection === "asc" ? comparison : -comparison
-    })
-  }, [records, sortField, sortDirection])
+  const hasActiveFilters = !!(keyword || recordType)
 
   // 排序图标组件
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -233,8 +148,14 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
     return <ArrowDown className="ml-1 h-3 w-3" />
   }
 
-  const handleDelete = (record: DnsRecord) => {
-    setDeletingRecord(record)
+  const handleDelete = (record: DnsRecord) => setDeletingRecord(record)
+  const handleEdit = (record: DnsRecord) => {
+    setEditingRecord(record)
+    setShowAddForm(true)
+  }
+  const handleFormClose = () => {
+    setShowAddForm(false)
+    setEditingRecord(null)
   }
 
   const confirmDelete = async () => {
@@ -243,18 +164,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
     setDeletingRecord(null)
   }
 
-  const handleEdit = (record: DnsRecord) => {
-    setEditingRecord(record)
-    setShowAddForm(true)
-  }
-
-  const handleFormClose = () => {
-    setShowAddForm(false)
-    setEditingRecord(null)
-  }
-
   // 只有域名切换时才显示全屏 loading
-  // 搜索时不显示全屏 loading（保持列表可见）
   const isInitialLoading = isLoading && currentDomainId !== domainId
 
   if (isInitialLoading) {
@@ -268,269 +178,61 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 border-b bg-muted/30 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => fetchRecords(accountId, domainId, searchInput, selectedType)}
-              disabled={isLoading}
-            >
-              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
-            </Button>
-            <span className="text-muted-foreground text-sm">{t("common.total")}</span>
-            <Badge variant="secondary">{totalCount}</Badge>
-            <span className="text-muted-foreground text-sm">{t("common.records")}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={isSelectMode ? "secondary" : "outline"}
-              size="sm"
-              onClick={toggleSelectMode}
-              disabled={records.length === 0}
-            >
-              <CheckSquare className="mr-2 h-4 w-4" />
-              {isSelectMode ? t("common.cancel") : t("dns.batchSelect")}
-            </Button>
-            {!isSelectMode && (
-              <Button size="sm" onClick={() => setShowAddForm(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t("dns.addRecord")}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* 搜索和筛选 */}
-        <div className="flex items-center gap-2">
-          <div className="relative max-w-sm flex-1">
-            <Search className="-translate-y-1/2 absolute top-1/2 left-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t("dns.searchPlaceholder")}
-              value={searchInput}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="h-8 pr-8 pl-8"
-            />
-            {searchInput && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="-translate-y-1/2 absolute top-1/2 right-1 h-6 w-6"
-                onClick={() => handleSearchChange("")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8">
-                <Filter className="mr-2 h-4 w-4" />
-                {selectedType || t("common.type")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {RECORD_TYPES.map((type) => (
-                <DropdownMenuCheckboxItem
-                  key={type}
-                  checked={selectedType === type}
-                  onCheckedChange={() => handleTypeChange(type)}
-                >
-                  {type}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" className="h-8" onClick={clearFilters}>
-              <X className="mr-1 h-4 w-4" />
-              {t("common.clearFilter")}
-            </Button>
-          )}
-        </div>
-      </div>
+      <DnsTableToolbar
+        totalCount={totalCount}
+        isLoading={isLoading}
+        keyword={keyword}
+        recordType={recordType}
+        hasRecords={records.length > 0}
+        isSelectMode={isSelectMode}
+        onSearchChange={handleSearchChange}
+        onTypeChange={handleTypeChange}
+        onClearFilters={clearFilters}
+        onRefresh={() => fetchRecords(accountId, domainId, keyword, recordType)}
+        onToggleSelectMode={toggleSelectMode}
+        onAdd={() => setShowAddForm(true)}
+      />
 
       {/* Table / Card List */}
       <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-auto">
         {isMobile ? (
-          // 移动端：卡片列表
-          <div className="flex flex-col gap-3 p-4">
-            {/* 选择模式下显示全选行 */}
-            {isSelectMode && sortedRecords.length > 0 && (
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
-                <Checkbox
-                  checked={sortedRecords.every((r) => selectedRecordIds.has(r.id))}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      selectAllRecords()
-                    } else {
-                      clearSelection()
-                    }
-                  }}
-                />
-                <span className="text-sm text-muted-foreground">{t("common.selectAll")}</span>
-              </div>
-            )}
-            {sortedRecords.length === 0 ? (
-              isLoading ? (
-                <div className="py-8 text-center">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  {hasActiveFilters ? t("common.noMatch") : t("dns.noRecords")}
-                </div>
-              )
-            ) : (
-              <>
-                {sortedRecords.map((record) => (
-                  <DnsRecordCard
-                    key={record.id}
-                    record={record}
-                    onEdit={() => handleEdit(record)}
-                    onDelete={() => handleDelete(record)}
-                    disabled={isDeleting}
-                    showProxy={supportsProxy}
-                    isSelectMode={isSelectMode}
-                    isSelected={selectedRecordIds.has(record.id)}
-                    onToggleSelect={() => toggleRecordSelection(record.id)}
-                  />
-                ))}
-                {/* 无限滚动触发元素 */}
-                <div ref={setSentinelRef} className="h-1" />
-                {isLoadingMore && (
-                  <div className="py-4 text-center">
-                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <MobileCardList
+            records={sortedRecords}
+            isLoading={isLoading}
+            isLoadingMore={isLoadingMore}
+            isDeleting={isDeleting}
+            isSelectMode={isSelectMode}
+            selectedRecordIds={selectedRecordIds}
+            hasActiveFilters={hasActiveFilters}
+            supportsProxy={supportsProxy}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleSelect={toggleRecordSelection}
+            onSelectAll={selectAllRecords}
+            onClearSelection={clearSelection}
+            setSentinelRef={setSentinelRef}
+          />
         ) : (
-          // 桌面端：表格
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-background">
-              <TableRow>
-                {isSelectMode && (
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={
-                        sortedRecords.length > 0 &&
-                        sortedRecords.every((r) => selectedRecordIds.has(r.id))
-                      }
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          selectAllRecords()
-                        } else {
-                          clearSelection()
-                        }
-                      }}
-                    />
-                  </TableHead>
-                )}
-                <TableHead
-                  className="w-16 cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort("type")}
-                >
-                  <div className="flex items-center">
-                    {t("common.type")}
-                    <SortIcon field="type" />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="w-28 cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort("name")}
-                >
-                  <div className="flex items-center">
-                    {t("dns.name")}
-                    <SortIcon field="name" />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort("value")}
-                >
-                  <div className="flex items-center">
-                    {t("dns.value")}
-                    <SortIcon field="value" />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="w-20 cursor-pointer select-none hover:bg-muted/50"
-                  onClick={() => handleSort("ttl")}
-                >
-                  <div className="flex items-center">
-                    {t("dns.ttl")}
-                    <SortIcon field="ttl" />
-                  </div>
-                </TableHead>
-                {supportsProxy && <TableHead className="w-12">{t("dns.proxy")}</TableHead>}
-                <TableHead className="w-16 text-right">{t("dns.actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedRecords.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={supportsProxy ? 6 : 5 + (isSelectMode ? 1 : 0)}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                    ) : hasActiveFilters ? (
-                      t("common.noMatch")
-                    ) : (
-                      t("dns.noRecords")
-                    )}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                <>
-                  {sortedRecords.map((record) => (
-                    <TableRow key={record.id}>
-                      {isSelectMode && (
-                        <TableCell className="w-10">
-                          <Checkbox
-                            checked={selectedRecordIds.has(record.id)}
-                            onCheckedChange={() => toggleRecordSelection(record.id)}
-                          />
-                        </TableCell>
-                      )}
-                      <DnsRecordRow
-                        record={record}
-                        onEdit={() => handleEdit(record)}
-                        onDelete={() => handleDelete(record)}
-                        disabled={isDeleting || isSelectMode}
-                        showProxy={supportsProxy}
-                        asFragment
-                      />
-                    </TableRow>
-                  ))}
-                  {/* 无限滚动触发行 */}
-                  <TableRow ref={setSentinelRef} className="h-1 border-0">
-                    <TableCell
-                      colSpan={supportsProxy ? 6 : 5 + (isSelectMode ? 1 : 0)}
-                      className="p-0"
-                    />
-                  </TableRow>
-                  {isLoadingMore && (
-                    <TableRow className="border-0">
-                      <TableCell
-                        colSpan={supportsProxy ? 6 : 5 + (isSelectMode ? 1 : 0)}
-                        className="py-4 text-center"
-                      >
-                        <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
-              )}
-            </TableBody>
-          </Table>
+          <DesktopTable
+            records={sortedRecords}
+            isLoading={isLoading}
+            isLoadingMore={isLoadingMore}
+            isDeleting={isDeleting}
+            isSelectMode={isSelectMode}
+            selectedRecordIds={selectedRecordIds}
+            hasActiveFilters={hasActiveFilters}
+            supportsProxy={supportsProxy}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleSelect={toggleRecordSelection}
+            onSelectAll={selectAllRecords}
+            onClearSelection={clearSelection}
+            setSentinelRef={setSentinelRef}
+            SortIcon={SortIcon}
+          />
         )}
       </div>
 
@@ -594,29 +296,255 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
       </AlertDialog>
 
       {/* Batch Action Bar */}
-      {isSelectMode && selectedRecordIds.size > 0 && (
-        <div className="fixed inset-x-0 bottom-4 z-50 mx-auto flex w-fit items-center gap-3 rounded-full border bg-background px-4 py-2 shadow-lg">
-          <span className="text-muted-foreground text-sm">
-            {t("dns.selectedCount", { count: selectedRecordIds.size })}
-          </span>
-          <Button variant="ghost" size="sm" onClick={clearSelection}>
-            {t("common.deselectAll")}
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setShowBatchDeleteConfirm(true)}
-            disabled={isBatchDeleting}
-          >
-            {isBatchDeleting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
-            )}
-            {t("dns.batchDelete")}
-          </Button>
-        </div>
+      {isSelectMode && (
+        <DnsBatchActionBar
+          selectedCount={selectedRecordIds.size}
+          isDeleting={isBatchDeleting}
+          onClearSelection={clearSelection}
+          onDelete={() => setShowBatchDeleteConfirm(true)}
+        />
       )}
     </div>
+  )
+}
+
+// ============ 移动端卡片列表 ============
+
+interface MobileCardListProps {
+  records: DnsRecord[]
+  isLoading: boolean
+  isLoadingMore: boolean
+  isDeleting: boolean
+  isSelectMode: boolean
+  selectedRecordIds: Set<string>
+  hasActiveFilters: boolean
+  supportsProxy: boolean
+  onEdit: (record: DnsRecord) => void
+  onDelete: (record: DnsRecord) => void
+  onToggleSelect: (id: string) => void
+  onSelectAll: () => void
+  onClearSelection: () => void
+  setSentinelRef: (node: HTMLElement | null) => void
+}
+
+function MobileCardList({
+  records,
+  isLoading,
+  isLoadingMore,
+  isDeleting,
+  isSelectMode,
+  selectedRecordIds,
+  hasActiveFilters,
+  supportsProxy,
+  onEdit,
+  onDelete,
+  onToggleSelect,
+  onSelectAll,
+  onClearSelection,
+  setSentinelRef,
+}: MobileCardListProps) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      {/* 选择模式下显示全选行 */}
+      {isSelectMode && records.length > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
+          <Checkbox
+            checked={records.every((r) => selectedRecordIds.has(r.id))}
+            onCheckedChange={(checked) => {
+              if (checked) onSelectAll()
+              else onClearSelection()
+            }}
+          />
+          <span className="text-muted-foreground text-sm">{t("common.selectAll")}</span>
+        </div>
+      )}
+
+      {records.length === 0 ? (
+        isLoading ? (
+          <div className="py-8 text-center">
+            <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="py-8 text-center text-muted-foreground">
+            {hasActiveFilters ? t("common.noMatch") : t("dns.noRecords")}
+          </div>
+        )
+      ) : (
+        <>
+          {records.map((record) => (
+            <DnsRecordCard
+              key={record.id}
+              record={record}
+              onEdit={() => onEdit(record)}
+              onDelete={() => onDelete(record)}
+              disabled={isDeleting}
+              showProxy={supportsProxy}
+              isSelectMode={isSelectMode}
+              isSelected={selectedRecordIds.has(record.id)}
+              onToggleSelect={() => onToggleSelect(record.id)}
+            />
+          ))}
+          <div ref={setSentinelRef} className="h-1" />
+          {isLoadingMore && (
+            <div className="py-4 text-center">
+              <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ============ 桌面端表格 ============
+
+interface DesktopTableProps {
+  records: DnsRecord[]
+  isLoading: boolean
+  isLoadingMore: boolean
+  isDeleting: boolean
+  isSelectMode: boolean
+  selectedRecordIds: Set<string>
+  hasActiveFilters: boolean
+  supportsProxy: boolean
+  sortField: SortField | null
+  sortDirection: "asc" | "desc" | null
+  onSort: (field: SortField) => void
+  onEdit: (record: DnsRecord) => void
+  onDelete: (record: DnsRecord) => void
+  onToggleSelect: (id: string) => void
+  onSelectAll: () => void
+  onClearSelection: () => void
+  setSentinelRef: (node: HTMLElement | null) => void
+  SortIcon: React.ComponentType<{ field: SortField }>
+}
+
+function DesktopTable({
+  records,
+  isLoading,
+  isLoadingMore,
+  isDeleting,
+  isSelectMode,
+  selectedRecordIds,
+  hasActiveFilters,
+  supportsProxy,
+  onSort,
+  onEdit,
+  onDelete,
+  onToggleSelect,
+  onSelectAll,
+  onClearSelection,
+  setSentinelRef,
+  SortIcon,
+}: DesktopTableProps) {
+  const { t } = useTranslation()
+  const colSpan = (supportsProxy ? 6 : 5) + (isSelectMode ? 1 : 0)
+
+  return (
+    <Table>
+      <TableHeader className="sticky top-0 z-10 bg-background">
+        <TableRow>
+          {isSelectMode && (
+            <TableHead className="w-10">
+              <Checkbox
+                checked={records.length > 0 && records.every((r) => selectedRecordIds.has(r.id))}
+                onCheckedChange={(checked) => {
+                  if (checked) onSelectAll()
+                  else onClearSelection()
+                }}
+              />
+            </TableHead>
+          )}
+          <TableHead
+            className="w-16 cursor-pointer select-none hover:bg-muted/50"
+            onClick={() => onSort("type")}
+          >
+            <div className="flex items-center">
+              {t("common.type")}
+              <SortIcon field="type" />
+            </div>
+          </TableHead>
+          <TableHead
+            className="w-28 cursor-pointer select-none hover:bg-muted/50"
+            onClick={() => onSort("name")}
+          >
+            <div className="flex items-center">
+              {t("dns.name")}
+              <SortIcon field="name" />
+            </div>
+          </TableHead>
+          <TableHead
+            className="cursor-pointer select-none hover:bg-muted/50"
+            onClick={() => onSort("value")}
+          >
+            <div className="flex items-center">
+              {t("dns.value")}
+              <SortIcon field="value" />
+            </div>
+          </TableHead>
+          <TableHead
+            className="w-20 cursor-pointer select-none hover:bg-muted/50"
+            onClick={() => onSort("ttl")}
+          >
+            <div className="flex items-center">
+              {t("dns.ttl")}
+              <SortIcon field="ttl" />
+            </div>
+          </TableHead>
+          {supportsProxy && <TableHead className="w-12">{t("dns.proxy")}</TableHead>}
+          <TableHead className="w-16 text-right">{t("dns.actions")}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {records.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={colSpan} className="py-8 text-center text-muted-foreground">
+              {isLoading ? (
+                <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+              ) : hasActiveFilters ? (
+                t("common.noMatch")
+              ) : (
+                t("dns.noRecords")
+              )}
+            </TableCell>
+          </TableRow>
+        ) : (
+          <>
+            {records.map((record) => (
+              <TableRow key={record.id}>
+                {isSelectMode && (
+                  <TableCell className="w-10">
+                    <Checkbox
+                      checked={selectedRecordIds.has(record.id)}
+                      onCheckedChange={() => onToggleSelect(record.id)}
+                    />
+                  </TableCell>
+                )}
+                <DnsRecordRow
+                  record={record}
+                  onEdit={() => onEdit(record)}
+                  onDelete={() => onDelete(record)}
+                  disabled={isDeleting || isSelectMode}
+                  showProxy={supportsProxy}
+                  asFragment
+                />
+              </TableRow>
+            ))}
+            <TableRow ref={setSentinelRef} className="h-1 border-0">
+              <TableCell colSpan={colSpan} className="p-0" />
+            </TableRow>
+            {isLoadingMore && (
+              <TableRow className="border-0">
+                <TableCell colSpan={colSpan} className="py-4 text-center">
+                  <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+                </TableCell>
+              </TableRow>
+            )}
+          </>
+        )}
+      </TableBody>
+    </Table>
   )
 }

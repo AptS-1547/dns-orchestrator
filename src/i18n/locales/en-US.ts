@@ -319,4 +319,10 @@ export default {
         "This port uses HTTP protocol, data is transmitted unencrypted, which may pose security risks",
     },
   },
+  error: {
+    title: "Something went wrong",
+    description: "The page encountered an error. Please try refreshing or retry.",
+    retry: "Retry",
+    reload: "Reload page",
+  },
 }

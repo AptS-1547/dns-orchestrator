@@ -65,7 +65,7 @@ export function AccountTreeItem({
                 )}
               />
               <ProviderIcon provider={account.provider} className="h-4 w-4 shrink-0" />
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="truncate font-medium text-sm">{account.name}</div>
                 <div className="text-muted-foreground text-xs">
                   {getProviderName(account.provider)}
@@ -85,7 +85,7 @@ export function AccountTreeItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreHorizontal className="h-4 w-4" />
@@ -131,7 +131,7 @@ export function AccountTreeItem({
                       type="button"
                       onClick={onLoadMore}
                       disabled={isLoadingMore}
-                      className="flex w-full items-center justify-center gap-1 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex w-full items-center justify-center gap-1 py-1.5 text-muted-foreground text-xs transition-colors hover:text-foreground"
                     >
                       {isLoadingMore ? (
                         <Loader2 className="h-3 w-3 animate-spin" />

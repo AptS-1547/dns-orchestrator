@@ -74,7 +74,7 @@ export function AccountsPage({ onBack }: AccountsPageProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 border-b bg-background px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
         <Button variant="ghost" size="icon" onClick={onBack}>
@@ -93,9 +93,9 @@ export function AccountsPage({ onBack }: AccountsPageProps) {
         </span>
         <div className="flex gap-2">
           {/* 桌面端：显示完整按钮 */}
-          <div className="hidden md:flex gap-2">
+          <div className="hidden gap-2 md:flex">
             <Button variant="outline" size="sm" onClick={openImportDialog}>
-              <Upload className="h-4 w-4 mr-2" />
+              <Upload className="mr-2 h-4 w-4" />
               {t("import.title")}
             </Button>
             <Button
@@ -104,7 +104,7 @@ export function AccountsPage({ onBack }: AccountsPageProps) {
               onClick={openExportDialog}
               disabled={accounts.length === 0}
             >
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="mr-2 h-4 w-4" />
               {t("export.title")}
             </Button>
           </div>
@@ -137,7 +137,7 @@ export function AccountsPage({ onBack }: AccountsPageProps) {
       </div>
 
       {/* 账户列表 */}
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="p-4 sm:p-6">
           {isLoading ? (
             <div className="space-y-3">
@@ -147,18 +147,18 @@ export function AccountsPage({ onBack }: AccountsPageProps) {
             </div>
           ) : accounts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Globe className="h-16 w-16 text-muted-foreground/30 mb-4" />
-              <h3 className="font-medium text-lg mb-2">{t("accounts.empty")}</h3>
-              <p className="text-muted-foreground text-sm mb-6 max-w-sm">
+              <Globe className="mb-4 h-16 w-16 text-muted-foreground/30" />
+              <h3 className="mb-2 font-medium text-lg">{t("accounts.empty")}</h3>
+              <p className="mb-6 max-w-sm text-muted-foreground text-sm">
                 {t("accounts.emptyDesc")}
               </p>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={openImportDialog}>
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Upload className="mr-2 h-4 w-4" />
                   {t("import.title")}
                 </Button>
                 <Button onClick={() => setShowAccountForm(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   {t("account.create")}
                 </Button>
               </div>
@@ -177,18 +177,18 @@ export function AccountsPage({ onBack }: AccountsPageProps) {
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                           <ProviderIcon provider={account.provider} className="h-5 w-5" />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-medium truncate">{account.name}</h3>
+                            <h3 className="truncate font-medium">{account.name}</h3>
                             {hasError && (
-                              <TriangleAlert className="h-4 w-4 text-destructive shrink-0" />
+                              <TriangleAlert className="h-4 w-4 shrink-0 text-destructive" />
                             )}
                           </div>
                           <p className="text-muted-foreground text-sm">
                             {getProviderName(account.provider)}
                           </p>
                           {hasError && account.error && (
-                            <p className="text-destructive text-xs mt-1 truncate">
+                            <p className="mt-1 truncate text-destructive text-xs">
                               {account.error}
                             </p>
                           )}

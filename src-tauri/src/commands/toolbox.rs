@@ -393,7 +393,7 @@ pub async fn dns_lookup(
                             "{} {} \"{}\"",
                             if caa.issuer_critical() { 128 } else { 0 },
                             caa.tag().as_str(),
-                            caa.value()
+                            String::from_utf8_lossy(caa.raw_value())
                         );
                         records.push(DnsLookupRecord {
                             record_type: "CAA".to_string(),
@@ -564,7 +564,7 @@ pub async fn ip_lookup(query: String) -> Result<ApiResponse<IpLookupResult>, Str
     let client = reqwest::Client::new();
 
     // 检查是否为 IP 地址
-    if let Ok(ip_addr) = query.parse::<std::net::IpAddr>() {
+    if let Ok(_ip_addr) = query.parse::<std::net::IpAddr>() {
         // 直接查询 IP
         let result = lookup_single_ip(&query, &client).await?;
         return Ok(ApiResponse::success(IpLookupResult {

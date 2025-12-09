@@ -1,8 +1,7 @@
-import { invoke } from "@tauri-apps/api/core"
 import { create } from "zustand"
-import type { ApiResponse, Domain, PaginatedResponse } from "@/types"
-
-const PAGE_SIZE = 20
+import { PAGINATION } from "@/constants"
+import { invoke } from "@/lib/tauri"
+import type { Domain } from "@/types"
 
 interface DomainState {
   domains: Domain[]
@@ -48,10 +47,10 @@ export const useDomainStore = create<DomainState>((set, get) => ({
       currentAccountId: accountId,
     })
     try {
-      const response = await invoke<ApiResponse<PaginatedResponse<Domain>>>("list_domains", {
+      const response = await invoke("list_domains", {
         accountId,
         page: 1,
-        pageSize: PAGE_SIZE,
+        pageSize: PAGINATION.PAGE_SIZE,
       })
       // 验证请求是否仍然有效
       if (get().currentAccountId !== accountId) {
@@ -89,10 +88,10 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     const nextPage = page + 1
 
     try {
-      const response = await invoke<ApiResponse<PaginatedResponse<Domain>>>("list_domains", {
+      const response = await invoke("list_domains", {
         accountId,
         page: nextPage,
-        pageSize: PAGE_SIZE,
+        pageSize: PAGINATION.PAGE_SIZE,
       })
       // 验证请求是否仍然有效
       if (get().currentAccountId !== accountId) {

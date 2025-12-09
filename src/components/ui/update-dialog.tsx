@@ -64,7 +64,7 @@ export function UpdateDialog({ open, onOpenChange }: UpdateDialogProps) {
 
         {notes && (
           <div className="space-y-2">
-            <p className="text-sm font-medium">{t("settings.releaseNotes")}</p>
+            <p className="font-medium text-sm">{t("settings.releaseNotes")}</p>
             <ScrollArea className="h-[200px] rounded-md border bg-muted/50 p-3">
               <pre className="whitespace-pre-wrap text-sm">{notes}</pre>
             </ScrollArea>
@@ -79,7 +79,7 @@ export function UpdateDialog({ open, onOpenChange }: UpdateDialogProps) {
             </Button>
           ) : (
             <>
-              <div className="flex gap-3 text-sm text-muted-foreground">
+              <div className="flex gap-3 text-muted-foreground text-sm">
                 <button type="button" onClick={handleSkip} className="hover:underline">
                   {t("settings.skipVersion")}
                 </button>

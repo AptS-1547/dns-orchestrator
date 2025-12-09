@@ -92,6 +92,7 @@ fn serialize_to_query_string<T: Serialize>(params: &T) -> Result<String> {
 #[derive(Debug, Deserialize)]
 struct AliyunResponse<T> {
     #[serde(flatten)]
+    #[allow(dead_code)]
     data: Option<T>,
     #[serde(rename = "Code")]
     code: Option<String>,
@@ -343,9 +344,9 @@ impl AliyunProvider {
     /// 注意：阿里云 DescribeDomains API 实际上不返回 DomainStatus 字段
     fn convert_domain_status(status: Option<&str>) -> DomainStatus {
         match status {
-            Some("ENABLE") | Some("enable") => DomainStatus::Active,
-            Some("PAUSE") | Some("pause") => DomainStatus::Paused,
-            Some("SPAM") | Some("spam") => DomainStatus::Error,
+            Some("ENABLE" | "enable") => DomainStatus::Active,
+            Some("PAUSE" | "pause") => DomainStatus::Paused,
+            Some("SPAM" | "spam") => DomainStatus::Error,
             _ => DomainStatus::Unknown,
         }
     }

@@ -44,7 +44,7 @@ export function ToolboxPage({ onBack }: ToolboxPageProps) {
   }, [activeTab])
 
   return (
-    <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 border-b bg-background px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
         <Button variant="ghost" size="icon" onClick={onBack}>
@@ -57,7 +57,7 @@ export function ToolboxPage({ onBack }: ToolboxPageProps) {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col min-h-0">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
         <div className="overflow-x-auto border-b px-4 sm:px-6">
           <TabsList className="relative h-auto flex-nowrap gap-1 bg-transparent p-0">
             {/* 滑动指示器 */}
@@ -76,7 +76,7 @@ export function ToolboxPage({ onBack }: ToolboxPageProps) {
                 }}
                 value={id}
                 className={cn(
-                  "gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5",
+                  "gap-1.5 rounded-none border-transparent border-b-2 px-3 py-2.5",
                   "transition-colors duration-200",
                   "data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 )}
@@ -88,18 +88,18 @@ export function ToolboxPage({ onBack }: ToolboxPageProps) {
           </TabsList>
         </div>
 
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="mx-auto max-w-4xl p-4 sm:p-6">
-            <TabsContent value="dns" className="mt-0 animate-in fade-in-0 duration-200">
+            <TabsContent value="dns" className="fade-in-0 mt-0 animate-in duration-200">
               <DnsLookup />
             </TabsContent>
-            <TabsContent value="whois" className="mt-0 animate-in fade-in-0 duration-200">
+            <TabsContent value="whois" className="fade-in-0 mt-0 animate-in duration-200">
               <WhoisLookup />
             </TabsContent>
-            <TabsContent value="ssl" className="mt-0 animate-in fade-in-0 duration-200">
+            <TabsContent value="ssl" className="fade-in-0 mt-0 animate-in duration-200">
               <SslCheck />
             </TabsContent>
-            <TabsContent value="ip" className="mt-0 animate-in fade-in-0 duration-200">
+            <TabsContent value="ip" className="fade-in-0 mt-0 animate-in duration-200">
               <IpLookup />
             </TabsContent>
           </div>

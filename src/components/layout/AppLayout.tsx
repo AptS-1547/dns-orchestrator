@@ -53,7 +53,7 @@ export function AppLayout({
   const collapsed = isCollapsedRange && !hovered
 
   return (
-    <div className="flex h-screen w-full flex-col md:flex-row overflow-hidden bg-background md:pb-6">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background md:flex-row md:pb-6">
       {/* 移动端顶部导航 - 根据 hideHeader 控制，子页面时隐藏 */}
       {!hideHeader && (
         <header className="flex items-center gap-2 border-b px-4 py-3 md:hidden">
@@ -92,12 +92,13 @@ export function AppLayout({
       )}
 
       {/* 桌面端侧边栏 - 仅桌面端显示 */}
-      <div className="hidden md:block relative h-full">
+      <div className="relative hidden h-full md:block">
         {/* 折叠时的占位容器 */}
         <div className={cn("h-full", isCollapsedRange ? "w-16" : "w-64")} />
 
         {/* 实际 Sidebar - 折叠范围内使用 absolute 定位实现浮层 */}
         <div
+          role="navigation"
           className={cn(
             "h-full",
             isCollapsedRange ? "absolute inset-y-0 left-0 z-50" : "absolute inset-y-0 left-0"
@@ -114,13 +115,13 @@ export function AppLayout({
           />
           {/* 展开时的阴影 */}
           {isCollapsedRange && hovered && (
-            <div className="absolute inset-y-0 right-0 w-4 -mr-4 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
+            <div className="-mr-4 pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-r from-black/10 to-transparent" />
           )}
         </div>
       </div>
 
       {/* 主内容区 - 始终渲染，不会被卸载 */}
-      <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {children || <MainContent />}
       </div>
     </div>

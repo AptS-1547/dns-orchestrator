@@ -24,8 +24,8 @@ export function MainContent() {
       <main className="flex flex-1 flex-col items-center justify-center bg-muted/30 p-6">
         <div className="text-center text-muted-foreground">
           <Globe className="mx-auto mb-4 h-16 w-16 opacity-40" />
-          <p className="text-lg font-medium">{t("main.selectDomain")}</p>
-          <p className="mt-2 text-sm max-w-[280px]">{t("main.selectDomainHint")}</p>
+          <p className="font-medium text-lg">{t("main.selectDomain")}</p>
+          <p className="mt-2 max-w-[280px] text-sm">{t("main.selectDomainHint")}</p>
         </div>
       </main>
     )

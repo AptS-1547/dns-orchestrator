@@ -1,6 +1,9 @@
 /** DNS 记录类型枚举 */
 export type DnsRecordType = "A" | "AAAA" | "CNAME" | "MX" | "TXT" | "NS" | "SRV" | "CAA"
 
+/** 所有可用的记录类型列表 */
+export const RECORD_TYPES: DnsRecordType[] = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"]
+
 /** DNS 记录 */
 export interface DnsRecord {
   id: string

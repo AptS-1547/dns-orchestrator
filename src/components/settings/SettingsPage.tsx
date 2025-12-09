@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { type LanguageCode, supportedLanguages } from "@/i18n"
+import { ENV } from "@/lib/env"
 import { cn } from "@/lib/utils"
 import { useSettingsStore } from "@/stores/settingsStore"
 import { getUpdateNotes, useUpdaterStore } from "@/stores/updaterStore"
@@ -116,7 +117,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   ]
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden min-h-0">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 border-b bg-background px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
         <Button variant="ghost" size="icon" onClick={onBack}>
@@ -126,7 +127,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="mx-auto max-w-3xl space-y-6 p-4 sm:space-y-10 sm:p-8">
           {/* 主题设置 */}
           <div className="space-y-3 sm:space-y-5">
@@ -141,14 +142,14 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                   type="button"
                   onClick={() => setTheme(id)}
                   className={cn(
-                    "flex flex-col items-center gap-2 sm:gap-3 rounded-xl border-2 p-3 sm:p-5 transition-all",
+                    "flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all sm:gap-3 sm:p-5",
                     theme === id
                       ? "border-primary bg-primary/5 shadow-sm"
                       : "border-border bg-card hover:border-accent-foreground/20 hover:bg-accent"
                   )}
                 >
                   <Icon className="h-5 w-5 sm:h-7 sm:w-7" />
-                  <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{label}</span>
+                  <span className="whitespace-nowrap font-medium text-xs sm:text-sm">{label}</span>
                 </button>
               ))}
             </div>
@@ -200,7 +201,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           </div>
 
           {/* 调试模式设置 - 仅开发环境显示 */}
-          {import.meta.env.DEV && (
+          {ENV.isDev && (
             <div className="space-y-3 sm:space-y-5">
               <div>
                 <h3 className="mb-1 font-semibold text-lg">{t("settings.debug")}</h3>
@@ -229,7 +230,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                 <div className="space-y-1">
                   <p className="font-medium">{t("common.appName")}</p>
                   <p className="text-muted-foreground text-sm">
-                    {t("settings.version")} {__APP_VERSION__}
+                    {t("settings.version")} {ENV.appVersion}
                   </p>
                 </div>
                 <Button

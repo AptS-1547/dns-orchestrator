@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core"
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog"
 import { readTextFile } from "@tauri-apps/plugin-fs"
 import { AlertTriangle, FileText, Loader2, Lock, Upload } from "lucide-react"
@@ -18,7 +17,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type { ApiResponse, ImportAccountsRequest, ImportPreview, ImportResult } from "@/types"
+import { invoke } from "@/lib/tauri"
+import type { ImportAccountsRequest, ImportPreview } from "@/types"
 import { getProviderName, ProviderIcon } from "./ProviderIcon"
 
 interface ImportDialogProps {
@@ -62,10 +62,7 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
       setFileName((filePath as string).split("/").pop() || "file.json")
 
       // 尝试预览（不带密码）
-      const response = await invoke<ApiResponse<ImportPreview>>("preview_import", {
-        content,
-        password: null,
-      })
+      const response = await invoke("preview_import", { content, password: null })
 
       if (response.success && response.data) {
         setPreview(response.data)
@@ -89,10 +86,7 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
 
     setIsLoading(true)
     try {
-      const response = await invoke<ApiResponse<ImportPreview>>("preview_import", {
-        content: fileContent,
-        password,
-      })
+      const response = await invoke("preview_import", { content: fileContent, password })
 
       if (response.success && response.data?.accounts) {
         setPreview(response.data)
@@ -107,6 +101,18 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
     }
   }
 
+  const showImportResult = (successCount: number, failures: { name: string; reason: string }[]) => {
+    if (successCount > 0) {
+      toast.success(t("import.success", { count: successCount }))
+      onImportSuccess()
+    }
+    if (failures.length > 0) {
+      toast.warning(t("import.partialFailure", { count: failures.length }), {
+        description: failures.map((f) => `${f.name}: ${f.reason}`).join("\n"),
+      })
+    }
+  }
+
   const handleImport = async () => {
     if (!fileContent) return
 
@@ -117,21 +123,10 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
         password: preview?.encrypted ? password : undefined,
       }
 
-      const response = await invoke<ApiResponse<ImportResult>>("import_accounts", {
-        request,
-      })
+      const response = await invoke("import_accounts", { request })
 
       if (response.success && response.data) {
-        const { successCount, failures } = response.data
-        if (successCount > 0) {
-          toast.success(t("import.success", { count: successCount }))
-          onImportSuccess()
-        }
-        if (failures.length > 0) {
-          toast.warning(t("import.partialFailure", { count: failures.length }), {
-            description: failures.map((f) => `${f.name}: ${f.reason}`).join("\n"),
-          })
-        }
+        showImportResult(response.data.successCount, response.data.failures)
         onOpenChange(false)
         resetState()
       } else {
@@ -212,8 +207,11 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
               </div>
               <ScrollArea className="h-[200px] rounded-md border p-3">
                 <div className="space-y-2">
-                  {preview.accounts.map((account, index) => (
-                    <div key={index} className="flex items-center gap-3 py-1">
+                  {preview.accounts.map((account) => (
+                    <div
+                      key={`${account.name}-${account.provider}`}
+                      className="flex items-center gap-3 py-1"
+                    >
                       <ProviderIcon provider={account.provider} className="h-4 w-4" />
                       <span className="flex-1 truncate text-sm">{account.name}</span>
                       <span className="text-muted-foreground text-xs">

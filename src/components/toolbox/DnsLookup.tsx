@@ -102,7 +102,7 @@ export function DnsLookup() {
             onValueChange={(v) => setRecordType(v as DnsLookupType)}
             disabled={isLoading}
           >
-            <SelectTrigger className="w-auto gap-1 rounded-l-none border-0 border-l bg-transparent pl-3 pr-3 shadow-none">
+            <SelectTrigger className="w-auto gap-1 rounded-l-none border-0 border-l bg-transparent pr-3 pl-3 shadow-none">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-60">

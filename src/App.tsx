@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { useTranslation } from "react-i18next"
 import { AccountsPage } from "@/components/accounts/AccountsPage"
+import { ErrorBoundary } from "@/components/error"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { SettingsPage } from "@/components/settings/SettingsPage"
 import { ToolboxPage } from "@/components/toolbox/ToolboxPage"
@@ -15,7 +15,6 @@ import { useUpdaterStore } from "@/stores/updaterStore"
 type View = "main" | "settings" | "toolbox" | "accounts"
 
 function App() {
-  const { t } = useTranslation()
   const { checkForUpdates, showUpdateDialog, setShowUpdateDialog } = useUpdaterStore()
   const { selectDomain } = useDomainStore()
   const [currentView, setCurrentView] = useState<View>("main")
@@ -39,7 +38,7 @@ function App() {
     }, 3000)
 
     return () => clearTimeout(timer)
-  }, [checkForUpdates, t, isMobile])
+  }, [checkForUpdates, isMobile])
 
   const handleOpenSettings = () => {
     selectDomain(null)
@@ -55,7 +54,7 @@ function App() {
   const shouldHideHeader = isMobile && currentView !== "main"
 
   return (
-    <>
+    <ErrorBoundary level="global" name="App" showRetry={false}>
       <AppLayout
         hideHeader={shouldHideHeader}
         onOpenToolbox={() => {
@@ -66,13 +65,17 @@ function App() {
         onOpenSettings={handleOpenSettings}
         onOpenAccounts={handleOpenAccounts}
       >
-        {currentView === "settings" ? (
-          <SettingsPage onBack={() => setCurrentView("main")} />
-        ) : currentView === "toolbox" ? (
-          <ToolboxPage onBack={() => setCurrentView("main")} />
-        ) : currentView === "accounts" ? (
-          <AccountsPage onBack={() => setCurrentView("main")} />
-        ) : null}
+        {currentView !== "main" && (
+          <ErrorBoundary level="page" name="ContentArea">
+            {currentView === "settings" ? (
+              <SettingsPage onBack={() => setCurrentView("main")} />
+            ) : currentView === "toolbox" ? (
+              <ToolboxPage onBack={() => setCurrentView("main")} />
+            ) : currentView === "accounts" ? (
+              <AccountsPage onBack={() => setCurrentView("main")} />
+            ) : null}
+          </ErrorBoundary>
+        )}
       </AppLayout>
       {/* 桌面端显示底部状态栏 */}
       {!isMobile && <StatusBar />}
@@ -80,7 +83,7 @@ function App() {
       <UpdateDialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog} />
       {/* Toast 位置：移动端底部居中，桌面端右上角 */}
       <Toaster richColors position={isMobile ? "bottom-center" : "top-right"} />
-    </>
+    </ErrorBoundary>
   )
 }
 

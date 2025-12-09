@@ -19,14 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { DNS } from "@/constants"
 import { useDnsStore } from "@/stores"
-import type {
-  CreateDnsRecordRequest,
-  DnsRecord,
-  DnsRecordType,
-  UpdateDnsRecordRequest,
-} from "@/types"
-import { RECORD_TYPE_INFO, TTL_OPTIONS } from "@/types/dns"
+import type { DnsRecord, DnsRecordType } from "@/types"
+import { RECORD_TYPE_INFO, RECORD_TYPES, TTL_OPTIONS } from "@/types/dns"
 
 interface DnsRecordFormProps {
   accountId: string
@@ -35,8 +31,6 @@ interface DnsRecordFormProps {
   onClose: () => void
   supportsProxy?: boolean
 }
-
-const RECORD_TYPES: DnsRecordType[] = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"]
 
 export function DnsRecordForm({
   accountId,
@@ -53,37 +47,30 @@ export function DnsRecordForm({
     type: (record?.type || "A") as DnsRecordType,
     name: record?.name || "",
     value: record?.value || "",
-    ttl: record?.ttl || 300,
+    ttl: record?.ttl || DNS.DEFAULT_TTL,
     priority: record?.priority || undefined,
     proxied: record?.proxied,
+  })
+
+  // 构建请求对象
+  const buildRequest = () => ({
+    domainId,
+    type: formData.type,
+    name: formData.name || "@",
+    value: formData.value,
+    ttl: formData.ttl,
+    priority: formData.priority,
+    proxied: supportsProxy ? formData.proxied : undefined,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (isEditing && record) {
-      const updateRequest: UpdateDnsRecordRequest = {
-        domainId,
-        type: formData.type,
-        name: formData.name || "@",
-        value: formData.value,
-        ttl: formData.ttl,
-        priority: formData.priority,
-        proxied: supportsProxy ? formData.proxied : undefined,
-      }
-      const success = await updateRecord(accountId, record.id, updateRequest)
+      const success = await updateRecord(accountId, record.id, buildRequest())
       if (success) onClose()
     } else {
-      const request: CreateDnsRecordRequest = {
-        domainId,
-        type: formData.type,
-        name: formData.name || "@",
-        value: formData.value,
-        ttl: formData.ttl,
-        priority: formData.priority,
-        proxied: supportsProxy ? formData.proxied : undefined,
-      }
-      const result = await createRecord(accountId, request)
+      const result = await createRecord(accountId, buildRequest())
       if (result) onClose()
     }
   }
@@ -161,7 +148,7 @@ export function DnsRecordForm({
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    priority: e.target.value ? Number.parseInt(e.target.value) : undefined,
+                    priority: e.target.value ? Number.parseInt(e.target.value, 10) : undefined,
                   })
                 }
                 placeholder="10"
@@ -176,7 +163,7 @@ export function DnsRecordForm({
             <Label htmlFor="ttl">{t("dns.ttl")}</Label>
             <Select
               value={String(formData.ttl)}
-              onValueChange={(v) => setFormData({ ...formData, ttl: Number.parseInt(v) })}
+              onValueChange={(v) => setFormData({ ...formData, ttl: Number.parseInt(v, 10) })}
             >
               <SelectTrigger>
                 <SelectValue />

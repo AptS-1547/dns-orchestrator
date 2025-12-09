@@ -1,11 +1,13 @@
 import { toast } from "sonner"
+import { TIMING, UI } from "@/constants"
+import { ENV } from "@/lib/env"
 import { useSettingsStore } from "@/stores/settingsStore"
 
 const originalError = console.error
 
 export function initDebugMode() {
   // 生产环境不初始化调试模式
-  if (!import.meta.env.DEV) return
+  if (!ENV.isDev) return
 
   console.error = (...args: unknown[]) => {
     // 始终保留原始控制台输出
@@ -18,8 +20,8 @@ export function initDebugMode() {
         .join(" ")
 
       toast.error("控制台错误", {
-        description: message.substring(0, 300),
-        duration: 5000,
+        description: message.substring(0, UI.MAX_ERROR_MESSAGE_LENGTH),
+        duration: TIMING.TOAST_DURATION,
       })
     }
   }

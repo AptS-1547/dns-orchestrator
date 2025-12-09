@@ -313,4 +313,10 @@ export default {
       httpWarningDesc: "该端口使用 HTTP 协议，数据传输未加密，可能存在安全风险",
     },
   },
+  error: {
+    title: "出现了一些问题",
+    description: "页面遇到错误，请尝试刷新或重试",
+    retry: "重试",
+    reload: "刷新页面",
+  },
 }

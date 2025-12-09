@@ -1,17 +1,14 @@
-import { invoke } from "@tauri-apps/api/core"
 import { toast } from "sonner"
 import { create } from "zustand"
+import { PAGINATION } from "@/constants"
+import { invoke } from "@/lib/tauri"
 import type {
-  ApiResponse,
   BatchDeleteRequest,
   BatchDeleteResult,
   CreateDnsRecordRequest,
   DnsRecord,
-  PaginatedResponse,
   UpdateDnsRecordRequest,
 } from "@/types"
-
-const PAGE_SIZE = 20
 
 interface DnsState {
   records: DnsRecord[]
@@ -39,7 +36,8 @@ interface DnsState {
     recordType?: string
   ) => Promise<void>
   fetchMoreRecords: (accountId: string, domainId: string) => Promise<void>
-  setSearchParams: (keyword: string, recordType: string) => void
+  setKeyword: (keyword: string) => void
+  setRecordType: (recordType: string) => void
   createRecord: (accountId: string, request: CreateDnsRecordRequest) => Promise<DnsRecord | null>
   updateRecord: (
     accountId: string,
@@ -72,8 +70,12 @@ export const useDnsStore = create<DnsState>((set, get) => ({
   isSelectMode: false,
   isBatchDeleting: false,
 
-  setSearchParams: (keyword, recordType) => {
-    set({ keyword, recordType })
+  setKeyword: (keyword) => {
+    set({ keyword })
+  },
+
+  setRecordType: (recordType) => {
+    set({ recordType })
   },
 
   fetchRecords: async (accountId, domainId, keyword, recordType) => {
@@ -96,11 +98,11 @@ export const useDnsStore = create<DnsState>((set, get) => ({
       ...(isDomainChange && { records: [], totalCount: 0 }),
     })
     try {
-      const response = await invoke<ApiResponse<PaginatedResponse<DnsRecord>>>("list_dns_records", {
+      const response = await invoke("list_dns_records", {
         accountId,
         domainId,
         page: 1,
-        pageSize: PAGE_SIZE,
+        pageSize: PAGINATION.PAGE_SIZE,
         keyword: searchKeyword || null,
         recordType: searchRecordType || null,
       })
@@ -144,11 +146,11 @@ export const useDnsStore = create<DnsState>((set, get) => ({
     const nextPage = page + 1
 
     try {
-      const response = await invoke<ApiResponse<PaginatedResponse<DnsRecord>>>("list_dns_records", {
+      const response = await invoke("list_dns_records", {
         accountId,
         domainId,
         page: nextPage,
-        pageSize: PAGE_SIZE,
+        pageSize: PAGINATION.PAGE_SIZE,
         keyword: keyword || null,
         recordType: recordType || null,
       })
@@ -175,10 +177,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
   createRecord: async (accountId, request) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await invoke<ApiResponse<DnsRecord>>("create_dns_record", {
-        accountId,
-        request,
-      })
+      const response = await invoke("create_dns_record", { accountId, request })
       if (response.success && response.data) {
         set((state) => ({
           records: [...state.records, response.data!],
@@ -203,11 +202,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
 
   updateRecord: async (accountId, recordId, request) => {
     try {
-      const response = await invoke<ApiResponse<DnsRecord>>("update_dns_record", {
-        accountId,
-        recordId,
-        request,
-      })
+      const response = await invoke("update_dns_record", { accountId, recordId, request })
       if (response.success && response.data) {
         set((state) => ({
           records: state.records.map((r) => (r.id === recordId ? response.data! : r)),
@@ -226,11 +221,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
   deleteRecord: async (accountId, recordId, domainId) => {
     set({ isDeleting: true })
     try {
-      const response = await invoke<ApiResponse<void>>("delete_dns_record", {
-        accountId,
-        recordId,
-        domainId,
-      })
+      const response = await invoke("delete_dns_record", { accountId, recordId, domainId })
       if (response.success) {
         set((state) => ({
           records: state.records.filter((r) => r.id !== recordId),
@@ -300,10 +291,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
         domainId,
         recordIds: Array.from(selectedRecordIds),
       }
-      const response = await invoke<ApiResponse<BatchDeleteResult>>("batch_delete_dns_records", {
-        accountId,
-        request,
-      })
+      const response = await invoke("batch_delete_dns_records", { accountId, request })
 
       if (response.success && response.data) {
         const result = response.data

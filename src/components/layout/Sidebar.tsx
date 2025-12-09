@@ -1,5 +1,5 @@
 import { Globe, Settings, Users, Wrench, X } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { ProviderIcon } from "@/components/account/ProviderIcon"
 import { AccountTreeItem } from "@/components/navigation"
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TIMING } from "@/constants"
 import { cn } from "@/lib/utils"
 import { useAccountStore, useDomainStore } from "@/stores"
 
@@ -36,9 +37,11 @@ export function Sidebar({
   const {
     accounts,
     selectedAccountId,
+    expandedAccountId,
     isLoading: isAccountLoading,
     fetchAccounts,
     selectAccount,
+    setExpandedAccountId,
   } = useAccountStore()
 
   const {
@@ -53,8 +56,6 @@ export function Sidebar({
     clearDomains,
   } = useDomainStore()
 
-  const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null)
-
   // 展开/收起账户
   const handleToggleAccount = useCallback(
     (accountId: string) => {
@@ -68,7 +69,7 @@ export function Sidebar({
         fetchDomains(accountId)
       }
     },
-    [expandedAccountId, selectAccount, fetchDomains, clearDomains]
+    [expandedAccountId, selectAccount, fetchDomains, clearDomains, setExpandedAccountId]
   )
 
   // 选择域名
@@ -88,15 +89,8 @@ export function Sidebar({
     fetchAccounts()
   }, [fetchAccounts])
 
-  // 恢复展开状态
-  useEffect(() => {
-    if (selectedAccountId && !expandedAccountId) {
-      setExpandedAccountId(selectedAccountId)
-    }
-  }, [selectedAccountId, expandedAccountId])
-
   return (
-    <TooltipProvider delayDuration={300}>
+    <TooltipProvider delayDuration={TIMING.TOOLTIP_DELAY}>
       <aside
         className={cn(
           "flex h-full flex-col border-r bg-sidebar transition-all duration-200",
@@ -111,9 +105,9 @@ export function Sidebar({
           )}
         >
           <div className="flex items-center gap-2">
-            <Globe className="h-6 w-6 text-primary shrink-0" />
+            <Globe className="h-6 w-6 shrink-0 text-primary" />
             {!collapsed && (
-              <h1 className="font-semibold text-lg whitespace-nowrap">{t("common.appName")}</h1>
+              <h1 className="whitespace-nowrap font-semibold text-lg">{t("common.appName")}</h1>
             )}
           </div>
           {isMobile && onClose && (
@@ -126,7 +120,7 @@ export function Sidebar({
         {/* 账户标题 - 折叠时隐藏 */}
         {!collapsed && (
           <div className="flex items-center justify-between border-b px-4 py-2">
-            <span className="text-muted-foreground text-sm font-medium">{t("account.title")}</span>
+            <span className="font-medium text-muted-foreground text-sm">{t("account.title")}</span>
             <Button
               variant="ghost"
               size="sm"
@@ -156,7 +150,7 @@ export function Sidebar({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-full h-10"
+                      className="h-10 w-full"
                       onClick={() => {
                         onOpenAccounts?.()
                       }}
@@ -168,8 +162,8 @@ export function Sidebar({
                 </Tooltip>
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <Globe className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                  <p className="text-muted-foreground text-sm mb-3">{t("account.noAccounts")}</p>
+                  <Globe className="mb-2 h-8 w-8 text-muted-foreground/50" />
+                  <p className="mb-3 text-muted-foreground text-sm">{t("account.noAccounts")}</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -178,7 +172,7 @@ export function Sidebar({
                       if (isMobile) onClose?.()
                     }}
                   >
-                    <Users className="h-4 w-4 mr-1" />
+                    <Users className="mr-1 h-4 w-4" />
                     {t("accounts.manage")}
                   </Button>
                 </div>
@@ -228,7 +222,7 @@ export function Sidebar({
         </ScrollArea>
 
         {/* 底部导航 */}
-        <div className={cn("border-t p-2 space-y-1", collapsed && "flex flex-col items-center")}>
+        <div className={cn("space-y-1 border-t p-2", collapsed && "flex flex-col items-center")}>
           {collapsed ? (
             <>
               <Tooltip>
@@ -266,7 +260,7 @@ export function Sidebar({
             <>
               <Button
                 variant="ghost"
-                className="w-full justify-start gap-3 h-10"
+                className="h-10 w-full justify-start gap-3"
                 onClick={() => {
                   onOpenToolbox?.()
                   if (isMobile) onClose?.()
@@ -277,7 +271,7 @@ export function Sidebar({
               </Button>
               <Button
                 variant="ghost"
-                className="w-full justify-start gap-3 h-10"
+                className="h-10 w-full justify-start gap-3"
                 onClick={() => {
                   onOpenSettings?.()
                   if (isMobile) onClose?.()

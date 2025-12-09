@@ -1,13 +1,15 @@
-import { invoke } from "@tauri-apps/api/core"
 import { toast } from "sonner"
 import { create } from "zustand"
-import type { Account, ApiResponse, CreateAccountRequest } from "@/types"
+import { TIMING } from "@/constants"
+import { invoke } from "@/lib/tauri"
+import type { Account, CreateAccountRequest } from "@/types"
 import type { ProviderInfo } from "@/types/provider"
 
 interface AccountState {
   accounts: Account[]
   providers: ProviderInfo[]
   selectedAccountId: string | null
+  expandedAccountId: string | null
   isLoading: boolean
   isDeleting: boolean
   error: string | null
@@ -19,6 +21,7 @@ interface AccountState {
   createAccount: (request: CreateAccountRequest) => Promise<Account | null>
   deleteAccount: (id: string) => Promise<boolean>
   selectAccount: (id: string | null) => void
+  setExpandedAccountId: (id: string | null) => void
   openExportDialog: () => void
   closeExportDialog: () => void
   openImportDialog: () => void
@@ -29,6 +32,7 @@ export const useAccountStore = create<AccountState>((set) => ({
   accounts: [],
   providers: [],
   selectedAccountId: null,
+  expandedAccountId: null,
   isLoading: false,
   isDeleting: false,
   error: null,
@@ -38,14 +42,14 @@ export const useAccountStore = create<AccountState>((set) => ({
   fetchAccounts: async () => {
     set({ isLoading: true, error: null })
     try {
-      const response = await invoke<ApiResponse<Account[]>>("list_accounts")
+      const response = await invoke("list_accounts")
       if (response.success && response.data) {
         set({ accounts: response.data })
         // 检查是否有加载失败的账户
         const failedAccounts = response.data.filter((a) => a.status === "error")
         if (failedAccounts.length > 0) {
           toast.error(`${failedAccounts.length} 个账号加载失败，请检查 Keychain 权限`, {
-            duration: 5000,
+            duration: TIMING.TOAST_DURATION,
           })
         }
       } else {
@@ -64,7 +68,7 @@ export const useAccountStore = create<AccountState>((set) => ({
 
   fetchProviders: async () => {
     try {
-      const response = await invoke<ApiResponse<ProviderInfo[]>>("list_providers")
+      const response = await invoke("list_providers")
       if (response.success && response.data) {
         set({ providers: response.data })
       } else {
@@ -78,9 +82,7 @@ export const useAccountStore = create<AccountState>((set) => ({
   createAccount: async (request) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await invoke<ApiResponse<Account>>("create_account", {
-        request,
-      })
+      const response = await invoke("create_account", { request })
       if (response.success && response.data) {
         set((state) => ({ accounts: [...state.accounts, response.data!] }))
         toast.success(`账号 "${response.data.name}" 添加成功`)
@@ -103,9 +105,7 @@ export const useAccountStore = create<AccountState>((set) => ({
   deleteAccount: async (id) => {
     set({ isDeleting: true })
     try {
-      const response = await invoke<ApiResponse<void>>("delete_account", {
-        accountId: id,
-      })
+      const response = await invoke("delete_account", { accountId: id })
       if (response.success) {
         set((state) => ({
           accounts: state.accounts.filter((a) => a.id !== id),
@@ -125,6 +125,7 @@ export const useAccountStore = create<AccountState>((set) => ({
   },
 
   selectAccount: (id) => set({ selectedAccountId: id }),
+  setExpandedAccountId: (id) => set({ expandedAccountId: id }),
 
   openExportDialog: () => set({ isExportDialogOpen: true }),
   closeExportDialog: () => set({ isExportDialogOpen: false }),

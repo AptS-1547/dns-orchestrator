@@ -37,7 +37,7 @@ export function DomainTreeItem({ domain, isSelected, onSelect }: DomainTreeItemP
     >
       <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       <span className="flex-1 truncate text-left">{domain.name}</span>
-      <Badge variant={config.variant} className="text-[10px] px-1.5 py-0">
+      <Badge variant={config.variant} className="px-1.5 py-0 text-[10px]">
         {t(config.labelKey)}
       </Badge>
     </button>

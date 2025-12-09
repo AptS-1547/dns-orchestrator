@@ -107,7 +107,7 @@ export function DnsRecordCard({
 
       {/* 第二行：value */}
       <div className="mt-2">
-        <p className="break-all font-mono text-sm text-muted-foreground">
+        <p className="break-all font-mono text-muted-foreground text-sm">
           {record.priority !== undefined && (
             <span className="mr-1 text-xs">[{record.priority}]</span>
           )}
@@ -116,7 +116,7 @@ export function DnsRecordCard({
       </div>
 
       {/* 第三行：ttl + proxy */}
-      <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="mt-2 flex items-center gap-3 text-muted-foreground text-xs">
         <span>TTL: {formatTTL(record.ttl)}</span>
         {showProxy && record.proxied !== undefined && (
           <span className="flex items-center gap-1">

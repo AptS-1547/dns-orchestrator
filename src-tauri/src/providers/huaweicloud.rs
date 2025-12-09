@@ -429,15 +429,15 @@ impl HuaweicloudProvider {
         match status {
             Some("ACTIVE") => DomainStatus::Active,
             // 各种 PENDING 状态
-            Some("PENDING_CREATE")
-            | Some("PENDING_UPDATE")
-            | Some("PENDING_DELETE")
-            | Some("PENDING_FREEZE")
-            | Some("PENDING_DISABLE") => DomainStatus::Pending,
+            Some(
+                "PENDING_CREATE"
+                | "PENDING_UPDATE"
+                | "PENDING_DELETE"
+                | "PENDING_FREEZE"
+                | "PENDING_DISABLE",
+            ) => DomainStatus::Pending,
             // 冻结/暂停状态
-            Some("FREEZE") | Some("ILLEGAL") | Some("POLICE") | Some("DISABLE") => {
-                DomainStatus::Paused
-            }
+            Some("FREEZE" | "ILLEGAL" | "POLICE" | "DISABLE") => DomainStatus::Paused,
             Some("ERROR") => DomainStatus::Error,
             _ => DomainStatus::Unknown,
         }

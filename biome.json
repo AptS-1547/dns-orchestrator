@@ -8,18 +8,6 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "experimentalScannerIgnores": [
-      "node_modules",
-      "dist",
-      "dist-ssr",
-      "src-tauri",
-      "public",
-      ".vscode",
-      ".github",
-      "*.log",
-      "pnpm-lock.yaml",
-      "components.json"
-    ],
     "includes": [
       "src/**/*.ts",
       "src/**/*.tsx",

@@ -67,6 +67,7 @@ export function DomainList({
     <div className="space-y-1">
       {domains.map((domain) => (
         <button
+          type="button"
           key={domain.id}
           onClick={() => onSelect(selectedId === domain.id ? null : domain.id)}
           className={cn(

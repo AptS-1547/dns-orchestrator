@@ -120,7 +120,7 @@ export function StatusBar() {
         )}
 
         {/* 右侧版本号 */}
-        <span className="tabular-nums text-muted-foreground">v{__APP_VERSION__}</span>
+        <span className="text-muted-foreground tabular-nums">v{__APP_VERSION__}</span>
       </div>
     </footer>
   )
