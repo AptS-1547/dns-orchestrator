@@ -54,10 +54,11 @@ export function DnsLookup() {
       nameserver = dnsServer
     }
 
-    const data = await execute(
-      () => toolboxService.dnsLookup(trimmed, recordType, nameserver),
-      { type: "dns", query: trimmed, recordType }
-    )
+    const data = await execute(() => toolboxService.dnsLookup(trimmed, recordType, nameserver), {
+      type: "dns",
+      query: trimmed,
+      recordType,
+    })
     if (data && data.records.length === 0) {
       toast.info(t("toolbox.noRecords"))
     }

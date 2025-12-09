@@ -234,7 +234,7 @@ impl ProviderErrorMapper for AliyunProvider {
 }
 
 impl AliyunProvider {
-    pub fn new(credentials: HashMap<String, String>) -> Self {
+    pub fn new(credentials: &HashMap<String, String>) -> Self {
         let access_key_id = credentials.get("accessKeyId").cloned().unwrap_or_default();
         let access_key_secret = credentials
             .get("accessKeySecret")
@@ -250,7 +250,7 @@ impl AliyunProvider {
         }
     }
 
-    pub fn with_account_id(credentials: HashMap<String, String>, account_id: String) -> Self {
+    pub fn with_account_id(credentials: &HashMap<String, String>, account_id: String) -> Self {
         let access_key_id = credentials.get("accessKeyId").cloned().unwrap_or_default();
         let access_key_secret = credentials
             .get("accessKeySecret")
@@ -361,10 +361,12 @@ impl AliyunProvider {
         if let Ok(error_response) = serde_json::from_str::<AliyunResponse<()>>(&response_text) {
             if let (Some(code), Some(message)) = (error_response.code, error_response.message) {
                 log::error!("API 错误: {code} - {message}");
-                return Err(self.map_error(
-                    RawApiError::with_code(&code, &message),
-                    ErrorContext::default(),
-                ).into());
+                return Err(self
+                    .map_error(
+                        RawApiError::with_code(&code, &message),
+                        ErrorContext::default(),
+                    )
+                    .into());
             }
         }
 
@@ -402,7 +404,8 @@ impl AliyunProvider {
                 provider: "aliyun".to_string(),
                 param: "record_type".to_string(),
                 detail: format!("不支持的记录类型: {record_type}"),
-            }.into()),
+            }
+            .into()),
         }
     }
 

@@ -168,7 +168,7 @@ impl ProviderErrorMapper for DnspodProvider {
 }
 
 impl DnspodProvider {
-    pub fn new(credentials: HashMap<String, String>) -> Self {
+    pub fn new(credentials: &HashMap<String, String>) -> Self {
         let secret_id = credentials.get("secretId").cloned().unwrap_or_default();
         let secret_key = credentials.get("secretKey").cloned().unwrap_or_default();
         let account_id = uuid::Uuid::new_v4().to_string();
@@ -181,7 +181,7 @@ impl DnspodProvider {
         }
     }
 
-    pub fn with_account_id(credentials: HashMap<String, String>, account_id: String) -> Self {
+    pub fn with_account_id(credentials: &HashMap<String, String>, account_id: String) -> Self {
         let secret_id = credentials.get("secretId").cloned().unwrap_or_default();
         let secret_key = credentials.get("secretKey").cloned().unwrap_or_default();
 
@@ -219,9 +219,8 @@ impl DnspodProvider {
         let algorithm = "TC3-HMAC-SHA256";
         let credential_scope = format!("{date}/{DNSPOD_SERVICE}/tc3_request");
         let hashed_canonical_request = hex::encode(Sha256::digest(canonical_request.as_bytes()));
-        let string_to_sign = format!(
-            "{algorithm}\n{timestamp}\n{credential_scope}\n{hashed_canonical_request}"
-        );
+        let string_to_sign =
+            format!("{algorithm}\n{timestamp}\n{credential_scope}\n{hashed_canonical_request}");
 
         // 3. 计算签名
         let secret_date = Self::hmac_sha256(
@@ -297,10 +296,12 @@ impl DnspodProvider {
 
         if let Some(error) = tc_response.response.error {
             log::error!("API 错误: {} - {}", error.code, error.message);
-            return Err(self.map_error(
-                RawApiError::with_code(&error.code, &error.message),
-                ErrorContext::default(),
-            ).into());
+            return Err(self
+                .map_error(
+                    RawApiError::with_code(&error.code, &error.message),
+                    ErrorContext::default(),
+                )
+                .into());
         }
 
         tc_response
@@ -334,7 +335,8 @@ impl DnspodProvider {
                 provider: "dnspod".to_string(),
                 param: "record_type".to_string(),
                 detail: format!("不支持的记录类型: {record_type}"),
-            }.into()),
+            }
+            .into()),
         }
     }
 
@@ -524,7 +526,12 @@ impl DnsProvider for DnspodProvider {
             Err(DnsError::Provider(ProviderError::Unknown { raw_code, .. }))
                 if raw_code.as_deref() == Some("ResourceNotFound.NoDataOfRecord") =>
             {
-                Ok(PaginatedResponse::new(vec![], params.page, params.page_size, 0))
+                Ok(PaginatedResponse::new(
+                    vec![],
+                    params.page,
+                    params.page_size,
+                    0,
+                ))
             }
             Err(e) => Err(e),
         }

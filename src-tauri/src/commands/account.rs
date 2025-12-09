@@ -4,7 +4,11 @@ use crate::crypto;
 use crate::error::DnsError;
 use crate::providers::create_provider;
 use crate::storage::AccountStore;
-use crate::types::{ApiResponse, Account, CreateAccountRequest, DnsProvider, ProviderMetadata, ExportAccountsResponse, ExportAccountsRequest, ExportedAccount, ExportFile, ExportFileHeader, ImportPreview, ImportPreviewAccount, ImportResult, ImportAccountsRequest, ImportFailure, AccountStatus};
+use crate::types::{
+    Account, AccountStatus, ApiResponse, CreateAccountRequest, DnsProvider, ExportAccountsRequest,
+    ExportAccountsResponse, ExportFile, ExportFileHeader, ExportedAccount, ImportAccountsRequest,
+    ImportFailure, ImportPreview, ImportPreviewAccount, ImportResult, ProviderMetadata,
+};
 use crate::AppState;
 
 /// 列出所有账号
@@ -34,7 +38,7 @@ pub async fn create_account(
     };
 
     // 1. 创建 provider 实例
-    let provider = create_provider(provider_type, request.credentials.clone())?;
+    let provider = create_provider(provider_type, &request.credentials.clone())?;
 
     // 2. 验证凭证
     let is_valid = provider.validate_credentials().await?;
@@ -358,7 +362,7 @@ pub async fn import_accounts(
             DnsProvider::Huaweicloud => "huaweicloud",
         };
 
-        let provider = match create_provider(provider_type, exported.credentials.clone()) {
+        let provider = match create_provider(provider_type, &exported.credentials.clone()) {
             Ok(p) => p,
             Err(e) => {
                 failures.push(ImportFailure {

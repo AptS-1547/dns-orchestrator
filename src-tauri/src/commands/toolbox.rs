@@ -228,7 +228,7 @@ pub async fn dns_lookup(
                             .as_lookup()
                             .record_iter()
                             .next()
-                            .map_or(0, |r| r.ttl()),
+                            .map_or(0, hickory_resolver::proto::rr::Record::ttl),
                         priority: None,
                     });
                 }
@@ -245,7 +245,7 @@ pub async fn dns_lookup(
                             .as_lookup()
                             .record_iter()
                             .next()
-                            .map_or(0, |r| r.ttl()),
+                            .map_or(0, hickory_resolver::proto::rr::Record::ttl),
                         priority: None,
                     });
                 }
@@ -262,7 +262,7 @@ pub async fn dns_lookup(
                             .as_lookup()
                             .record_iter()
                             .next()
-                            .map_or(0, |r| r.ttl()),
+                            .map_or(0, hickory_resolver::proto::rr::Record::ttl),
                         priority: Some(mx.preference()),
                     });
                 }
@@ -283,7 +283,7 @@ pub async fn dns_lookup(
                             .as_lookup()
                             .record_iter()
                             .next()
-                            .map_or(0, |r| r.ttl()),
+                            .map_or(0, hickory_resolver::proto::rr::Record::ttl),
                         priority: None,
                     });
                 }
@@ -300,7 +300,7 @@ pub async fn dns_lookup(
                             .as_lookup()
                             .record_iter()
                             .next()
-                            .map_or(0, |r| r.ttl()),
+                            .map_or(0, hickory_resolver::proto::rr::Record::ttl),
                         priority: None,
                     });
                 }
@@ -345,7 +345,7 @@ pub async fn dns_lookup(
                             .as_lookup()
                             .record_iter()
                             .next()
-                            .map_or(0, |r| r.ttl()),
+                            .map_or(0, hickory_resolver::proto::rr::Record::ttl),
                         priority: None,
                     });
                 }
@@ -368,7 +368,7 @@ pub async fn dns_lookup(
                             .as_lookup()
                             .record_iter()
                             .next()
-                            .map_or(0, |r| r.ttl()),
+                            .map_or(0, hickory_resolver::proto::rr::Record::ttl),
                         priority: Some(srv.priority()),
                     });
                 }
@@ -627,9 +627,7 @@ fn check_http_connection(domain: &str, port: u16) -> bool {
             .set_write_timeout(Some(std::time::Duration::from_secs(5)))
             .ok();
 
-        let request = format!(
-            "HEAD / HTTP/1.1\r\nHost: {domain}\r\nConnection: close\r\n\r\n"
-        );
+        let request = format!("HEAD / HTTP/1.1\r\nHost: {domain}\r\nConnection: close\r\n\r\n");
 
         if stream.write_all(request.as_bytes()).is_ok() {
             let mut response = vec![0u8; 128];
@@ -695,7 +693,7 @@ pub async fn ssl_check(
             }
         };
 
-        let mut tls_stream = if let Ok(s) = connector.connect(&domain_clone, stream) { s } else {
+        let Ok(mut tls_stream) = connector.connect(&domain_clone, stream) else {
             // TLS 握手失败，检测是否是 HTTP 连接
             if check_http_connection(&domain_clone, port) {
                 return Ok(ApiResponse::success(SslCheckResult {
@@ -716,25 +714,21 @@ pub async fn ssl_check(
         };
 
         // 发送 HTTP 请求
-        let request = format!(
-            "HEAD / HTTP/1.1\r\nHost: {domain_clone}\r\nConnection: close\r\n\r\n"
-        );
+        let request =
+            format!("HEAD / HTTP/1.1\r\nHost: {domain_clone}\r\nConnection: close\r\n\r\n");
         tls_stream.write_all(request.as_bytes()).ok();
         let mut response = vec![0u8; 1024];
         tls_stream.read(&mut response).ok();
 
         // 获取证书
-        let cert_chain = match tls_stream.peer_certificate() {
-            Ok(Some(c)) => c,
-            _ => {
-                return Ok(ApiResponse::success(SslCheckResult {
-                    domain: domain_clone,
-                    port,
-                    connection_status: "https".to_string(),
-                    cert_info: None,
-                    error: Some("未找到证书".to_string()),
-                }));
-            }
+        let Ok(Some(cert_chain)) = tls_stream.peer_certificate() else {
+            return Ok(ApiResponse::success(SslCheckResult {
+                domain: domain_clone,
+                port,
+                connection_status: "https".to_string(),
+                cert_info: None,
+                error: Some("未找到证书".to_string()),
+            }));
         };
 
         let cert_der = match cert_chain.to_der() {

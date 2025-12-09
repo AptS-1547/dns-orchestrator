@@ -1,0 +1,14 @@
+# Rust Edition
+edition = "2024"
+
+# 格式化基本设置（稳定版本支持的选项）
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+
+# 函数和闭包
+fn_params_layout = "Tall"
+
+# 代码风格
+use_small_heuristics = "Default"
+match_block_trailing_comma = false

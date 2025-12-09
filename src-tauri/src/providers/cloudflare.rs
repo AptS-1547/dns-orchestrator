@@ -109,7 +109,7 @@ impl ProviderErrorMapper for CloudflareProvider {
 }
 
 impl CloudflareProvider {
-    pub fn new(credentials: HashMap<String, String>) -> Self {
+    pub fn new(credentials: &HashMap<String, String>) -> Self {
         let api_token = credentials.get("apiToken").cloned().unwrap_or_default();
 
         let account_id = uuid::Uuid::new_v4().to_string();
@@ -121,7 +121,7 @@ impl CloudflareProvider {
         }
     }
 
-    pub fn with_account_id(credentials: HashMap<String, String>, account_id: String) -> Self {
+    pub fn with_account_id(credentials: &HashMap<String, String>, account_id: String) -> Self {
         let api_token = credentials.get("apiToken").cloned().unwrap_or_default();
 
         Self {
@@ -164,13 +164,19 @@ impl CloudflareProvider {
         if !cf_response.success {
             let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .and_then(|errors| {
+                    errors
+                        .first()
+                        .map(|e| (e.code.to_string(), e.message.clone()))
+                })
                 .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
             log::error!("API 错误: {message}");
-            return Err(self.map_error(
-                RawApiError::with_code(code, message),
-                ErrorContext::default(),
-            ).into());
+            return Err(self
+                .map_error(
+                    RawApiError::with_code(code, message),
+                    ErrorContext::default(),
+                )
+                .into());
         }
 
         cf_response
@@ -222,13 +228,19 @@ impl CloudflareProvider {
         if !cf_response.success {
             let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .and_then(|errors| {
+                    errors
+                        .first()
+                        .map(|e| (e.code.to_string(), e.message.clone()))
+                })
                 .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
             log::error!("API 错误: {message}");
-            return Err(self.map_error(
-                RawApiError::with_code(code, message),
-                ErrorContext::default(),
-            ).into());
+            return Err(self
+                .map_error(
+                    RawApiError::with_code(code, message),
+                    ErrorContext::default(),
+                )
+                .into());
         }
 
         let total_count = cf_response.result_info.map_or(0, |i| i.total_count);
@@ -278,13 +290,19 @@ impl CloudflareProvider {
         if !cf_response.success {
             let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .and_then(|errors| {
+                    errors
+                        .first()
+                        .map(|e| (e.code.to_string(), e.message.clone()))
+                })
                 .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
             log::error!("API 错误: {message}");
-            return Err(self.map_error(
-                RawApiError::with_code(code, message),
-                ErrorContext::default(),
-            ).into());
+            return Err(self
+                .map_error(
+                    RawApiError::with_code(code, message),
+                    ErrorContext::default(),
+                )
+                .into());
         }
 
         cf_response
@@ -333,13 +351,19 @@ impl CloudflareProvider {
         if !cf_response.success {
             let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .and_then(|errors| {
+                    errors
+                        .first()
+                        .map(|e| (e.code.to_string(), e.message.clone()))
+                })
                 .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
             log::error!("API 错误: {message}");
-            return Err(self.map_error(
-                RawApiError::with_code(code, message),
-                ErrorContext::default(),
-            ).into());
+            return Err(self
+                .map_error(
+                    RawApiError::with_code(code, message),
+                    ErrorContext::default(),
+                )
+                .into());
         }
 
         cf_response
@@ -380,13 +404,19 @@ impl CloudflareProvider {
         if !cf_response.success {
             let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .and_then(|errors| {
+                    errors
+                        .first()
+                        .map(|e| (e.code.to_string(), e.message.clone()))
+                })
                 .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
             log::error!("API 错误: {message}");
-            return Err(self.map_error(
-                RawApiError::with_code(code, message),
-                ErrorContext::default(),
-            ).into());
+            return Err(self
+                .map_error(
+                    RawApiError::with_code(code, message),
+                    ErrorContext::default(),
+                )
+                .into());
         }
 
         Ok(())
@@ -457,7 +487,8 @@ impl CloudflareProvider {
                     provider: self.provider_name().to_string(),
                     param: "record_type".to_string(),
                     detail: format!("不支持的记录类型: {}", cf_record.record_type),
-                }.into())
+                }
+                .into())
             }
         };
 
@@ -558,18 +589,23 @@ impl DnsProvider for CloudflareProvider {
             .map_err(|e| self.network_error(format!("读取响应失败: {e}")))?;
 
         let cf_response: CloudflareResponse<Vec<CloudflareDnsRecord>> =
-            serde_json::from_str(&response_text)
-                .map_err(|e| self.parse_error(e))?;
+            serde_json::from_str(&response_text).map_err(|e| self.parse_error(e))?;
 
         if !cf_response.success {
             let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .and_then(|errors| {
+                    errors
+                        .first()
+                        .map(|e| (e.code.to_string(), e.message.clone()))
+                })
                 .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
-            return Err(self.map_error(
-                RawApiError::with_code(code, message),
-                ErrorContext::default(),
-            ).into());
+            return Err(self
+                .map_error(
+                    RawApiError::with_code(code, message),
+                    ErrorContext::default(),
+                )
+                .into());
         }
 
         let total_count = cf_response.result_info.map_or(0, |i| i.total_count);

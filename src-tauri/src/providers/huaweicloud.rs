@@ -122,7 +122,7 @@ impl ProviderErrorMapper for HuaweicloudProvider {
 }
 
 impl HuaweicloudProvider {
-    pub fn new(credentials: HashMap<String, String>) -> Self {
+    pub fn new(credentials: &HashMap<String, String>) -> Self {
         let access_key_id = credentials.get("accessKeyId").cloned().unwrap_or_default();
         let secret_access_key = credentials
             .get("secretAccessKey")
@@ -192,9 +192,7 @@ impl HuaweicloudProvider {
 
         // 6. 构造待签名字符串（3 行格式）
         let hashed_canonical_request = hex::encode(Sha256::digest(canonical_request.as_bytes()));
-        let string_to_sign = format!(
-            "SDK-HMAC-SHA256\n{timestamp}\n{hashed_canonical_request}"
-        );
+        let string_to_sign = format!("SDK-HMAC-SHA256\n{timestamp}\n{hashed_canonical_request}");
 
         log::debug!("StringToSign:\n{string_to_sign}");
 
@@ -257,15 +255,19 @@ impl HuaweicloudProvider {
 
         if !status.is_success() {
             if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
-                return Err(self.map_error(
-                    RawApiError::with_code(
-                        error.error_code.unwrap_or_default(),
-                        error.error_msg.unwrap_or_default(),
-                    ),
-                    ErrorContext::default(),
-                ).into());
+                return Err(self
+                    .map_error(
+                        RawApiError::with_code(
+                            error.error_code.unwrap_or_default(),
+                            error.error_msg.unwrap_or_default(),
+                        ),
+                        ErrorContext::default(),
+                    )
+                    .into());
             }
-            return Err(self.unknown_error(RawApiError::new(format!("HTTP {status}: {response_text}"))).into());
+            return Err(self
+                .unknown_error(RawApiError::new(format!("HTTP {status}: {response_text}")))
+                .into());
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
@@ -319,15 +321,19 @@ impl HuaweicloudProvider {
 
         if !status.is_success() {
             if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
-                return Err(self.map_error(
-                    RawApiError::with_code(
-                        error.error_code.unwrap_or_default(),
-                        error.error_msg.unwrap_or_default(),
-                    ),
-                    ErrorContext::default(),
-                ).into());
+                return Err(self
+                    .map_error(
+                        RawApiError::with_code(
+                            error.error_code.unwrap_or_default(),
+                            error.error_msg.unwrap_or_default(),
+                        ),
+                        ErrorContext::default(),
+                    )
+                    .into());
             }
-            return Err(self.unknown_error(RawApiError::new(format!("HTTP {status}: {response_text}"))).into());
+            return Err(self
+                .unknown_error(RawApiError::new(format!("HTTP {status}: {response_text}")))
+                .into());
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
@@ -381,15 +387,19 @@ impl HuaweicloudProvider {
 
         if !status.is_success() {
             if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
-                return Err(self.map_error(
-                    RawApiError::with_code(
-                        error.error_code.unwrap_or_default(),
-                        error.error_msg.unwrap_or_default(),
-                    ),
-                    ErrorContext::default(),
-                ).into());
+                return Err(self
+                    .map_error(
+                        RawApiError::with_code(
+                            error.error_code.unwrap_or_default(),
+                            error.error_msg.unwrap_or_default(),
+                        ),
+                        ErrorContext::default(),
+                    )
+                    .into());
             }
-            return Err(self.unknown_error(RawApiError::new(format!("HTTP {status}: {response_text}"))).into());
+            return Err(self
+                .unknown_error(RawApiError::new(format!("HTTP {status}: {response_text}")))
+                .into());
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
@@ -432,15 +442,19 @@ impl HuaweicloudProvider {
                 .map_err(|e| self.network_error(format!("读取响应失败: {e}")))?;
 
             if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
-                return Err(self.map_error(
-                    RawApiError::with_code(
-                        error.error_code.unwrap_or_default(),
-                        error.error_msg.unwrap_or_default(),
-                    ),
-                    ErrorContext::default(),
-                ).into());
+                return Err(self
+                    .map_error(
+                        RawApiError::with_code(
+                            error.error_code.unwrap_or_default(),
+                            error.error_msg.unwrap_or_default(),
+                        ),
+                        ErrorContext::default(),
+                    )
+                    .into());
             }
-            return Err(self.unknown_error(RawApiError::new(format!("HTTP {status}: {response_text}"))).into());
+            return Err(self
+                .unknown_error(RawApiError::new(format!("HTTP {status}: {response_text}")))
+                .into());
         }
 
         Ok(())
@@ -454,10 +468,7 @@ impl HuaweicloudProvider {
             Some("ACTIVE") => DomainStatus::Active,
             // 各种 PENDING 状态
             Some(
-                "PENDING_CREATE"
-                | "PENDING_UPDATE"
-                | "PENDING_DELETE"
-                | "PENDING_FREEZE"
+                "PENDING_CREATE" | "PENDING_UPDATE" | "PENDING_DELETE" | "PENDING_FREEZE"
                 | "PENDING_DISABLE",
             ) => DomainStatus::Pending,
             // 冻结/暂停状态
@@ -482,7 +493,8 @@ impl HuaweicloudProvider {
                 provider: "huaweicloud".to_string(),
                 param: "record_type".to_string(),
                 detail: format!("不支持的记录类型: {record_type}"),
-            }.into()),
+            }
+            .into()),
         }
     }
 

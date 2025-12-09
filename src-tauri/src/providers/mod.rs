@@ -170,7 +170,7 @@ impl Default for ProviderRegistry {
 /// 工厂函数 - 根据提供商类型创建 Provider 实例
 pub fn create_provider(
     provider_type: &str,
-    credentials: HashMap<String, String>,
+    credentials: &HashMap<String, String>,
 ) -> Result<Arc<dyn DnsProvider>> {
     match provider_type {
         "cloudflare" => Ok(Arc::new(CloudflareProvider::new(credentials))),

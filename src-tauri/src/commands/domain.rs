@@ -1,7 +1,7 @@
 use tauri::State;
 
 use crate::error::{DnsError, ProviderError};
-use crate::types::{AccountStatus, ApiResponse, PaginatedResponse, Domain, PaginationParams};
+use crate::types::{AccountStatus, ApiResponse, Domain, PaginatedResponse, PaginationParams};
 use crate::AppState;
 
 /// 更新账户状态（凭证失效时调用）

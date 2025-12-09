@@ -232,7 +232,7 @@ fn restore_accounts(state: &AppState) -> crate::error::Result<()> {
         };
 
         // 3.3 重建 Provider 实例
-        let provider = match create_provider(provider_type, credentials) {
+        let provider = match create_provider(provider_type, &credentials) {
             Ok(p) => p,
             Err(e) => {
                 log::warn!(

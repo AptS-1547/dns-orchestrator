@@ -40,10 +40,7 @@ pub enum ProviderError {
     },
 
     /// 域名不存在
-    DomainNotFound {
-        provider: String,
-        domain: String,
-    },
+    DomainNotFound { provider: String, domain: String },
 
     /// 响应解析失败
     ParseError { provider: String, detail: String },

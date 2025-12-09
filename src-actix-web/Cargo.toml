@@ -1,6 +1,72 @@
 [package]
 name = "dns-orchestrator-web"
-version = "0.1.0"
+version = "1.0.13"
+description = "DNS Orchestrator built with Actix-web"
+license = "MIT"
+authors = ["AptS-1547 <apts-1547@esaps.net>"]
 edition = "2024"
+publish = false
+
+# 优化配置
+[profile.dev]
+opt-level = 1
+lto = false
+codegen-units = 16
+panic = "unwind"
+strip = false
+incremental = true
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = false
+
+[profile.release-debug]
+inherits = "release"
+codegen-units = 1
+debug = true
+strip = false
+lto = false
+
+
+[workspace]
+members = [".", "migration"]
+
+[dependencies.migration]
+path = "./migration"
 
 [dependencies]
+actix-service = "2.0.3"
+actix-web = "4.12.1"
+anyhow = { version = "1.0.100", features = ["backtrace"] }
+chrono = { version = "0.4.42", default-features = false, features = ["clock", "serde"] }
+num_cpus = { version = "1.17.0", default-features = false }
+rustls = "0.23.35"
+sea-orm = { version = "2.0.0-rc", default-features = false, features = ["sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "macros", "runtime-tokio-rustls", "chrono"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+tokio = { version = "1.48.0", default-features = false, features = ["rt-multi-thread", "macros"] }
+toml = "0.9.8"
+tracing = { version = "0.1.43", default-features = false }
+tracing-appender = "0.2.4"
+tracing-attributes = "0.1.31"
+tracing-subscriber = { version = "0.3.22", default-features = false, features = ["env-filter", "fmt", "ansi", "json"] }
+uuid = { version = "1.19.0", features = ["v4", "serde"] }
+
+# Clippy 配置
+[lints.rust]
+unsafe_code = "forbid"
+unused_imports = "warn"
+unused_variables = "warn"
+dead_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# 严格规则
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"

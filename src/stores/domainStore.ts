@@ -88,11 +88,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
       await Promise.allSettled(
         accounts.map(async (account) => {
           try {
-            const response = await domainService.listDomains(
-              account.id,
-              1,
-              PAGINATION.PAGE_SIZE
-            )
+            const response = await domainService.listDomains(account.id, 1, PAGINATION.PAGE_SIZE)
             if (response.success && response.data) {
               set((state) => ({
                 domainsByAccount: {
@@ -129,11 +125,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     }))
 
     try {
-      const response = await domainService.listDomains(
-        accountId,
-        1,
-        PAGINATION.PAGE_SIZE
-      )
+      const response = await domainService.listDomains(accountId, 1, PAGINATION.PAGE_SIZE)
       if (response.success && response.data) {
         set((state) => ({
           domainsByAccount: {
@@ -179,11 +171,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     const nextPage = cache.page + 1
 
     try {
-      const response = await domainService.listDomains(
-        accountId,
-        nextPage,
-        PAGINATION.PAGE_SIZE
-      )
+      const response = await domainService.listDomains(accountId, nextPage, PAGINATION.PAGE_SIZE)
       if (response.success && response.data) {
         set((state) => ({
           domainsByAccount: {

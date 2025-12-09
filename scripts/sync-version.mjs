@@ -20,13 +20,20 @@ const tauriConfPath = resolve(root, 'src-tauri/tauri.conf.json');
 const tauriConf = JSON.parse(readFileSync(tauriConfPath, 'utf-8'));
 tauriConf.version = version;
 writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + '\n');
-console.log('✓ tauri.conf.json');
+console.log('✓ src-tauri/tauri.conf.json');
 
-// 更新 Cargo.toml
+// 更新 Tauri Cargo.toml
 const cargoTomlPath = resolve(root, 'src-tauri/Cargo.toml');
-let cargoToml = readFileSync(cargoTomlPath, 'utf-8');
-cargoToml = cargoToml.replace(/^version\s*=\s*"[^"]*"/m, `version = "${version}"`);
-writeFileSync(cargoTomlPath, cargoToml);
-console.log('✓ Cargo.toml');
+let tauriCargoToml = readFileSync(cargoTomlPath, 'utf-8');
+tauriCargoToml = tauriCargoToml.replace(/^version\s*=\s*"[^"]*"/m, `version = "${version}"`);
+writeFileSync(cargoTomlPath, tauriCargoToml);
+console.log('✓ src-tauri/Cargo.toml');
+
+// 更新 Actix-web Cargo.toml
+const actixCargoTomlPath = resolve(root, 'src-actix-web/Cargo.toml');
+let actixCargoToml = readFileSync(actixCargoTomlPath, 'utf-8');
+actixCargoToml = actixCargoToml.replace(/^version\s*=\s*"[^"]*"/m, `version = "${version}"`);
+writeFileSync(actixCargoTomlPath, actixCargoToml);
+console.log('✓ src-actix-web/Cargo.toml');
 
 console.log('版本同步完成');
