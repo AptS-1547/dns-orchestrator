@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { NETWORK } from "@/constants"
 import type { SslCheckResult } from "@/types"
 import { HistoryChips } from "./HistoryChips"
-import { useToolboxQuery } from "./hooks/useToolboxQuery"
+import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
 import { CopyableText, InfoCard, ToolCard } from "./shared"
 
 /** 获取状态信息 */
@@ -96,17 +96,11 @@ export function SslCheck() {
   const [port, setPort] = useState("")
   const [chainOpen, setChainOpen] = useState(false)
 
-  const { isLoading, result, execute } = useToolboxQuery<
-    { domain: string; port?: number },
-    SslCheckResult
-  >({
-    commandName: "ssl_check",
-    historyType: "ssl",
-    getHistoryQuery: (params) => (params.port ? `${params.domain}:${params.port}` : params.domain),
-  })
+  const { isLoading, result, execute } = useToolboxQuery<SslCheckResult>()
 
   const handleCheck = () => {
-    if (!domain.trim()) {
+    const trimmed = domain.trim()
+    if (!trimmed) {
       toast.error(t("toolbox.enterDomain"))
       return
     }
@@ -120,7 +114,10 @@ export function SslCheck() {
       return
     }
 
-    execute({ domain: domain.trim(), port: portNum })
+    execute(() => toolboxService.sslCheck(trimmed, portNum), {
+      type: "ssl",
+      query: portNum ? `${trimmed}:${portNum}` : trimmed,
+    })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

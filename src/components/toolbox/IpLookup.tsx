@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import type { IpGeoInfo, IpLookupResult } from "@/types"
-import { useToolboxQuery } from "./hooks/useToolboxQuery"
+import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
 import { CopyableText, InfoCard, QueryInput, ToolCard } from "./shared"
 
 /** 国家代码转国旗 emoji */
@@ -20,18 +20,18 @@ export function IpLookup() {
   const { t } = useTranslation()
   const [query, setQuery] = useState("")
 
-  const { isLoading, result, execute } = useToolboxQuery<{ query: string }, IpLookupResult>({
-    commandName: "ip_lookup",
-    historyType: "ip",
-    getHistoryQuery: (params) => params.query,
-  })
+  const { isLoading, result, execute } = useToolboxQuery<IpLookupResult>()
 
   const handleLookup = () => {
-    if (!query.trim()) {
+    const trimmed = query.trim()
+    if (!trimmed) {
       toast.error(t("toolbox.enterIpOrDomain"))
       return
     }
-    execute({ query: query.trim() })
+    execute(() => toolboxService.ipLookup(trimmed), {
+      type: "ip",
+      query: trimmed,
+    })
   }
 
   /** 渲染单个 IP 结果 */

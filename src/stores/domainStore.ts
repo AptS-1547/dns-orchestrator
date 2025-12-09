@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { PAGINATION, STORAGE_KEYS } from "@/constants"
 import { extractErrorMessage, getErrorMessage, isCredentialError } from "@/lib/error"
-import { invoke } from "@/lib/tauri"
+import { domainService } from "@/services"
 import type { Domain } from "@/types"
 import { useAccountStore } from "./accountStore"
 
@@ -88,11 +88,11 @@ export const useDomainStore = create<DomainState>((set, get) => ({
       await Promise.allSettled(
         accounts.map(async (account) => {
           try {
-            const response = await invoke("list_domains", {
-              accountId: account.id,
-              page: 1,
-              pageSize: PAGINATION.PAGE_SIZE,
-            })
+            const response = await domainService.listDomains(
+              account.id,
+              1,
+              PAGINATION.PAGE_SIZE
+            )
             if (response.success && response.data) {
               set((state) => ({
                 domainsByAccount: {
@@ -129,11 +129,11 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     }))
 
     try {
-      const response = await invoke("list_domains", {
+      const response = await domainService.listDomains(
         accountId,
-        page: 1,
-        pageSize: PAGINATION.PAGE_SIZE,
-      })
+        1,
+        PAGINATION.PAGE_SIZE
+      )
       if (response.success && response.data) {
         set((state) => ({
           domainsByAccount: {
@@ -179,11 +179,11 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     const nextPage = cache.page + 1
 
     try {
-      const response = await invoke("list_domains", {
+      const response = await domainService.listDomains(
         accountId,
-        page: nextPage,
-        pageSize: PAGINATION.PAGE_SIZE,
-      })
+        nextPage,
+        PAGINATION.PAGE_SIZE
+      )
       if (response.success && response.data) {
         set((state) => ({
           domainsByAccount: {

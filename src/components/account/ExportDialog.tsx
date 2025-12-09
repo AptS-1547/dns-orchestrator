@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { getErrorMessage } from "@/lib/error"
-import { invoke } from "@/lib/tauri"
+import { accountService } from "@/services"
 import type { Account, ExportAccountsRequest } from "@/types"
 import { getProviderName, ProviderIcon } from "./ProviderIcon"
 
@@ -98,7 +98,7 @@ export function ExportDialog({ open, onOpenChange, accounts }: ExportDialogProps
         password: encrypt ? password : undefined,
       }
 
-      const response = await invoke("export_accounts", { request })
+      const response = await accountService.exportAccounts(request)
       if (!(response.success && response.data)) {
         toast.error(getErrorMessage(response.error))
         return

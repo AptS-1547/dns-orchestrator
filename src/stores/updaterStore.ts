@@ -91,6 +91,12 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
   setShowUpdateDialog: (show: boolean) => set({ showUpdateDialog: show }),
 
   checkForUpdates: async () => {
+    // Web 端不支持更新
+    if (__PLATFORM__ === "web") {
+      set({ isPlatformUnsupported: true })
+      return null
+    }
+
     set({ checking: true, error: null, upToDate: false, isPlatformUnsupported: false })
     try {
       const currentPlatform = getPlatform()

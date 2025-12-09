@@ -8,14 +8,25 @@ const host = process.env.TAURI_DEV_HOST
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"))
 
+// 平台类型：tauri（默认）或 web
+const platform = process.env.VITE_PLATFORM ?? "tauri"
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [react(), tailwindcss()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __PLATFORM__: JSON.stringify(platform),
   },
   resolve: {
     alias: {
+      // 编译时切换 Transport 实现（需要放在 @ 之前，否则会被 @ 优先匹配）
+      "#transport-impl": path.resolve(
+        __dirname,
+        platform === "web"
+          ? "./src/services/transport/http.transport.ts"
+          : "./src/services/transport/tauri.transport.ts"
+      ),
       "@": path.resolve(__dirname, "./src"),
     },
   },
@@ -40,5 +51,14 @@ export default defineConfig(async () => ({
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
+    // Web 模式下的代理配置
+    ...(platform === "web" && {
+      proxy: {
+        "/api": {
+          target: "http://localhost:8080",
+          changeOrigin: true,
+        },
+      },
+    }),
   },
 }))

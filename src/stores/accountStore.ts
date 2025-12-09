@@ -2,7 +2,7 @@ import { toast } from "sonner"
 import { create } from "zustand"
 import { TIMING } from "@/constants"
 import { extractErrorMessage, getErrorMessage } from "@/lib/error"
-import { invoke } from "@/lib/tauri"
+import { accountService } from "@/services"
 import type { Account, CreateAccountRequest } from "@/types"
 import type { ProviderInfo } from "@/types/provider"
 import { useDomainStore } from "./domainStore"
@@ -44,7 +44,7 @@ export const useAccountStore = create<AccountState>((set) => ({
   fetchAccounts: async () => {
     set({ isLoading: true, error: null })
     try {
-      const response = await invoke("list_accounts")
+      const response = await accountService.listAccounts()
       if (response.success && response.data) {
         set({ accounts: response.data })
         // 检查是否有加载失败的账户
@@ -70,7 +70,7 @@ export const useAccountStore = create<AccountState>((set) => ({
 
   fetchProviders: async () => {
     try {
-      const response = await invoke("list_providers")
+      const response = await accountService.listProviders()
       if (response.success && response.data) {
         set({ providers: response.data })
       } else {
@@ -84,7 +84,7 @@ export const useAccountStore = create<AccountState>((set) => ({
   createAccount: async (request) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await invoke("create_account", { request })
+      const response = await accountService.createAccount(request)
       if (response.success && response.data) {
         set((state) => ({ accounts: [...state.accounts, response.data!] }))
         toast.success(`账号 "${response.data.name}" 添加成功`)
@@ -107,7 +107,7 @@ export const useAccountStore = create<AccountState>((set) => ({
   deleteAccount: async (id) => {
     set({ isDeleting: true })
     try {
-      const response = await invoke("delete_account", { accountId: id })
+      const response = await accountService.deleteAccount(id)
       if (response.success) {
         set((state) => ({
           accounts: state.accounts.filter((a) => a.id !== id),

@@ -23,7 +23,7 @@ import { DNS_SERVERS } from "@/constants"
 import type { DnsLookupResult, DnsLookupType } from "@/types"
 import { DNS_RECORD_TYPES } from "@/types"
 import { HistoryChips } from "./HistoryChips"
-import { useToolboxQuery } from "./hooks/useToolboxQuery"
+import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
 import { CopyableText, ToolCard } from "./shared"
 
 export function DnsLookup() {
@@ -33,18 +33,11 @@ export function DnsLookup() {
   const [dnsServer, setDnsServer] = useState("system")
   const [customDns, setCustomDns] = useState("")
 
-  const { isLoading, result, execute } = useToolboxQuery<
-    { domain: string; recordType: DnsLookupType; nameserver: string | null },
-    DnsLookupResult
-  >({
-    commandName: "dns_lookup",
-    historyType: "dns",
-    getHistoryQuery: (params) => params.domain,
-    getHistoryExtra: (params) => ({ recordType: params.recordType }),
-  })
+  const { isLoading, result, execute } = useToolboxQuery<DnsLookupResult>()
 
   const handleLookup = async () => {
-    if (!domain.trim()) {
+    const trimmed = domain.trim()
+    if (!trimmed) {
       toast.error(t("toolbox.enterDomain"))
       return
     }
@@ -61,7 +54,10 @@ export function DnsLookup() {
       nameserver = dnsServer
     }
 
-    const data = await execute({ domain: domain.trim(), recordType, nameserver })
+    const data = await execute(
+      () => toolboxService.dnsLookup(trimmed, recordType, nameserver),
+      { type: "dns", query: trimmed, recordType }
+    )
     if (data && data.records.length === 0) {
       toast.info(t("toolbox.noRecords"))
     }

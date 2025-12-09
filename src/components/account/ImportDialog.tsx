@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { getErrorMessage } from "@/lib/error"
-import { invoke } from "@/lib/tauri"
+import { accountService } from "@/services"
 import type { ImportAccountsRequest, ImportPreview } from "@/types"
 import { getProviderName, ProviderIcon } from "./ProviderIcon"
 
@@ -63,7 +63,7 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
       setFileName((filePath as string).split("/").pop() || "file.json")
 
       // 尝试预览（不带密码）
-      const response = await invoke("preview_import", { content, password: null })
+      const response = await accountService.previewImport(content, null)
 
       if (response.success && response.data) {
         setPreview(response.data)
@@ -87,7 +87,7 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
 
     setIsLoading(true)
     try {
-      const response = await invoke("preview_import", { content: fileContent, password })
+      const response = await accountService.previewImport(fileContent, password)
 
       if (response.success && response.data?.accounts) {
         setPreview(response.data)
@@ -124,7 +124,7 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
         password: preview?.encrypted ? password : undefined,
       }
 
-      const response = await invoke("import_accounts", { request })
+      const response = await accountService.importAccounts(request)
 
       if (response.success && response.data) {
         showImportResult(response.data.successCount, response.data.failures)

@@ -2,7 +2,7 @@ import { toast } from "sonner"
 import { create } from "zustand"
 import { PAGINATION } from "@/constants"
 import { extractErrorMessage, getErrorMessage } from "@/lib/error"
-import { invoke } from "@/lib/tauri"
+import { dnsService } from "@/services"
 import type {
   BatchDeleteRequest,
   BatchDeleteResult,
@@ -99,7 +99,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
       ...(isDomainChange && { records: [], totalCount: 0 }),
     })
     try {
-      const response = await invoke("list_dns_records", {
+      const response = await dnsService.listRecords({
         accountId,
         domainId,
         page: 1,
@@ -147,7 +147,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
     const nextPage = page + 1
 
     try {
-      const response = await invoke("list_dns_records", {
+      const response = await dnsService.listRecords({
         accountId,
         domainId,
         page: nextPage,
@@ -178,7 +178,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
   createRecord: async (accountId, request) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await invoke("create_dns_record", { accountId, request })
+      const response = await dnsService.createRecord(accountId, request)
       if (response.success && response.data) {
         set((state) => ({
           records: [...state.records, response.data!],
@@ -203,7 +203,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
 
   updateRecord: async (accountId, recordId, request) => {
     try {
-      const response = await invoke("update_dns_record", { accountId, recordId, request })
+      const response = await dnsService.updateRecord(accountId, recordId, request)
       if (response.success && response.data) {
         set((state) => ({
           records: state.records.map((r) => (r.id === recordId ? response.data! : r)),
@@ -222,7 +222,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
   deleteRecord: async (accountId, recordId, domainId) => {
     set({ isDeleting: true })
     try {
-      const response = await invoke("delete_dns_record", { accountId, recordId, domainId })
+      const response = await dnsService.deleteRecord(accountId, recordId, domainId)
       if (response.success) {
         set((state) => ({
           records: state.records.filter((r) => r.id !== recordId),
@@ -292,7 +292,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
         domainId,
         recordIds: Array.from(selectedRecordIds),
       }
-      const response = await invoke("batch_delete_dns_records", { accountId, request })
+      const response = await dnsService.batchDeleteRecords(accountId, request)
 
       if (response.success && response.data) {
         const result = response.data

@@ -1,61 +1,48 @@
-import { invoke } from "@tauri-apps/api/core"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import { getErrorMessage } from "@/lib/error"
+import { toolboxService } from "@/services"
 import { useToolboxStore } from "@/stores"
 import type { ApiResponse, QueryHistoryItem } from "@/types"
 
-export interface UseToolboxQueryOptions<TParams> {
-  /** Tauri command 名称 */
-  commandName: string
-  /** 历史记录类型 */
-  historyType: QueryHistoryItem["type"]
-  /** 生成历史记录的查询字符串 */
-  getHistoryQuery: (params: TParams) => string
-  /** 额外的历史记录字段（如 DNS 的 recordType） */
-  getHistoryExtra?: (params: TParams) => Partial<QueryHistoryItem>
-}
-
-export interface UseToolboxQueryReturn<TParams, TResult> {
+export interface UseToolboxQueryReturn<TResult> {
   /** 是否正在加载 */
   isLoading: boolean
   /** 查询结果 */
   result: TResult | null
   /** 执行查询 */
-  execute: (params: TParams) => Promise<TResult | null>
+  execute: (
+    serviceFn: () => Promise<ApiResponse<TResult>>,
+    historyItem: Omit<QueryHistoryItem, "id" | "timestamp">
+  ) => Promise<TResult | null>
   /** 重置结果 */
   reset: () => void
 }
 
 /**
  * 通用工具箱查询 Hook
- * 统一管理：loading 状态、Tauri invoke 调用、历史记录添加、错误提示
+ * 统一管理：loading 状态、Service 调用、历史记录添加、错误提示
  */
-export function useToolboxQuery<TParams extends Record<string, unknown>, TResult>(
-  options: UseToolboxQueryOptions<TParams>
-): UseToolboxQueryReturn<TParams, TResult> {
-  const { commandName, historyType, getHistoryQuery, getHistoryExtra } = options
+export function useToolboxQuery<TResult>(): UseToolboxQueryReturn<TResult> {
   const { addHistory } = useToolboxStore()
 
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<TResult | null>(null)
 
   const execute = useCallback(
-    async (params: TParams): Promise<TResult | null> => {
+    async (
+      serviceFn: () => Promise<ApiResponse<TResult>>,
+      historyItem: Omit<QueryHistoryItem, "id" | "timestamp">
+    ): Promise<TResult | null> => {
       setIsLoading(true)
       setResult(null)
 
       try {
-        const response = await invoke<ApiResponse<TResult>>(commandName, params)
+        const response = await serviceFn()
 
         if (response.success && response.data) {
           setResult(response.data)
-          // 添加历史记录
-          addHistory({
-            type: historyType,
-            query: getHistoryQuery(params),
-            ...getHistoryExtra?.(params),
-          })
+          addHistory(historyItem)
           return response.data
         }
 
@@ -68,7 +55,7 @@ export function useToolboxQuery<TParams extends Record<string, unknown>, TResult
         setIsLoading(false)
       }
     },
-    [commandName, historyType, getHistoryQuery, getHistoryExtra, addHistory]
+    [addHistory]
   )
 
   const reset = useCallback(() => {
@@ -82,3 +69,6 @@ export function useToolboxQuery<TParams extends Record<string, unknown>, TResult
     reset,
   }
 }
+
+// ============ 导出 toolboxService 供组件使用 ============
+export { toolboxService }

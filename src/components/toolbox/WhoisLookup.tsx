@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import type { WhoisResult } from "@/types"
-import { useToolboxQuery } from "./hooks/useToolboxQuery"
+import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
 import { QueryInput, ToolCard } from "./shared"
 
 export function WhoisLookup() {
@@ -12,18 +12,18 @@ export function WhoisLookup() {
   const [domain, setDomain] = useState("")
   const [showRaw, setShowRaw] = useState(false)
 
-  const { isLoading, result, execute } = useToolboxQuery<{ domain: string }, WhoisResult>({
-    commandName: "whois_lookup",
-    historyType: "whois",
-    getHistoryQuery: (params) => params.domain,
-  })
+  const { isLoading, result, execute } = useToolboxQuery<WhoisResult>()
 
   const handleLookup = () => {
-    if (!domain.trim()) {
+    const trimmed = domain.trim()
+    if (!trimmed) {
       toast.error(t("toolbox.enterDomain"))
       return
     }
-    execute({ domain: domain.trim() })
+    execute(() => toolboxService.whoisLookup(trimmed), {
+      type: "whois",
+      query: trimmed,
+    })
   }
 
   return (

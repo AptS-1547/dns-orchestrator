@@ -1,13 +1,16 @@
 {
   "name": "dns-orchestrator",
   "private": true,
-  "version": "1.0.12",
+  "version": "1.0.13",
   "author": "AptS:1547 (Yuhan Bian / 卞雨涵 <apts-1547@esaps.net>)",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:web": "VITE_PLATFORM=web vite",
     "build": "tsc && vite build",
+    "build:web": "VITE_PLATFORM=web tsc && VITE_PLATFORM=web vite build",
     "preview": "vite preview",
+    "preview:web": "VITE_PLATFORM=web vite preview",
     "tauri": "tauri",
     "sync-version": "node scripts/sync-version.mjs",
     "lint": "biome lint ./src",
