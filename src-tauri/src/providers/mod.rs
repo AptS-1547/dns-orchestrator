@@ -13,11 +13,83 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::error::{DnsError, Result};
+use crate::error::{DnsError, ProviderError, Result};
 use crate::types::{
     CreateDnsRecordRequest, DnsRecord, Domain, PaginatedResponse, PaginationParams,
     RecordQueryParams, UpdateDnsRecordRequest,
 };
+
+/// 原始 API 错误
+#[derive(Debug, Clone)]
+pub struct RawApiError {
+    /// 错误码（各 Provider 格式不同）
+    pub code: Option<String>,
+    /// 原始错误消息
+    pub message: String,
+}
+
+impl RawApiError {
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            code: None,
+            message: message.into(),
+        }
+    }
+
+    pub fn with_code(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            code: Some(code.into()),
+            message: message.into(),
+        }
+    }
+}
+
+/// Provider 错误映射 Trait
+/// 各 Provider 实现此 trait 以将原始 API 错误映射到统一错误类型
+pub trait ProviderErrorMapper {
+    /// 返回 Provider 标识符
+    fn provider_name(&self) -> &'static str;
+
+    /// 将原始 API 错误映射到统一错误类型
+    fn map_error(&self, raw: RawApiError, context: ErrorContext) -> ProviderError;
+
+    /// 快捷方法：网络错误
+    fn network_error(&self, detail: impl ToString) -> ProviderError {
+        ProviderError::NetworkError {
+            provider: self.provider_name().to_string(),
+            detail: detail.to_string(),
+        }
+    }
+
+    /// 快捷方法：解析错误
+    fn parse_error(&self, detail: impl ToString) -> ProviderError {
+        ProviderError::ParseError {
+            provider: self.provider_name().to_string(),
+            detail: detail.to_string(),
+        }
+    }
+
+    /// 快捷方法：未知错误（fallback）
+    fn unknown_error(&self, raw: RawApiError) -> ProviderError {
+        ProviderError::Unknown {
+            provider: self.provider_name().to_string(),
+            raw_code: raw.code,
+            raw_message: raw.message,
+        }
+    }
+}
+
+/// 错误上下文信息
+/// 用于在映射错误时提供额外信息
+#[derive(Debug, Clone, Default)]
+pub struct ErrorContext {
+    /// 记录名称（用于 RecordExists 等错误）
+    pub record_name: Option<String>,
+    /// 记录 ID（用于 RecordNotFound 等错误）
+    pub record_id: Option<String>,
+    /// 域名（用于 DomainNotFound 等错误）
+    pub domain: Option<String>,
+}
 
 /// DNS 提供商 Trait
 #[async_trait]

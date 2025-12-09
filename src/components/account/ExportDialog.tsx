@@ -4,6 +4,7 @@ import { Download, Loader2, Lock } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
+import { getErrorMessage } from "@/lib/error"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -99,7 +100,7 @@ export function ExportDialog({ open, onOpenChange, accounts }: ExportDialogProps
 
       const response = await invoke("export_accounts", { request })
       if (!(response.success && response.data)) {
-        toast.error(response.error?.message || t("export.failed"))
+        toast.error(getErrorMessage(response.error))
         return
       }
 

@@ -1,7 +1,9 @@
 import { create } from "zustand"
 import { PAGINATION } from "@/constants"
+import { extractErrorMessage, getErrorMessage, isCredentialError } from "@/lib/error"
 import { invoke } from "@/lib/tauri"
 import type { Domain } from "@/types"
+import { useAccountStore } from "./accountStore"
 
 interface DomainState {
   domains: Domain[]
@@ -64,13 +66,17 @@ export const useDomainStore = create<DomainState>((set, get) => ({
           totalCount: response.data.totalCount,
         })
       } else {
-        set({ error: response.error?.message || "获取域名列表失败" })
+        set({ error: getErrorMessage(response.error) })
       }
     } catch (err) {
       if (get().currentAccountId !== accountId) {
         return
       }
-      set({ error: String(err) })
+      // 凭证错误时刷新账户列表以获取最新状态
+      if (isCredentialError(err)) {
+        useAccountStore.getState().fetchAccounts()
+      }
+      set({ error: extractErrorMessage(err) })
     } finally {
       if (get().currentAccountId === accountId) {
         set({ isLoading: false })

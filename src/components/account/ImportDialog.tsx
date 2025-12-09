@@ -4,6 +4,7 @@ import { AlertTriangle, FileText, Loader2, Lock, Upload } from "lucide-react"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
+import { getErrorMessage } from "@/lib/error"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -72,7 +73,7 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
           setStep("preview")
         }
       } else {
-        toast.error(response.error?.message || t("import.invalidFile"))
+        toast.error(getErrorMessage(response.error))
       }
     } catch (err) {
       toast.error(String(err))
@@ -92,7 +93,7 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
         setPreview(response.data)
         setStep("preview")
       } else {
-        toast.error(response.error?.message || t("import.decryptFailed"))
+        toast.error(getErrorMessage(response.error))
       }
     } catch (err) {
       toast.error(String(err))
@@ -130,7 +131,7 @@ export function ImportDialog({ open, onOpenChange, onImportSuccess }: ImportDial
         onOpenChange(false)
         resetState()
       } else {
-        toast.error(response.error?.message || t("import.failed"))
+        toast.error(getErrorMessage(response.error))
         setStep("preview")
       }
     } catch (err) {

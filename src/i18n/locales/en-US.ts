@@ -325,4 +325,68 @@ export default {
     retry: "Retry",
     reload: "Reload page",
   },
+  errors: {
+    // General
+    unknown: "Unknown error",
+    // API errors
+    request_failed: "Request failed: {{detail}}",
+    response_read_failed: "Failed to read response: {{detail}}",
+    json_parse_failed: "JSON parse failed: {{detail}}",
+    response_parse_failed: "Response parse failed: {{detail}}",
+    missing_result_field: "Missing result field in response",
+    missing_data_field: "Missing data in response",
+    api_error: "API error: {{detail}}",
+    unknown_error: "Unknown error",
+    serialize_body_failed: "Failed to serialize request body",
+    // Credential errors
+    credential_validation_failed: "Credential validation failed",
+    credential_load_failed: "Failed to load credentials: {{detail}}",
+    credential_not_found: "Credentials not found",
+    credential_save_failed: "Failed to save credentials: {{detail}}",
+    // Provider errors
+    provider_create_failed: "Failed to create provider: {{detail}}",
+    unsupported_record_type: "Unsupported record type: {{detail}}",
+    // Import/Export errors
+    invalid_import_file: "Invalid import file: {{detail}}",
+    unsupported_file_version: "Unsupported file version",
+    no_accounts_selected: "No accounts selected",
+    encryption_password_required: "Password required for encrypted export",
+    decryption_password_required: "Password required for encrypted file",
+    invalid_encrypted_data: "Invalid encrypted data",
+    missing_salt: "Missing encryption salt",
+    missing_nonce: "Missing encryption nonce",
+    decryption_failed: "Decryption failed, please check your password",
+    parse_accounts_failed: "Failed to parse account data: {{detail}}",
+    // Provider errors (unified error types)
+    provider: {
+      // Common errors (shared by all providers)
+      common: {
+        network_error: "Network request failed: {{detail}}",
+        invalid_credentials: "Invalid or expired credentials",
+        record_exists: 'Record "{{record_name}}" already exists',
+        record_not_found: "Record not found",
+        invalid_parameter: 'Invalid parameter "{{param}}": {{detail}}',
+        quota_exceeded: "Quota exceeded",
+        domain_not_found: 'Domain "{{domain}}" not found',
+        parse_error: "Response parse failed: {{detail}}",
+        unknown: "Unknown error",
+      },
+      // Cloudflare specific errors
+      cloudflare: {
+        invalid_credentials: "API Token is invalid or expired",
+      },
+      // Aliyun specific errors
+      aliyun: {
+        invalid_credentials: "AccessKey is invalid or disabled",
+      },
+      // DNSPod specific errors
+      dnspod: {
+        invalid_credentials: "API key is invalid",
+      },
+      // Huaweicloud specific errors
+      huaweicloud: {
+        invalid_credentials: "AK/SK is invalid",
+      },
+    },
+  },
 }

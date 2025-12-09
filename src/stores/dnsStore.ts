@@ -1,6 +1,7 @@
 import { toast } from "sonner"
 import { create } from "zustand"
 import { PAGINATION } from "@/constants"
+import { extractErrorMessage, getErrorMessage } from "@/lib/error"
 import { invoke } from "@/lib/tauri"
 import type {
   BatchDeleteRequest,
@@ -118,7 +119,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
           totalCount: response.data.totalCount,
         })
       } else {
-        const msg = response.error?.message || "获取 DNS 记录失败"
+        const msg = getErrorMessage(response.error)
         set({ error: msg })
         toast.error(msg)
       }
@@ -126,7 +127,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
       if (get().currentDomainId !== domainId) {
         return // 请求已过期，忽略
       }
-      const msg = String(err)
+      const msg = extractErrorMessage(err)
       set({ error: msg })
       toast.error(msg)
     } finally {
@@ -186,12 +187,12 @@ export const useDnsStore = create<DnsState>((set, get) => ({
         toast.success(`记录 "${response.data.name}" 添加成功`)
         return response.data
       }
-      const msg = response.error?.message || "创建记录失败"
+      const msg = getErrorMessage(response.error)
       set({ error: msg })
       toast.error(msg)
       return null
     } catch (err) {
-      const msg = String(err)
+      const msg = extractErrorMessage(err)
       set({ error: msg })
       toast.error(msg)
       return null
@@ -213,7 +214,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
       toast.error("更新记录失败")
       return false
     } catch (err) {
-      toast.error(String(err))
+      toast.error(extractErrorMessage(err))
       return false
     }
   },
@@ -233,7 +234,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
       toast.error("删除记录失败")
       return false
     } catch (err) {
-      toast.error(String(err))
+      toast.error(extractErrorMessage(err))
       return false
     } finally {
       set({ isDeleting: false })
@@ -313,10 +314,10 @@ export const useDnsStore = create<DnsState>((set, get) => ({
         }
         return result
       }
-      toast.error(response.error?.message || "批量删除失败")
+      toast.error(getErrorMessage(response.error))
       return null
     } catch (err) {
-      toast.error(String(err))
+      toast.error(extractErrorMessage(err))
       return null
     } finally {
       set({ isBatchDeleting: false })

@@ -14,13 +14,13 @@ pub async fn list_dns_records(
     page_size: Option<u32>,
     keyword: Option<String>,
     record_type: Option<String>,
-) -> Result<ApiResponse<PaginatedResponse<DnsRecord>>, String> {
+) -> Result<ApiResponse<PaginatedResponse<DnsRecord>>, DnsError> {
     // 获取 provider
     let provider = state
         .registry
         .get(&account_id)
         .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()).to_string())?;
+        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
 
     // 构造查询参数
     let params = RecordQueryParams {
@@ -31,10 +31,7 @@ pub async fn list_dns_records(
     };
 
     // 调用 provider 获取 DNS 记录列表
-    let response = provider
-        .list_records(&domain_id, &params)
-        .await
-        .map_err(|e| e.to_string())?;
+    let response = provider.list_records(&domain_id, &params).await?;
 
     Ok(ApiResponse::success(response))
 }
@@ -45,19 +42,16 @@ pub async fn create_dns_record(
     state: State<'_, AppState>,
     account_id: String,
     request: CreateDnsRecordRequest,
-) -> Result<ApiResponse<DnsRecord>, String> {
+) -> Result<ApiResponse<DnsRecord>, DnsError> {
     // 获取 provider
     let provider = state
         .registry
         .get(&account_id)
         .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()).to_string())?;
+        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
 
     // 调用 provider 创建记录
-    let record = provider
-        .create_record(&request)
-        .await
-        .map_err(|e| e.to_string())?;
+    let record = provider.create_record(&request).await?;
 
     Ok(ApiResponse::success(record))
 }
@@ -69,19 +63,16 @@ pub async fn update_dns_record(
     account_id: String,
     record_id: String,
     request: UpdateDnsRecordRequest,
-) -> Result<ApiResponse<DnsRecord>, String> {
+) -> Result<ApiResponse<DnsRecord>, DnsError> {
     // 获取 provider
     let provider = state
         .registry
         .get(&account_id)
         .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()).to_string())?;
+        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
 
     // 调用 provider 更新记录
-    let record = provider
-        .update_record(&record_id, &request)
-        .await
-        .map_err(|e| e.to_string())?;
+    let record = provider.update_record(&record_id, &request).await?;
 
     Ok(ApiResponse::success(record))
 }
@@ -93,19 +84,16 @@ pub async fn delete_dns_record(
     account_id: String,
     record_id: String,
     domain_id: String,
-) -> Result<ApiResponse<()>, String> {
+) -> Result<ApiResponse<()>, DnsError> {
     // 获取 provider
     let provider = state
         .registry
         .get(&account_id)
         .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()).to_string())?;
+        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
 
     // 调用 provider 删除记录
-    provider
-        .delete_record(&record_id, &domain_id)
-        .await
-        .map_err(|e| e.to_string())?;
+    provider.delete_record(&record_id, &domain_id).await?;
 
     Ok(ApiResponse::success(()))
 }
@@ -116,13 +104,13 @@ pub async fn batch_delete_dns_records(
     state: State<'_, AppState>,
     account_id: String,
     request: BatchDeleteRequest,
-) -> Result<ApiResponse<BatchDeleteResult>, String> {
+) -> Result<ApiResponse<BatchDeleteResult>, DnsError> {
     // 获取 provider
     let provider = state
         .registry
         .get(&account_id)
         .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()).to_string())?;
+        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
 
     let mut success_count = 0;
     let mut failures = Vec::new();

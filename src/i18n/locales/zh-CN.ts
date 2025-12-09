@@ -319,4 +319,68 @@ export default {
     retry: "重试",
     reload: "刷新页面",
   },
+  errors: {
+    // 通用
+    unknown: "未知错误",
+    // API 错误
+    request_failed: "请求失败: {{detail}}",
+    response_read_failed: "读取响应失败: {{detail}}",
+    json_parse_failed: "JSON 解析失败: {{detail}}",
+    response_parse_failed: "解析响应失败: {{detail}}",
+    missing_result_field: "响应中缺少 result 字段",
+    missing_data_field: "响应中缺少数据",
+    api_error: "API 错误: {{detail}}",
+    unknown_error: "未知错误",
+    serialize_body_failed: "无法序列化请求体",
+    // 凭证错误
+    credential_validation_failed: "凭证验证失败",
+    credential_load_failed: "凭证加载失败: {{detail}}",
+    credential_not_found: "凭证未找到",
+    credential_save_failed: "保存凭证失败: {{detail}}",
+    // Provider 错误
+    provider_create_failed: "Provider 创建失败: {{detail}}",
+    unsupported_record_type: "不支持的记录类型: {{detail}}",
+    // 导入导出错误
+    invalid_import_file: "无效的导入文件: {{detail}}",
+    unsupported_file_version: "不支持的文件版本",
+    no_accounts_selected: "没有选中任何账号",
+    encryption_password_required: "加密导出需要提供密码",
+    decryption_password_required: "加密文件需要提供密码",
+    invalid_encrypted_data: "无效的加密数据",
+    missing_salt: "缺少加密盐值",
+    missing_nonce: "缺少加密 nonce",
+    decryption_failed: "解密失败，请检查密码是否正确",
+    parse_accounts_failed: "解析账号数据失败: {{detail}}",
+    // Provider 错误（统一错误类型）
+    provider: {
+      // 通用错误（所有 Provider 共享）
+      common: {
+        network_error: "网络请求失败: {{detail}}",
+        invalid_credentials: "凭证无效或已过期",
+        record_exists: "记录 \"{{record_name}}\" 已存在",
+        record_not_found: "记录不存在",
+        invalid_parameter: "参数 \"{{param}}\" 无效: {{detail}}",
+        quota_exceeded: "配额已用尽",
+        domain_not_found: "域名 \"{{domain}}\" 不存在",
+        parse_error: "响应解析失败: {{detail}}",
+        unknown: "未知错误",
+      },
+      // Cloudflare 特定错误
+      cloudflare: {
+        invalid_credentials: "API Token 无效或已过期",
+      },
+      // 阿里云特定错误
+      aliyun: {
+        invalid_credentials: "AccessKey 无效或已禁用",
+      },
+      // DNSPod 特定错误
+      dnspod: {
+        invalid_credentials: "API 密钥无效",
+      },
+      // 华为云特定错误
+      huaweicloud: {
+        invalid_credentials: "AK/SK 无效",
+      },
+    },
+  },
 }

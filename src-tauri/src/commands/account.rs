@@ -11,7 +11,7 @@ use crate::AppState;
 #[tauri::command]
 pub async fn list_accounts(
     state: State<'_, AppState>,
-) -> Result<ApiResponse<Vec<Account>>, String> {
+) -> Result<ApiResponse<Vec<Account>>, DnsError> {
     let accounts = state.accounts.read().await.clone();
     Ok(ApiResponse::success(accounts))
 }
@@ -25,7 +25,7 @@ pub async fn list_accounts(
 pub async fn create_account(
     state: State<'_, AppState>,
     request: CreateAccountRequest,
-) -> Result<ApiResponse<Account>, String> {
+) -> Result<ApiResponse<Account>, DnsError> {
     let provider_type = match &request.provider {
         DnsProvider::Cloudflare => "cloudflare",
         DnsProvider::Aliyun => "aliyun",
@@ -34,14 +34,10 @@ pub async fn create_account(
     };
 
     // 1. 创建 provider 实例
-    let provider =
-        create_provider(provider_type, request.credentials.clone()).map_err(|e| e.to_string())?;
+    let provider = create_provider(provider_type, request.credentials.clone())?;
 
     // 2. 验证凭证
-    let is_valid = provider
-        .validate_credentials()
-        .await
-        .map_err(|e| e.to_string())?;
+    let is_valid = provider.validate_credentials().await?;
 
     if !is_valid {
         return Ok(ApiResponse::error("INVALID_CREDENTIALS", "凭证验证失败"));
@@ -58,7 +54,7 @@ pub async fn create_account(
         .save(&account_id, &request.credentials)
         .map_err(|e| {
             log::error!("Failed to save credentials to Keychain: {}", e);
-            e.to_string()
+            DnsError::CredentialError(e.to_string())
         })?;
     log::info!("Credentials saved successfully to Keychain");
 
@@ -97,13 +93,13 @@ pub async fn create_account(
 pub async fn delete_account(
     state: State<'_, AppState>,
     account_id: String,
-) -> Result<ApiResponse<()>, String> {
+) -> Result<ApiResponse<()>, DnsError> {
     // 1. 检查账号是否存在
     let mut accounts = state.accounts.write().await;
     let index = accounts
         .iter()
         .position(|a| a.id == account_id)
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()).to_string())?;
+        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
 
     // 2. 注销 provider
     state.registry.unregister(&account_id).await;
@@ -128,7 +124,7 @@ pub async fn delete_account(
 
 /// 获取所有支持的提供商列表
 #[tauri::command]
-pub async fn list_providers() -> Result<ApiResponse<Vec<ProviderMetadata>>, String> {
+pub async fn list_providers() -> Result<ApiResponse<Vec<ProviderMetadata>>, DnsError> {
     let providers = crate::providers::get_all_provider_metadata();
     Ok(ApiResponse::success(providers))
 }
@@ -138,7 +134,7 @@ pub async fn list_providers() -> Result<ApiResponse<Vec<ProviderMetadata>>, Stri
 pub async fn export_accounts(
     state: State<'_, AppState>,
     request: ExportAccountsRequest,
-) -> Result<ApiResponse<ExportAccountsResponse>, String> {
+) -> Result<ApiResponse<ExportAccountsResponse>, DnsError> {
     // 1. 获取选中账号的元数据
     let accounts = state.accounts.read().await;
     let selected_accounts: Vec<&Account> = accounts
@@ -172,19 +168,24 @@ pub async fn export_accounts(
     }
 
     // 3. 序列化账号数据
-    let accounts_json = serde_json::to_value(&exported_accounts).map_err(|e| e.to_string())?;
+    let accounts_json = serde_json::to_value(&exported_accounts)
+        .map_err(|e| DnsError::SerializationError(e.to_string()))?;
 
     // 4. 构建导出文件
     let now = chrono::Utc::now().to_rfc3339();
     let app_version = env!("CARGO_PKG_VERSION").to_string();
 
     let export_file = if request.encrypt {
-        let password = request.password.as_ref().ok_or("加密导出需要提供密码")?;
+        let password = request
+            .password
+            .as_ref()
+            .ok_or_else(|| DnsError::ValidationError("加密导出需要提供密码".to_string()))?;
 
-        let plaintext = serde_json::to_vec(&accounts_json).map_err(|e| e.to_string())?;
+        let plaintext = serde_json::to_vec(&accounts_json)
+            .map_err(|e| DnsError::SerializationError(e.to_string()))?;
 
-        let (salt, nonce, ciphertext) =
-            crypto::encrypt(&plaintext, password).map_err(|e| e.to_string())?;
+        let (salt, nonce, ciphertext) = crypto::encrypt(&plaintext, password)
+            .map_err(|e| DnsError::ImportExportError(e.to_string()))?;
 
         ExportFile {
             header: ExportFileHeader {
@@ -212,7 +213,8 @@ pub async fn export_accounts(
     };
 
     // 5. 生成文件内容
-    let content = serde_json::to_string_pretty(&export_file).map_err(|e| e.to_string())?;
+    let content = serde_json::to_string_pretty(&export_file)
+        .map_err(|e| DnsError::SerializationError(e.to_string()))?;
 
     let suggested_filename = format!(
         "dns-orchestrator-backup-{}.dnso",
@@ -231,10 +233,10 @@ pub async fn preview_import(
     state: State<'_, AppState>,
     content: String,
     password: Option<String>,
-) -> Result<ApiResponse<ImportPreview>, String> {
+) -> Result<ApiResponse<ImportPreview>, DnsError> {
     // 1. 解析文件
-    let export_file: ExportFile =
-        serde_json::from_str(&content).map_err(|e| format!("无效的导入文件: {}", e))?;
+    let export_file: ExportFile = serde_json::from_str(&content)
+        .map_err(|e| DnsError::ImportExportError(format!("无效的导入文件: {}", e)))?;
 
     // 2. 检查版本
     if export_file.header.version > 1 {
@@ -256,16 +258,29 @@ pub async fn preview_import(
     // 4. 解密或直接解析账号数据
     let accounts: Vec<ExportedAccount> = if export_file.header.encrypted {
         let password = password.as_ref().unwrap();
-        let ciphertext = export_file.data.as_str().ok_or("无效的加密数据")?;
-        let salt = export_file.header.salt.as_ref().ok_or("缺少加密盐值")?;
-        let nonce = export_file.header.nonce.as_ref().ok_or("缺少加密 nonce")?;
+        let ciphertext = export_file
+            .data
+            .as_str()
+            .ok_or_else(|| DnsError::ImportExportError("无效的加密数据".to_string()))?;
+        let salt = export_file
+            .header
+            .salt
+            .as_ref()
+            .ok_or_else(|| DnsError::ImportExportError("缺少加密盐值".to_string()))?;
+        let nonce = export_file
+            .header
+            .nonce
+            .as_ref()
+            .ok_or_else(|| DnsError::ImportExportError("缺少加密 nonce".to_string()))?;
 
         let plaintext = crypto::decrypt(ciphertext, password, salt, nonce)
-            .map_err(|_| "解密失败，请检查密码是否正确")?;
+            .map_err(|_| DnsError::ImportExportError("解密失败，请检查密码是否正确".to_string()))?;
 
-        serde_json::from_slice(&plaintext).map_err(|e| format!("解析账号数据失败: {}", e))?
+        serde_json::from_slice(&plaintext)
+            .map_err(|e| DnsError::ImportExportError(format!("解析账号数据失败: {}", e)))?
     } else {
-        serde_json::from_value(export_file.data).map_err(|e| format!("解析账号数据失败: {}", e))?
+        serde_json::from_value(export_file.data)
+            .map_err(|e| DnsError::ImportExportError(format!("解析账号数据失败: {}", e)))?
     };
 
     // 5. 检查与现有账号的冲突
@@ -294,23 +309,39 @@ pub async fn preview_import(
 pub async fn import_accounts(
     state: State<'_, AppState>,
     request: ImportAccountsRequest,
-) -> Result<ApiResponse<ImportResult>, String> {
+) -> Result<ApiResponse<ImportResult>, DnsError> {
     // 1. 解析和解密（逻辑与 preview_import 类似）
-    let export_file: ExportFile =
-        serde_json::from_str(&request.content).map_err(|e| format!("无效的导入文件: {}", e))?;
+    let export_file: ExportFile = serde_json::from_str(&request.content)
+        .map_err(|e| DnsError::ImportExportError(format!("无效的导入文件: {}", e)))?;
 
     let accounts: Vec<ExportedAccount> = if export_file.header.encrypted {
-        let password = request.password.as_ref().ok_or("加密文件需要提供密码")?;
-        let ciphertext = export_file.data.as_str().ok_or("无效的加密数据")?;
-        let salt = export_file.header.salt.as_ref().ok_or("缺少加密盐值")?;
-        let nonce = export_file.header.nonce.as_ref().ok_or("缺少加密 nonce")?;
+        let password = request
+            .password
+            .as_ref()
+            .ok_or_else(|| DnsError::ImportExportError("加密文件需要提供密码".to_string()))?;
+        let ciphertext = export_file
+            .data
+            .as_str()
+            .ok_or_else(|| DnsError::ImportExportError("无效的加密数据".to_string()))?;
+        let salt = export_file
+            .header
+            .salt
+            .as_ref()
+            .ok_or_else(|| DnsError::ImportExportError("缺少加密盐值".to_string()))?;
+        let nonce = export_file
+            .header
+            .nonce
+            .as_ref()
+            .ok_or_else(|| DnsError::ImportExportError("缺少加密 nonce".to_string()))?;
 
         let plaintext = crypto::decrypt(ciphertext, password, salt, nonce)
-            .map_err(|_| "解密失败，请检查密码是否正确")?;
+            .map_err(|_| DnsError::ImportExportError("解密失败，请检查密码是否正确".to_string()))?;
 
-        serde_json::from_slice(&plaintext).map_err(|e| format!("解析账号数据失败: {}", e))?
+        serde_json::from_slice(&plaintext)
+            .map_err(|e| DnsError::ImportExportError(format!("解析账号数据失败: {}", e)))?
     } else {
-        serde_json::from_value(export_file.data).map_err(|e| format!("解析账号数据失败: {}", e))?
+        serde_json::from_value(export_file.data)
+            .map_err(|e| DnsError::ImportExportError(format!("解析账号数据失败: {}", e)))?
     };
 
     // 2. 逐个导入账号

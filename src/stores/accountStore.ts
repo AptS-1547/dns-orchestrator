@@ -1,6 +1,7 @@
 import { toast } from "sonner"
 import { create } from "zustand"
 import { TIMING } from "@/constants"
+import { extractErrorMessage, getErrorMessage } from "@/lib/error"
 import { invoke } from "@/lib/tauri"
 import type { Account, CreateAccountRequest } from "@/types"
 import type { ProviderInfo } from "@/types/provider"
@@ -53,12 +54,12 @@ export const useAccountStore = create<AccountState>((set) => ({
           })
         }
       } else {
-        const msg = response.error?.message || "获取账号列表失败"
+        const msg = getErrorMessage(response.error)
         set({ error: msg })
         toast.error(msg)
       }
     } catch (err) {
-      const msg = String(err)
+      const msg = extractErrorMessage(err)
       set({ error: msg })
       toast.error(msg)
     } finally {
@@ -72,7 +73,7 @@ export const useAccountStore = create<AccountState>((set) => ({
       if (response.success && response.data) {
         set({ providers: response.data })
       } else {
-        console.error("Failed to fetch providers:", response.error?.message)
+        console.error("Failed to fetch providers:", getErrorMessage(response.error))
       }
     } catch (err) {
       console.error("Failed to fetch providers:", err)
@@ -88,12 +89,12 @@ export const useAccountStore = create<AccountState>((set) => ({
         toast.success(`账号 "${response.data.name}" 添加成功`)
         return response.data
       }
-      const msg = response.error?.message || "创建账号失败"
+      const msg = getErrorMessage(response.error)
       set({ error: msg })
       toast.error(msg)
       return null
     } catch (err) {
-      const msg = String(err)
+      const msg = extractErrorMessage(err)
       set({ error: msg })
       toast.error(msg)
       return null
@@ -117,7 +118,7 @@ export const useAccountStore = create<AccountState>((set) => ({
       toast.error("删除账号失败")
       return false
     } catch (err) {
-      toast.error(String(err))
+      toast.error(extractErrorMessage(err))
       return false
     } finally {
       set({ isDeleting: false })

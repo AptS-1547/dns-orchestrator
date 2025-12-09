@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
+import { getErrorMessage } from "@/lib/error"
 import { useToolboxStore } from "@/stores"
 import type { ApiResponse, QueryHistoryItem } from "@/types"
 
@@ -60,7 +61,7 @@ export function useToolboxQuery<TParams extends Record<string, unknown>, TResult
           return response.data
         }
 
-        toast.error(response.error?.message || t("toolbox.queryFailed"))
+        toast.error(getErrorMessage(response.error))
         return null
       } catch (err) {
         toast.error(String(err))

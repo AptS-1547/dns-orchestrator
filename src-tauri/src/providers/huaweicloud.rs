@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
-use super::DnsProvider;
-use crate::error::{DnsError, Result};
+use super::{DnsProvider, ErrorContext, ProviderErrorMapper, RawApiError};
+use crate::error::{DnsError, ProviderError, Result};
 use crate::types::{
     CreateDnsRecordRequest, DnsRecord, DnsRecordType, Domain, DomainStatus, PaginatedResponse,
     PaginationParams, RecordQueryParams, UpdateDnsRecordRequest,
@@ -84,6 +84,41 @@ pub struct HuaweicloudProvider {
     access_key_id: String,
     secret_access_key: String,
     account_id: String,
+}
+
+/// 华为云错误码映射
+impl ProviderErrorMapper for HuaweicloudProvider {
+    fn provider_name(&self) -> &'static str {
+        "huaweicloud"
+    }
+
+    fn map_error(&self, raw: RawApiError, context: ErrorContext) -> ProviderError {
+        match raw.code.as_deref() {
+            // 认证错误
+            Some("APIGW.0301") | Some("APIGW.0101") => ProviderError::InvalidCredentials {
+                provider: self.provider_name().to_string(),
+            },
+            // 记录已存在
+            Some("DNS.0312") => ProviderError::RecordExists {
+                provider: self.provider_name().to_string(),
+                record_name: context.record_name.unwrap_or_default(),
+                raw_message: Some(raw.message),
+            },
+            // 记录不存在
+            Some("DNS.0305") => ProviderError::RecordNotFound {
+                provider: self.provider_name().to_string(),
+                record_id: context.record_id.unwrap_or_default(),
+                raw_message: Some(raw.message),
+            },
+            // Zone 不存在
+            Some("DNS.0101") => ProviderError::DomainNotFound {
+                provider: self.provider_name().to_string(),
+                domain: context.domain.unwrap_or_default(),
+            },
+            // 其他错误 fallback
+            _ => self.unknown_error(raw),
+        }
+    }
 }
 
 impl HuaweicloudProvider {
@@ -217,33 +252,32 @@ impl HuaweicloudProvider {
             .header("Authorization", authorization)
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Status: {}, Body: {}", status, response_text);
 
         if !status.is_success() {
             if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
-                return Err(DnsError::ApiError(format!(
-                    "{}: {}",
-                    error.error_code.unwrap_or_default(),
-                    error.error_msg.unwrap_or_default()
-                )));
+                return Err(self.map_error(
+                    RawApiError::with_code(
+                        error.error_code.unwrap_or_default(),
+                        error.error_msg.unwrap_or_default(),
+                    ),
+                    ErrorContext::default(),
+                ).into());
             }
-            return Err(DnsError::ApiError(format!(
-                "HTTP {}: {}",
-                status, response_text
-            )));
+            return Err(self.unknown_error(RawApiError::new(format!("HTTP {}: {}", status, response_text))).into());
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
             log::error!("JSON 解析失败: {}", e);
-            DnsError::ApiError(format!("解析响应失败: {}", e))
+            self.parse_error(e).into()
         })
     }
 
@@ -280,33 +314,32 @@ impl HuaweicloudProvider {
             .body(payload)
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Status: {}, Body: {}", status, response_text);
 
         if !status.is_success() {
             if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
-                return Err(DnsError::ApiError(format!(
-                    "{}: {}",
-                    error.error_code.unwrap_or_default(),
-                    error.error_msg.unwrap_or_default()
-                )));
+                return Err(self.map_error(
+                    RawApiError::with_code(
+                        error.error_code.unwrap_or_default(),
+                        error.error_msg.unwrap_or_default(),
+                    ),
+                    ErrorContext::default(),
+                ).into());
             }
-            return Err(DnsError::ApiError(format!(
-                "HTTP {}: {}",
-                status, response_text
-            )));
+            return Err(self.unknown_error(RawApiError::new(format!("HTTP {}: {}", status, response_text))).into());
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
             log::error!("JSON 解析失败: {}", e);
-            DnsError::ApiError(format!("解析响应失败: {}", e))
+            self.parse_error(e).into()
         })
     }
 
@@ -343,33 +376,32 @@ impl HuaweicloudProvider {
             .body(payload)
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Status: {}, Body: {}", status, response_text);
 
         if !status.is_success() {
             if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
-                return Err(DnsError::ApiError(format!(
-                    "{}: {}",
-                    error.error_code.unwrap_or_default(),
-                    error.error_msg.unwrap_or_default()
-                )));
+                return Err(self.map_error(
+                    RawApiError::with_code(
+                        error.error_code.unwrap_or_default(),
+                        error.error_msg.unwrap_or_default(),
+                    ),
+                    ErrorContext::default(),
+                ).into());
             }
-            return Err(DnsError::ApiError(format!(
-                "HTTP {}: {}",
-                status, response_text
-            )));
+            return Err(self.unknown_error(RawApiError::new(format!("HTTP {}: {}", status, response_text))).into());
         }
 
         serde_json::from_str(&response_text).map_err(|e| {
             log::error!("JSON 解析失败: {}", e);
-            DnsError::ApiError(format!("解析响应失败: {}", e))
+            self.parse_error(e).into()
         })
     }
 
@@ -396,7 +428,7 @@ impl HuaweicloudProvider {
             .header("Authorization", authorization)
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
 
@@ -404,19 +436,18 @@ impl HuaweicloudProvider {
             let response_text = response
                 .text()
                 .await
-                .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+                .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
             if let Ok(error) = serde_json::from_str::<ErrorResponse>(&response_text) {
-                return Err(DnsError::ApiError(format!(
-                    "{}: {}",
-                    error.error_code.unwrap_or_default(),
-                    error.error_msg.unwrap_or_default()
-                )));
+                return Err(self.map_error(
+                    RawApiError::with_code(
+                        error.error_code.unwrap_or_default(),
+                        error.error_msg.unwrap_or_default(),
+                    ),
+                    ErrorContext::default(),
+                ).into());
             }
-            return Err(DnsError::ApiError(format!(
-                "HTTP {}: {}",
-                status, response_text
-            )));
+            return Err(self.unknown_error(RawApiError::new(format!("HTTP {}: {}", status, response_text))).into());
         }
 
         Ok(())
@@ -454,10 +485,11 @@ impl HuaweicloudProvider {
             "NS" => Ok(DnsRecordType::Ns),
             "SRV" => Ok(DnsRecordType::Srv),
             "CAA" => Ok(DnsRecordType::Caa),
-            _ => Err(DnsError::ApiError(format!(
-                "不支持的记录类型: {}",
-                record_type
-            ))),
+            _ => Err(ProviderError::InvalidParameter {
+                provider: "huaweicloud".to_string(),
+                param: "record_type".to_string(),
+                detail: format!("不支持的记录类型: {}", record_type),
+            }.into()),
         }
     }
 
@@ -508,11 +540,7 @@ impl DnsProvider for HuaweicloudProvider {
             .await
         {
             Ok(_) => Ok(true),
-            Err(DnsError::ApiError(msg))
-                if msg.contains("401") || msg.contains("403") || msg.contains("Unauthorized") =>
-            {
-                Ok(false)
-            }
+            Err(DnsError::Provider(ProviderError::InvalidCredentials { .. })) => Ok(false),
             Err(e) => {
                 log::warn!("凭证验证失败: {}", e);
                 Ok(false)

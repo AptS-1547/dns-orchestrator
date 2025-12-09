@@ -3,8 +3,8 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::DnsProvider;
-use crate::error::{DnsError, Result};
+use super::{DnsProvider, ErrorContext, ProviderErrorMapper, RawApiError};
+use crate::error::{ProviderError, Result};
 use crate::types::{
     CreateDnsRecordRequest, DnsRecord, DnsRecordType, Domain, DomainStatus, PaginatedResponse,
     PaginationParams, RecordQueryParams, UpdateDnsRecordRequest,
@@ -71,6 +71,43 @@ pub struct CloudflareProvider {
     account_id: String,
 }
 
+/// Cloudflare 错误码映射
+/// 参考: https://api.cloudflare.com/#getting-started-responses
+impl ProviderErrorMapper for CloudflareProvider {
+    fn provider_name(&self) -> &'static str {
+        "cloudflare"
+    }
+
+    fn map_error(&self, raw: RawApiError, context: ErrorContext) -> ProviderError {
+        // Cloudflare 错误码映射
+        match raw.code.as_deref() {
+            // 认证错误
+            Some("9109") | Some("10000") => ProviderError::InvalidCredentials {
+                provider: self.provider_name().to_string(),
+            },
+            // 记录已存在
+            Some("81057") => ProviderError::RecordExists {
+                provider: self.provider_name().to_string(),
+                record_name: context.record_name.unwrap_or_default(),
+                raw_message: Some(raw.message),
+            },
+            // 记录不存在
+            Some("81044") => ProviderError::RecordNotFound {
+                provider: self.provider_name().to_string(),
+                record_id: context.record_id.unwrap_or_default(),
+                raw_message: Some(raw.message),
+            },
+            // Zone 不存在
+            Some("7003") => ProviderError::DomainNotFound {
+                provider: self.provider_name().to_string(),
+                domain: context.domain.unwrap_or_default(),
+            },
+            // 其他错误 fallback
+            _ => self.unknown_error(raw),
+        }
+    }
+}
+
 impl CloudflareProvider {
     pub fn new(credentials: HashMap<String, String>) -> Self {
         let api_token = credentials.get("apiToken").cloned().unwrap_or_default();
@@ -105,7 +142,7 @@ impl CloudflareProvider {
             .header("Authorization", format!("Bearer {}", self.api_token))
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         log::debug!("Response Status: {}", status);
@@ -113,7 +150,7 @@ impl CloudflareProvider {
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Body: {}", response_text);
 
@@ -121,21 +158,24 @@ impl CloudflareProvider {
             serde_json::from_str(&response_text).map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
-                DnsError::ApiError(format!("解析响应失败: {}", e))
+                self.parse_error(e)
             })?;
 
         if !cf_response.success {
-            let error_msg = cf_response
+            let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| e.message.clone()))
-                .unwrap_or_else(|| "未知错误".to_string());
-            log::error!("API 错误: {}", error_msg);
-            return Err(DnsError::ApiError(error_msg));
+                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
+            log::error!("API 错误: {}", message);
+            return Err(self.map_error(
+                RawApiError::with_code(code, message),
+                ErrorContext::default(),
+            ).into());
         }
 
         cf_response
             .result
-            .ok_or_else(|| DnsError::ApiError("响应中缺少 result 字段".to_string()))
+            .ok_or_else(|| self.parse_error("响应中缺少 result 字段").into())
     }
 
     /// 执行 GET 请求 (带分页)
@@ -160,7 +200,7 @@ impl CloudflareProvider {
             .header("Authorization", format!("Bearer {}", self.api_token))
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         log::debug!("Response Status: {}", status);
@@ -168,7 +208,7 @@ impl CloudflareProvider {
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Body: {}", response_text);
 
@@ -176,16 +216,19 @@ impl CloudflareProvider {
             .map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
-                DnsError::ApiError(format!("解析响应失败: {}", e))
+                self.parse_error(e)
             })?;
 
         if !cf_response.success {
-            let error_msg = cf_response
+            let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| e.message.clone()))
-                .unwrap_or_else(|| "未知错误".to_string());
-            log::error!("API 错误: {}", error_msg);
-            return Err(DnsError::ApiError(error_msg));
+                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
+            log::error!("API 错误: {}", message);
+            return Err(self.map_error(
+                RawApiError::with_code(code, message),
+                ErrorContext::default(),
+            ).into());
         }
 
         let total_count = cf_response.result_info.map(|i| i.total_count).unwrap_or(0);
@@ -213,7 +256,7 @@ impl CloudflareProvider {
             .json(body)
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         log::debug!("Response Status: {}", status);
@@ -221,7 +264,7 @@ impl CloudflareProvider {
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Body: {}", response_text);
 
@@ -229,21 +272,24 @@ impl CloudflareProvider {
             serde_json::from_str(&response_text).map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
-                DnsError::ApiError(format!("解析响应失败: {}", e))
+                self.parse_error(e)
             })?;
 
         if !cf_response.success {
-            let error_msg = cf_response
+            let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| e.message.clone()))
-                .unwrap_or_else(|| "未知错误".to_string());
-            log::error!("API 错误: {}", error_msg);
-            return Err(DnsError::ApiError(error_msg));
+                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
+            log::error!("API 错误: {}", message);
+            return Err(self.map_error(
+                RawApiError::with_code(code, message),
+                ErrorContext::default(),
+            ).into());
         }
 
         cf_response
             .result
-            .ok_or_else(|| DnsError::ApiError("响应中缺少 result 字段".to_string()))
+            .ok_or_else(|| self.parse_error("响应中缺少 result 字段").into())
     }
 
     /// 执行 PATCH 请求
@@ -265,7 +311,7 @@ impl CloudflareProvider {
             .json(body)
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         log::debug!("Response Status: {}", status);
@@ -273,7 +319,7 @@ impl CloudflareProvider {
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Body: {}", response_text);
 
@@ -281,21 +327,24 @@ impl CloudflareProvider {
             serde_json::from_str(&response_text).map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
-                DnsError::ApiError(format!("解析响应失败: {}", e))
+                self.parse_error(e)
             })?;
 
         if !cf_response.success {
-            let error_msg = cf_response
+            let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| e.message.clone()))
-                .unwrap_or_else(|| "未知错误".to_string());
-            log::error!("API 错误: {}", error_msg);
-            return Err(DnsError::ApiError(error_msg));
+                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
+            log::error!("API 错误: {}", message);
+            return Err(self.map_error(
+                RawApiError::with_code(code, message),
+                ErrorContext::default(),
+            ).into());
         }
 
         cf_response
             .result
-            .ok_or_else(|| DnsError::ApiError("响应中缺少 result 字段".to_string()))
+            .ok_or_else(|| self.parse_error("响应中缺少 result 字段").into())
     }
 
     /// 执行 DELETE 请求
@@ -309,7 +358,7 @@ impl CloudflareProvider {
             .header("Authorization", format!("Bearer {}", self.api_token))
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         log::debug!("Response Status: {}", status);
@@ -317,7 +366,7 @@ impl CloudflareProvider {
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Body: {}", response_text);
 
@@ -325,16 +374,19 @@ impl CloudflareProvider {
             serde_json::from_str(&response_text).map_err(|e| {
                 log::error!("JSON 解析失败: {}", e);
                 log::error!("原始响应: {}", response_text);
-                DnsError::ApiError(format!("解析响应失败: {}", e))
+                self.parse_error(e)
             })?;
 
         if !cf_response.success {
-            let error_msg = cf_response
+            let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| e.message.clone()))
-                .unwrap_or_else(|| "未知错误".to_string());
-            log::error!("API 错误: {}", error_msg);
-            return Err(DnsError::ApiError(error_msg));
+                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
+            log::error!("API 错误: {}", message);
+            return Err(self.map_error(
+                RawApiError::with_code(code, message),
+                ErrorContext::default(),
+            ).into());
         }
 
         Ok(())
@@ -401,10 +453,11 @@ impl CloudflareProvider {
             "SRV" => DnsRecordType::Srv,
             "CAA" => DnsRecordType::Caa,
             _ => {
-                return Err(DnsError::ApiError(format!(
-                    "不支持的记录类型: {}",
-                    cf_record.record_type
-                )))
+                return Err(ProviderError::InvalidParameter {
+                    provider: self.provider_name().to_string(),
+                    param: "record_type".to_string(),
+                    detail: format!("不支持的记录类型: {}", cf_record.record_type),
+                }.into())
             }
         };
 
@@ -497,23 +550,26 @@ impl DnsProvider for CloudflareProvider {
             .header("Authorization", format!("Bearer {}", self.api_token))
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         let cf_response: CloudflareResponse<Vec<CloudflareDnsRecord>> =
             serde_json::from_str(&response_text)
-                .map_err(|e| DnsError::ApiError(format!("解析响应失败: {}", e)))?;
+                .map_err(|e| self.parse_error(e))?;
 
         if !cf_response.success {
-            let error_msg = cf_response
+            let (code, message) = cf_response
                 .errors
-                .and_then(|errors| errors.first().map(|e| e.message.clone()))
-                .unwrap_or_else(|| "未知错误".to_string());
-            return Err(DnsError::ApiError(error_msg));
+                .and_then(|errors| errors.first().map(|e| (e.code.to_string(), e.message.clone())))
+                .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
+            return Err(self.map_error(
+                RawApiError::with_code(code, message),
+                ErrorContext::default(),
+            ).into());
         }
 
         let total_count = cf_response.result_info.map(|i| i.total_count).unwrap_or(0);

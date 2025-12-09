@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashMap};
 
-use super::DnsProvider;
-use crate::error::{DnsError, Result};
+use super::{DnsProvider, ErrorContext, ProviderErrorMapper, RawApiError};
+use crate::error::{DnsError, ProviderError, Result};
 use crate::types::{
     CreateDnsRecordRequest, DnsRecord, DnsRecordType, Domain, DomainStatus, PaginatedResponse,
     PaginationParams, RecordQueryParams, UpdateDnsRecordRequest,
@@ -193,6 +193,46 @@ pub struct AliyunProvider {
     account_id: String,
 }
 
+/// 阿里云错误码映射
+/// 参考: https://help.aliyun.com/document_detail/29774.html
+impl ProviderErrorMapper for AliyunProvider {
+    fn provider_name(&self) -> &'static str {
+        "aliyun"
+    }
+
+    fn map_error(&self, raw: RawApiError, context: ErrorContext) -> ProviderError {
+        match raw.code.as_deref() {
+            // 认证错误
+            Some("InvalidAccessKeyId.NotFound") | Some("SignatureDoesNotMatch") => {
+                ProviderError::InvalidCredentials {
+                    provider: self.provider_name().to_string(),
+                }
+            }
+            // 记录已存在
+            Some("DomainRecordDuplicate") => ProviderError::RecordExists {
+                provider: self.provider_name().to_string(),
+                record_name: context.record_name.unwrap_or_default(),
+                raw_message: Some(raw.message),
+            },
+            // 记录不存在
+            Some("DomainRecordNotBelongToUser") | Some("InvalidRecordId.NotFound") => {
+                ProviderError::RecordNotFound {
+                    provider: self.provider_name().to_string(),
+                    record_id: context.record_id.unwrap_or_default(),
+                    raw_message: Some(raw.message),
+                }
+            }
+            // 域名不存在
+            Some("InvalidDomainName.NoExist") => ProviderError::DomainNotFound {
+                provider: self.provider_name().to_string(),
+                domain: context.domain.unwrap_or_default(),
+            },
+            // 其他错误 fallback
+            _ => self.unknown_error(raw),
+        }
+    }
+}
+
 impl AliyunProvider {
     pub fn new(credentials: HashMap<String, String>) -> Self {
         let access_key_id = credentials.get("accessKeyId").cloned().unwrap_or_default();
@@ -312,7 +352,7 @@ impl AliyunProvider {
             .header("Authorization", authorization)
             .send()
             .await
-            .map_err(|e| DnsError::ApiError(format!("请求失败: {}", e)))?;
+            .map_err(|e| self.network_error(e))?;
 
         let status = response.status();
         log::debug!("Response Status: {}", status);
@@ -320,7 +360,7 @@ impl AliyunProvider {
         let response_text = response
             .text()
             .await
-            .map_err(|e| DnsError::ApiError(format!("读取响应失败: {}", e)))?;
+            .map_err(|e| self.network_error(format!("读取响应失败: {}", e)))?;
 
         log::debug!("Response Body: {}", response_text);
 
@@ -328,7 +368,10 @@ impl AliyunProvider {
         if let Ok(error_response) = serde_json::from_str::<AliyunResponse<()>>(&response_text) {
             if let (Some(code), Some(message)) = (error_response.code, error_response.message) {
                 log::error!("API 错误: {} - {}", code, message);
-                return Err(DnsError::ApiError(format!("{}: {}", code, message)));
+                return Err(self.map_error(
+                    RawApiError::with_code(&code, &message),
+                    ErrorContext::default(),
+                ).into());
             }
         }
 
@@ -336,7 +379,7 @@ impl AliyunProvider {
         serde_json::from_str(&response_text).map_err(|e| {
             log::error!("JSON 解析失败: {}", e);
             log::error!("原始响应: {}", response_text);
-            DnsError::ApiError(format!("解析响应失败: {}", e))
+            self.parse_error(e).into()
         })
     }
 
@@ -362,10 +405,11 @@ impl AliyunProvider {
             "NS" => Ok(DnsRecordType::Ns),
             "SRV" => Ok(DnsRecordType::Srv),
             "CAA" => Ok(DnsRecordType::Caa),
-            _ => Err(DnsError::ApiError(format!(
-                "不支持的记录类型: {}",
-                record_type
-            ))),
+            _ => Err(ProviderError::InvalidParameter {
+                provider: "aliyun".to_string(),
+                param: "record_type".to_string(),
+                detail: format!("不支持的记录类型: {}", record_type),
+            }.into()),
         }
     }
 
@@ -415,13 +459,7 @@ impl DnsProvider for AliyunProvider {
             .await
         {
             Ok(_) => Ok(true),
-            Err(DnsError::ApiError(msg))
-                if msg.contains("InvalidAccessKeyId")
-                    || msg.contains("SignatureDoesNotMatch")
-                    || msg.contains("Forbidden") =>
-            {
-                Ok(false)
-            }
+            Err(DnsError::Provider(ProviderError::InvalidCredentials { .. })) => Ok(false),
             Err(e) => {
                 log::warn!("凭证验证失败: {}", e);
                 Ok(false)
