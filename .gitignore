@@ -33,3 +33,7 @@ src-actix-web/target
 src-tauri/target
 src-tauri/src-tauri/target
 dns-orchestrator-provider/target
+
+# Runtime files
+*.db
+config.toml
