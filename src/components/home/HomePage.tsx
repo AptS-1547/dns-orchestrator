@@ -1,17 +1,13 @@
 import { Clock, Globe, Settings, Users, Wrench } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 import { ProviderIcon } from "@/components/account/ProviderIcon"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LIMITS, STORAGE_KEYS } from "@/constants"
 import { useAccountStore, useDomainStore } from "@/stores"
-
-interface HomePageProps {
-  onNavigate: (view: "domains" | "toolbox" | "settings" | "accounts") => void
-  onQuickAccess: (accountId: string, domainId: string, domainName: string) => void
-}
 
 interface RecentDomain {
   accountId: string
@@ -41,8 +37,9 @@ export function addRecentDomain(domain: Omit<RecentDomain, "timestamp">) {
   localStorage.setItem(STORAGE_KEYS.RECENT_DOMAINS, JSON.stringify(updated))
 }
 
-export function HomePage({ onNavigate, onQuickAccess }: HomePageProps) {
+export function HomePage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { accounts } = useAccountStore()
   const { domainsByAccount } = useDomainStore()
   const [recentDomains, setRecentDomains] = useState<RecentDomain[]>([])
@@ -57,30 +54,34 @@ export function HomePage({ onNavigate, onQuickAccess }: HomePageProps) {
     setRecentDomains(getRecentDomains())
   }, [])
 
+  const handleQuickAccess = (accountId: string, domainId: string) => {
+    navigate(`/domains/${accountId}/${domainId}`)
+  }
+
   const quickActions = [
     {
       icon: Globe,
       label: t("nav.domains"),
       description: t("home.manageDomains"),
-      onClick: () => onNavigate("domains"),
+      onClick: () => navigate("/domains"),
     },
     {
       icon: Wrench,
       label: t("toolbox.title"),
       description: t("home.useTools"),
-      onClick: () => onNavigate("toolbox"),
+      onClick: () => navigate("/toolbox"),
     },
     {
       icon: Users,
       label: t("accounts.manage"),
       description: t("home.manageAccounts"),
-      onClick: () => onNavigate("accounts"),
+      onClick: () => navigate("/accounts"),
     },
     {
       icon: Settings,
       label: t("settings.title"),
       description: t("home.configureSettings"),
-      onClick: () => onNavigate("settings"),
+      onClick: () => navigate("/settings"),
     },
   ]
 
@@ -131,9 +132,7 @@ export function HomePage({ onNavigate, onQuickAccess }: HomePageProps) {
                   <button
                     key={domain.domainId}
                     type="button"
-                    onClick={() =>
-                      onQuickAccess(domain.accountId, domain.domainId, domain.domainName)
-                    }
+                    onClick={() => handleQuickAccess(domain.accountId, domain.domainId)}
                     className="flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-colors hover:bg-accent"
                   >
                     <ProviderIcon provider={domain.provider} className="h-6 w-6" />

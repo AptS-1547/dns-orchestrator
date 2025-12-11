@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 import { AccountForm } from "@/components/account/AccountForm"
 import { ExportDialog } from "@/components/account/ExportDialog"
 import { ImportDialog } from "@/components/account/ImportDialog"
@@ -39,12 +40,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAccountStore } from "@/stores"
 import type { Account } from "@/types"
 
-interface AccountsPageProps {
-  onBack: () => void
-}
-
-export function AccountsPage({ onBack }: AccountsPageProps) {
+export function AccountsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const {
     accounts,
     isLoading,
@@ -73,7 +71,7 @@ export function AccountsPage({ onBack }: AccountsPageProps) {
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 border-b bg-background px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">

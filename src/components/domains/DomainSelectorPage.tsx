@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 import { getProviderName, ProviderIcon } from "@/components/account/ProviderIcon"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,11 +20,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useAccountStore, useDomainStore } from "@/stores"
 import type { Account, Domain, DomainStatus } from "@/types"
-
-interface DomainSelectorPageProps {
-  onBack: () => void
-  onSelect: (accountId: string, domainId: string, domainName: string) => void
-}
 
 const statusConfig: Record<
   DomainStatus,
@@ -36,8 +32,9 @@ const statusConfig: Record<
   unknown: { labelKey: "domain.status.unknown", variant: "outline" },
 }
 
-export function DomainSelectorPage({ onBack, onSelect }: DomainSelectorPageProps) {
+export function DomainSelectorPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { accounts, isLoading: isAccountsLoading } = useAccountStore()
   const {
     domainsByAccount,
@@ -99,10 +96,10 @@ export function DomainSelectorPage({ onBack, onSelect }: DomainSelectorPageProps
 
   // 选择域名
   const handleSelectDomain = useCallback(
-    (accountId: string, domainId: string, domainName: string) => {
-      onSelect(accountId, domainId, domainName)
+    (accountId: string, domainId: string) => {
+      navigate(`/domains/${accountId}/${domainId}`)
     },
-    [onSelect]
+    [navigate]
   )
 
   // 加载更多域名
@@ -130,7 +127,7 @@ export function DomainSelectorPage({ onBack, onSelect }: DomainSelectorPageProps
       <button
         key={domain.id}
         type="button"
-        onClick={() => handleSelectDomain(accountId, domain.id, domain.name)}
+        onClick={() => handleSelectDomain(accountId, domain.id)}
         className={cn(
           "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
           "hover:bg-accent hover:text-accent-foreground"
@@ -238,7 +235,7 @@ export function DomainSelectorPage({ onBack, onSelect }: DomainSelectorPageProps
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 border-b bg-background px-4 py-3 sm:gap-3 sm:px-6 sm:py-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <Globe className="h-5 w-5 text-primary" />

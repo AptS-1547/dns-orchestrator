@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -26,12 +27,9 @@ import { cn } from "@/lib/utils"
 import { useSettingsStore } from "@/stores/settingsStore"
 import { getUpdateNotes, useUpdaterStore } from "@/stores/updaterStore"
 
-interface SettingsPageProps {
-  onBack: () => void
-}
-
-export function SettingsPage({ onBack }: SettingsPageProps) {
+export function SettingsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { theme, language, debugMode, setTheme, setLanguage, setDebugMode } = useSettingsStore()
   const {
     checking,
@@ -122,7 +120,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 border-b bg-background px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <h2 className="font-semibold text-xl">{t("settings.title")}</h2>

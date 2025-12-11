@@ -1,6 +1,7 @@
 import { ArrowLeft, FileText, Globe, Lock, MapPin, Wrench } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -10,10 +11,6 @@ import { IpLookup } from "./IpLookup"
 import { SslCheck } from "./SslCheck"
 import { WhoisLookup } from "./WhoisLookup"
 
-interface ToolboxPageProps {
-  onBack: () => void
-}
-
 const TABS = [
   { id: "dns", icon: Globe, label: "DNS" },
   { id: "whois", icon: FileText, label: "WHOIS" },
@@ -21,8 +18,9 @@ const TABS = [
   { id: "ip", icon: MapPin, label: "IP" },
 ] as const
 
-export function ToolboxPage({ onBack }: ToolboxPageProps) {
+export function ToolboxPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState("dns")
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
   const tabsRef = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -47,7 +45,7 @@ export function ToolboxPage({ onBack }: ToolboxPageProps) {
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 border-b bg-background px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
