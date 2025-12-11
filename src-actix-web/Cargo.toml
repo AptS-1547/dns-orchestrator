@@ -38,22 +38,61 @@ members = [".", "migration"]
 path = "./migration"
 
 [dependencies]
+# DNS Provider 共享库
+dns-orchestrator-provider = { path = "../dns-orchestrator-provider", features = ["rustls", "all-providers"] }
+
+# Web 框架
 actix-service = "2.0.3"
 actix-web = "4.12.1"
+actix-cors = "0.7"
+
+# 错误处理
 anyhow = { version = "1.0.100", features = ["backtrace"] }
+thiserror = "2"
+
+# 时间和 UUID
 chrono = { version = "0.4.42", default-features = false, features = ["clock", "serde"] }
+uuid = { version = "1.19.0", features = ["v4", "serde"] }
+
+# 系统
 num_cpus = { version = "1.17.0", default-features = false }
+
+# TLS
 rustls = "0.23.35"
+
+# 数据库 ORM
 sea-orm = { version = "2.0.0-rc", default-features = false, features = ["sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "macros", "runtime-tokio-rustls", "chrono"] }
+
+# 序列化
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
-tokio = { version = "1.48.0", default-features = false, features = ["rt-multi-thread", "macros"] }
+
+# 异步运行时
+tokio = { version = "1.48.0", default-features = false, features = ["rt-multi-thread", "macros", "sync"] }
+
+# 配置
 toml = "0.9.8"
+
+# 日志
 tracing = { version = "0.1.43", default-features = false }
 tracing-appender = "0.2.4"
 tracing-attributes = "0.1.31"
 tracing-subscriber = { version = "0.3.22", default-features = false, features = ["env-filter", "fmt", "ansi", "json"] }
-uuid = { version = "1.19.0", features = ["v4", "serde"] }
+
+# 加密（用于凭证存储）
+aes-gcm = "0.10"
+base64 = "0.22"
+rand = "0.8"
+pbkdf2 = { version = "0.12", features = ["simple"] }
+
+# 网络工具
+hickory-resolver = "0.25"
+whois-rust = { version = "1.6", features = ["tokio"] }
+regex = "1"
+
+# SSL 检查
+webpki-roots = "0.26"
+x509-parser = "0.16"
 
 # Clippy 配置
 [lints.rust]
