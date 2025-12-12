@@ -13,7 +13,7 @@ const PLUGIN_IDENTIFIER: &str = "net.esaps.tauri_plugin.apkinstaller";
 pub struct ApkInstaller<R: Runtime>(PluginHandle<R>);
 
 impl<R: Runtime> ApkInstaller<R> {
-    pub fn new(app: &AppHandle<R>, api: PluginApi<R, ()>) -> crate::Result<Self> {
+    pub fn new(_app: &AppHandle<R>, api: PluginApi<R, ()>) -> crate::Result<Self> {
         #[cfg(target_os = "android")]
         let handle = api.register_android_plugin(PLUGIN_IDENTIFIER, "ApkInstallerPlugin")?;
 

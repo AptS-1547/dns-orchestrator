@@ -1,7 +1,7 @@
 {
   "name": "dns-orchestrator",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "AptS:1547 (Yuhan Bian / 卞雨涵 <apts-1547@esaps.net>)",
   "type": "module",
   "scripts": {

@@ -89,7 +89,7 @@ export function DomainSelectorPage() {
     (accountId: string) => {
       toggleExpandedAccount(accountId)
       // 如果没有缓存，加载域名
-      if (!expandedAccounts.has(accountId) && !domainsByAccount[accountId]) {
+      if (!(expandedAccounts.has(accountId) || domainsByAccount[accountId])) {
         refreshAccount(accountId).catch(() => {})
       }
     },

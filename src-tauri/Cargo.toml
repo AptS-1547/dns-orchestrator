@@ -1,6 +1,6 @@
 [package]
-name = "dns-orchestrator"
-version = "1.2.0"
+name = "dns-orchestrator-tauri"
+version = "1.3.0"
 description = "DNS Orchestrator built with Tauri"
 license = "MIT"
 authors = ["AptS-1547 <apts-1547@esaps.net>"]
@@ -54,6 +54,7 @@ urlencoding = "2.1.3"
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-updater = "2"
+dns-orchestrator-core = { path = "../dns-orchestrator-core", default-features = false, features = ["native-tls"] }
 dns-orchestrator-provider = { path = "../dns-orchestrator-provider", default-features = false, features = ["all-providers", "native-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -66,23 +67,9 @@ keyring = { version = "3", features = [
     "windows-native",    # Windows
     "sync-secret-service", "crypto-rust"  # Linux/FreeBSD/OpenBSD (DBus Secret Service)
 ] }
-tokio = { version = "1", features = ["sync"] }
-reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["sync", "rt-multi-thread"] }
 log = "0.4"
 futures = "0.3"
-hmac = "0.12"
-sha2 = "0.10"
-hex = "0.4"
-hickory-resolver = "0.25"
-whois-rust = { version = "1.6", features = ["tokio"] }
-regex = "1"
-aes-gcm = "0.10"
-base64 = "0.22"
-rand = "0.8"
-pbkdf2 = { version = "0.12", features = ["simple"] }
-# SSL 证书检查
-native-tls = "0.2"
-x509-parser = "0.16"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 cocoa = "0.26"
@@ -91,6 +78,7 @@ cocoa = "0.26"
 [target."cfg(target_os = \"android\")".dependencies]
 tauri-plugin-stronghold = "2"
 tauri-plugin-apk-installer = { path = "./tauri-plugin-apk-installer" }
+dns-orchestrator-core = { path = "../dns-orchestrator-core", default-features = false, features = ["rustls"] }
 dns-orchestrator-provider = { path = "../dns-orchestrator-provider", default-features = false, features = ["all-providers", "rustls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -98,26 +86,11 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 thiserror = "2"
-tokio = { version = "1", features = ["sync"] }
-# 使用 rustls-tls 代替 native-tls，避免 OpenSSL 交叉编译问题
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["sync", "rt-multi-thread"] }
 log = "0.4"
 futures = "0.3"
-hmac = "0.12"
-sha2 = "0.10"
-hex = "0.4"
-regex = "1"
-aes-gcm = "0.10"
-base64 = "0.22"
-rand = "0.8"
-pbkdf2 = { version = "0.12", features = ["simple"] }
-# DNS 和 WHOIS 查询
-hickory-resolver = "0.25"
-whois-rust = { version = "1.6", features = ["tokio"] }
-# SSL 证书检查 (Android 使用 rustls)
-rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
-webpki-roots = "0.26"
-x509-parser = "0.16"
+# Android 更新器需要
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 # Clippy 配置
 [lints.rust]

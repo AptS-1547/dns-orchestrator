@@ -49,7 +49,6 @@ impl ProviderErrorMapper for DnspodProvider {
                 | "LimitExceeded.HiddenUrlExceeded"
                 | "LimitExceeded.NsCountLimit"
                 | "LimitExceeded.OffsetExceeded"
-                | "LimitExceeded.RecordTtlLimit"
                 | "LimitExceeded.SrvCountLimit"
                 | "LimitExceeded.SubdomainLevelLimit"
                 | "LimitExceeded.SubdomainRollLimit"
@@ -142,8 +141,7 @@ impl ProviderErrorMapper for DnspodProvider {
 
             // ============ 参数无效 - 记录值 ============
             Some(
-                "InvalidParameter.RecordValueInvalid"
-                | "InvalidParameter.RecordValueLengthInvalid",
+                "InvalidParameter.RecordValueInvalid" | "InvalidParameter.RecordValueLengthInvalid",
             ) => ProviderError::InvalidParameter {
                 provider: self.provider_name().to_string(),
                 param: "value".to_string(),
@@ -154,6 +152,13 @@ impl ProviderErrorMapper for DnspodProvider {
             Some("InvalidParameter.SubdomainInvalid") => ProviderError::InvalidParameter {
                 provider: self.provider_name().to_string(),
                 param: "subdomain".to_string(),
+                detail: raw.message,
+            },
+
+            // ============ 参数无效 - TTL ============
+            Some("LimitExceeded.RecordTtlLimit") => ProviderError::InvalidParameter {
+                provider: self.provider_name().to_string(),
+                param: "ttl".to_string(),
                 detail: raw.message,
             },
 

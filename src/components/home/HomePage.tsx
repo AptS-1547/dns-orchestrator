@@ -1,9 +1,8 @@
-import { Clock, Globe, Settings, Users, Wrench } from "lucide-react"
+import { ChevronRight, Clock, Globe, Settings, Users, Wrench } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import { ProviderIcon } from "@/components/account/ProviderIcon"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LIMITS, STORAGE_KEYS } from "@/constants"
@@ -108,28 +107,17 @@ export function HomePage() {
         <div className="mb-6">
           <h1 className="font-semibold text-2xl">{t("home.welcome")}</h1>
           <p className="mt-1 text-muted-foreground">{t("home.welcomeDesc")}</p>
-        </div>
-
-        {/* 统计卡片 */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="font-medium text-sm">{t("home.totalAccounts")}</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="font-bold text-2xl">{accounts.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="font-medium text-sm">{t("home.totalDomains")}</CardTitle>
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="font-bold text-2xl">{totalDomains}</div>
-            </CardContent>
-          </Card>
+          <div className="mt-2 flex items-center gap-1 text-muted-foreground text-sm">
+            <Users className="h-3.5 w-3.5" />
+            <span>
+              {accounts.length} {t("home.totalAccounts")}
+            </span>
+            <span className="mx-1">·</span>
+            <Globe className="h-3.5 w-3.5" />
+            <span>
+              {totalDomains} {t("home.totalDomains")}
+            </span>
+          </div>
         </div>
 
         {/* 最近访问 */}
@@ -142,8 +130,29 @@ export function HomePage() {
               </CardTitle>
               <CardDescription>{t("home.recentDomainsDesc")}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <CardContent className="px-2 sm:px-6">
+              {/* 移动端：紧凑列表 */}
+              <div className="flex flex-col divide-y sm:hidden">
+                {recentDomains.map((domain) => (
+                  <button
+                    key={domain.domainId}
+                    type="button"
+                    onClick={() => handleQuickAccess(domain.accountId, domain.domainId)}
+                    className="flex items-center gap-3 px-2 py-3 text-left transition-colors hover:bg-accent"
+                  >
+                    <ProviderIcon provider={domain.provider} className="h-5 w-5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-sm">{domain.domainName}</div>
+                      <div className="truncate text-muted-foreground text-xs">
+                        {domain.accountName}
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+                ))}
+              </div>
+              {/* 桌面端：网格卡片 */}
+              <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                 {recentDomains.map((domain) => (
                   <button
                     key={domain.domainId}
@@ -171,21 +180,42 @@ export function HomePage() {
             <CardTitle className="text-lg">{t("home.quickActions")}</CardTitle>
             <CardDescription>{t("home.quickActionsDesc")}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2">
+          <CardContent className="px-2 sm:px-6">
+            {/* 移动端：紧凑列表 */}
+            <div className="flex flex-col divide-y sm:hidden">
               {quickActions.map((action) => (
-                <Button
+                <button
                   key={action.label}
-                  variant="outline"
-                  className="h-auto justify-start gap-3 p-4"
+                  type="button"
                   onClick={action.onClick}
+                  className="flex items-center gap-3 px-2 py-3 text-left transition-colors hover:bg-accent"
                 >
                   <action.icon className="h-5 w-5 shrink-0" />
-                  <div className="text-left">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-sm">{action.label}</div>
+                    <div className="truncate text-muted-foreground text-xs">
+                      {action.description}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+            {/* 桌面端：网格卡片 */}
+            <div className="hidden gap-3 sm:grid sm:grid-cols-2">
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={action.onClick}
+                  className="flex h-auto items-center justify-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent"
+                >
+                  <action.icon className="h-5 w-5 shrink-0" />
+                  <div>
                     <div className="font-medium">{action.label}</div>
                     <div className="text-muted-foreground text-xs">{action.description}</div>
                   </div>
-                </Button>
+                </button>
               ))}
             </div>
           </CardContent>

@@ -2,10 +2,28 @@ use tauri::State;
 
 use crate::error::DnsError;
 use crate::types::{
-    ApiResponse, BatchDeleteFailure, BatchDeleteRequest, BatchDeleteResult, CreateDnsRecordRequest,
-    DnsRecord, DnsRecordType, PaginatedResponse, RecordQueryParams, UpdateDnsRecordRequest,
+    ApiResponse, BatchDeleteRequest, BatchDeleteResult, CreateDnsRecordRequest, DnsRecord,
+    DnsRecordType, PaginatedResponse, UpdateDnsRecordRequest,
 };
 use crate::AppState;
+
+// 从 core 类型转换到本地类型的辅助函数
+fn convert_batch_delete_result(
+    result: dns_orchestrator_core::types::BatchDeleteResult,
+) -> BatchDeleteResult {
+    BatchDeleteResult {
+        success_count: result.success_count,
+        failed_count: result.failed_count,
+        failures: result
+            .failures
+            .into_iter()
+            .map(|f| crate::types::BatchDeleteFailure {
+                record_id: f.record_id,
+                reason: f.reason,
+            })
+            .collect(),
+    }
+}
 
 /// 列出域名下的所有 DNS 记录（分页 + 搜索）
 #[tauri::command]
@@ -18,23 +36,17 @@ pub async fn list_dns_records(
     keyword: Option<String>,
     record_type: Option<DnsRecordType>,
 ) -> Result<ApiResponse<PaginatedResponse<DnsRecord>>, DnsError> {
-    // 获取 provider
-    let provider = state
-        .registry
-        .get(&account_id)
-        .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
-
-    // 构造查询参数
-    let params = RecordQueryParams {
-        page: page.unwrap_or(1),
-        page_size: page_size.unwrap_or(20),
-        keyword,
-        record_type,
-    };
-
-    // 调用 provider 获取 DNS 记录列表
-    let response = provider.list_records(&domain_id, &params).await?;
+    let response = state
+        .dns_service
+        .list_records(
+            &account_id,
+            &domain_id,
+            page,
+            page_size,
+            keyword,
+            record_type,
+        )
+        .await?;
 
     Ok(ApiResponse::success(response))
 }
@@ -46,15 +58,10 @@ pub async fn create_dns_record(
     account_id: String,
     request: CreateDnsRecordRequest,
 ) -> Result<ApiResponse<DnsRecord>, DnsError> {
-    // 获取 provider
-    let provider = state
-        .registry
-        .get(&account_id)
-        .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
-
-    // 调用 provider 创建记录
-    let record = provider.create_record(&request).await?;
+    let record = state
+        .dns_service
+        .create_record(&account_id, request)
+        .await?;
 
     Ok(ApiResponse::success(record))
 }
@@ -67,15 +74,10 @@ pub async fn update_dns_record(
     record_id: String,
     request: UpdateDnsRecordRequest,
 ) -> Result<ApiResponse<DnsRecord>, DnsError> {
-    // 获取 provider
-    let provider = state
-        .registry
-        .get(&account_id)
-        .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
-
-    // 调用 provider 更新记录
-    let record = provider.update_record(&record_id, &request).await?;
+    let record = state
+        .dns_service
+        .update_record(&account_id, &record_id, request)
+        .await?;
 
     Ok(ApiResponse::success(record))
 }
@@ -88,15 +90,10 @@ pub async fn delete_dns_record(
     record_id: String,
     domain_id: String,
 ) -> Result<ApiResponse<()>, DnsError> {
-    // 获取 provider
-    let provider = state
-        .registry
-        .get(&account_id)
-        .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
-
-    // 调用 provider 删除记录
-    provider.delete_record(&record_id, &domain_id).await?;
+    state
+        .dns_service
+        .delete_record(&account_id, &record_id, &domain_id)
+        .await?;
 
     Ok(ApiResponse::success(()))
 }
@@ -108,47 +105,16 @@ pub async fn batch_delete_dns_records(
     account_id: String,
     request: BatchDeleteRequest,
 ) -> Result<ApiResponse<BatchDeleteResult>, DnsError> {
-    // 获取 provider
-    let provider = state
-        .registry
-        .get(&account_id)
-        .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
+    // 转换请求类型
+    let core_request = dns_orchestrator_core::types::BatchDeleteRequest {
+        domain_id: request.domain_id,
+        record_ids: request.record_ids,
+    };
 
-    let mut success_count = 0;
-    let mut failures = Vec::new();
+    let result = state
+        .dns_service
+        .batch_delete_records(&account_id, core_request)
+        .await?;
 
-    // 并行删除所有记录
-    let delete_futures: Vec<_> = request
-        .record_ids
-        .iter()
-        .map(|record_id| {
-            let provider = provider.clone();
-            let domain_id = request.domain_id.clone();
-            let record_id = record_id.clone();
-            async move {
-                match provider.delete_record(&record_id, &domain_id).await {
-                    Ok(()) => Ok(record_id),
-                    Err(e) => Err((record_id, e.to_string())),
-                }
-            }
-        })
-        .collect();
-
-    let results = futures::future::join_all(delete_futures).await;
-
-    for result in results {
-        match result {
-            Ok(_) => success_count += 1,
-            Err((record_id, reason)) => {
-                failures.push(BatchDeleteFailure { record_id, reason });
-            }
-        }
-    }
-
-    Ok(ApiResponse::success(BatchDeleteResult {
-        success_count,
-        failed_count: failures.len(),
-        failures,
-    }))
+    Ok(ApiResponse::success(convert_batch_delete_result(result)))
 }

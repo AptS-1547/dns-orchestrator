@@ -1,0 +1,9 @@
+//! 存储层抽象 Trait 定义
+
+mod account_repository;
+mod credential_store;
+mod provider_registry;
+
+pub use account_repository::AccountRepository;
+pub use credential_store::{CredentialStore, CredentialsMap};
+pub use provider_registry::{InMemoryProviderRegistry, ProviderRegistry};

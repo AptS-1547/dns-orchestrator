@@ -1,16 +1,18 @@
 use tauri::State;
 
-use crate::error::{DnsError, ProviderError};
-use crate::types::{AccountStatus, ApiResponse, Domain, PaginatedResponse, PaginationParams};
+use crate::error::DnsError;
+use crate::types::{ApiResponse, Domain, PaginatedResponse};
 use crate::AppState;
 
-/// 更新账户状态（凭证失效时调用）
-async fn mark_account_invalid(state: &AppState, account_id: &str, error_msg: &str) {
-    let mut accounts = state.accounts.write().await;
-    if let Some(account) = accounts.iter_mut().find(|a| a.id == account_id) {
-        account.status = Some(AccountStatus::Error);
-        account.error = Some(error_msg.to_string());
-        log::warn!("Account {account_id} marked as invalid: {error_msg}");
+// 从 core 类型转换到本地类型的辅助函数
+fn convert_domain(core_domain: dns_orchestrator_core::types::Domain) -> Domain {
+    Domain {
+        id: core_domain.id,
+        name: core_domain.name,
+        account_id: core_domain.account_id,
+        provider: core_domain.provider,
+        status: core_domain.status,
+        record_count: core_domain.record_count,
     }
 }
 
@@ -22,47 +24,22 @@ pub async fn list_domains(
     page: Option<u32>,
     page_size: Option<u32>,
 ) -> Result<ApiResponse<PaginatedResponse<Domain>>, DnsError> {
-    // 获取 provider
-    let provider = state
-        .registry
-        .get(&account_id)
-        .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
+    let response = state
+        .domain_service
+        .list_domains(&account_id, page, page_size)
+        .await?;
 
-    // 构造分页参数
-    let params = PaginationParams {
-        page: page.unwrap_or(1),
-        page_size: page_size.unwrap_or(20),
-    };
+    // 转换响应中的 Domain 类型
+    let converted_items: Vec<Domain> = response.items.into_iter().map(convert_domain).collect();
 
-    // 调用 provider 获取域名列表
-    match provider.list_domains(&params).await {
-        Ok(lib_response) => {
-            // 将库的 Domain 转换为应用层的 Domain（添加 account_id）
-            let domains: Vec<Domain> = lib_response
-                .items
-                .into_iter()
-                .map(|d| Domain::from_lib(d, account_id.clone()))
-                .collect();
+    let result = PaginatedResponse::new(
+        converted_items,
+        response.page,
+        response.page_size,
+        response.total_count,
+    );
 
-            let response = PaginatedResponse::new(
-                domains,
-                lib_response.page,
-                lib_response.page_size,
-                lib_response.total_count,
-            );
-            Ok(ApiResponse::success(response))
-        }
-        Err(ProviderError::InvalidCredentials { provider, .. }) => {
-            // 凭证失效，更新账户状态
-            mark_account_invalid(&state, &account_id, "凭证已失效").await;
-            Err(DnsError::Provider(ProviderError::InvalidCredentials {
-                provider,
-                raw_message: None,
-            }))
-        }
-        Err(e) => Err(DnsError::Provider(e)),
-    }
+    Ok(ApiResponse::success(result))
 }
 
 /// 获取域名详情
@@ -72,18 +49,10 @@ pub async fn get_domain(
     account_id: String,
     domain_id: String,
 ) -> Result<ApiResponse<Domain>, DnsError> {
-    // 获取 provider
-    let provider = state
-        .registry
-        .get(&account_id)
-        .await
-        .ok_or_else(|| DnsError::AccountNotFound(account_id.clone()))?;
+    let domain = state
+        .domain_service
+        .get_domain(&account_id, &domain_id)
+        .await?;
 
-    // 调用 provider 获取域名详情
-    let lib_domain = provider.get_domain(&domain_id).await?;
-
-    // 转换为应用层的 Domain（添加 account_id）
-    let domain = Domain::from_lib(lib_domain, account_id);
-
-    Ok(ApiResponse::success(domain))
+    Ok(ApiResponse::success(convert_domain(domain)))
 }

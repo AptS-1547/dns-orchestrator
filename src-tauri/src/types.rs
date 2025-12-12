@@ -8,17 +8,13 @@ pub use dns_orchestrator_provider::{
     CreateDnsRecordRequest,
     DnsRecord,
     DnsRecordType,
-    // Domain 相关（重命名避免冲突）
-    Domain as LibDomain,
+    // Domain 相关
     DomainStatus,
     // 分页类型
     PaginatedResponse,
-    PaginationParams,
     // Provider 元数据类型
-    ProviderCredentials,
     ProviderMetadata,
     ProviderType,
-    RecordQueryParams,
     UpdateDnsRecordRequest,
 };
 
@@ -66,20 +62,6 @@ pub struct Domain {
     pub status: DomainStatus,
     #[serde(rename = "recordCount", skip_serializing_if = "Option::is_none")]
     pub record_count: Option<u32>,
-}
-
-impl Domain {
-    /// 从库的 Domain 构造应用层 Domain
-    pub fn from_lib(lib_domain: LibDomain, account_id: String) -> Self {
-        Self {
-            id: lib_domain.id,
-            name: lib_domain.name,
-            account_id,
-            provider: lib_domain.provider,
-            status: lib_domain.status,
-            record_count: lib_domain.record_count,
-        }
-    }
 }
 
 // ============ API 响应类型 ============
@@ -239,48 +221,6 @@ pub struct BatchDeleteFailure {
 }
 
 // ============ 导入导出相关类型 ============
-
-/// 单个账号的导出数据（包含凭证）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportedAccount {
-    pub id: String,
-    pub name: String,
-    pub provider: ProviderType,
-    pub created_at: String,
-    pub updated_at: String,
-    /// 凭证数据（导出时包含）
-    pub credentials: HashMap<String, String>,
-}
-
-/// 导出文件头部（明文部分）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportFileHeader {
-    /// 文件格式版本
-    pub version: u32,
-    /// 是否加密
-    pub encrypted: bool,
-    /// 加密时使用的盐值（Base64 编码）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub salt: Option<String>,
-    /// 加密时使用的 IV/Nonce（Base64 编码）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub nonce: Option<String>,
-    /// 导出时间
-    pub exported_at: String,
-    /// 应用版本
-    pub app_version: String,
-}
-
-/// 完整的导出文件结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportFile {
-    pub header: ExportFileHeader,
-    /// 账号数据（加密时为 Base64 编码的密文，未加密时为 JSON 数组）
-    pub data: serde_json::Value,
-}
 
 /// 导出请求
 #[derive(Debug, Clone, Serialize, Deserialize)]

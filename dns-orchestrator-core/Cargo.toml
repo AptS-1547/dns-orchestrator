@@ -1,0 +1,75 @@
+[package]
+name = "dns-orchestrator-core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Core business logic for DNS Orchestrator"
+authors = ["AptS-1547 <apts-1547@esaps.net>"]
+
+[features]
+default = ["native-tls"]
+# TLS 后端选择（二选一）
+native-tls = ["dep:native-tls-crate", "dep:x509-parser", "reqwest/native-tls"]
+rustls = ["dep:rustls", "dep:webpki-roots", "dep:x509-parser", "reqwest/rustls-tls"]
+
+[dependencies]
+# DNS Provider 抽象库
+dns-orchestrator-provider = { path = "../dns-orchestrator-provider", default-features = false, features = ["all-providers"] }
+
+# 核心依赖
+async-trait = "0.1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# 异步运行时
+tokio = { version = "1", features = ["sync"] }
+futures = "0.3"
+
+# 工具类
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+
+# 加密 (导入导出)
+aes-gcm = "0.10"
+pbkdf2 = { version = "0.12", features = ["simple"] }
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+
+# Toolbox: WHOIS
+whois-rust = { version = "1.6", features = ["tokio"] }
+regex = "1"
+
+# Toolbox: DNS 查询
+hickory-resolver = "0.25"
+
+# Toolbox: IP 查询
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+
+# SSL 检查 (feature-gated)
+native-tls-crate = { package = "native-tls", version = "0.2", optional = true }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"], optional = true }
+webpki-roots = { version = "0.26", optional = true }
+x509-parser = { version = "0.16", optional = true }
+
+# Clippy 配置
+[lints.rust]
+unsafe_code = "forbid"
+unused_imports = "warn"
+unused_variables = "warn"
+dead_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "allow", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+too_many_lines = "allow"
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"

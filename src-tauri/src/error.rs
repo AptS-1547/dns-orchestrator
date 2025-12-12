@@ -10,6 +10,9 @@ pub use dns_orchestrator_provider::{
     ProviderError,
 };
 
+// Re-export core error
+pub use dns_orchestrator_core::error::CoreError;
+
 // ============ 应用层错误类型 ============
 
 #[derive(Error, Debug, Serialize)]
@@ -62,4 +65,29 @@ pub enum DnsError {
     Provider(#[from] ProviderError),
 }
 
-pub type Result<T> = std::result::Result<T, DnsError>;
+/// 从 `CoreError` 转换为 `DnsError`
+impl From<CoreError> for DnsError {
+    fn from(err: CoreError) -> Self {
+        match err {
+            CoreError::ProviderNotFound(s) => Self::ProviderNotFound(s),
+            CoreError::AccountNotFound(s) => Self::AccountNotFound(s),
+            CoreError::DomainNotFound(s) => Self::DomainNotFound(s),
+            CoreError::RecordNotFound(s) => Self::RecordNotFound(s),
+            CoreError::CredentialError(s) => Self::CredentialError(s),
+            CoreError::CredentialValidation(e) => Self::CredentialValidation(e),
+            CoreError::ApiError { provider, message } => Self::ApiError { provider, message },
+            CoreError::InvalidCredentials(_) => Self::InvalidCredentials,
+            CoreError::SerializationError(s) => Self::SerializationError(s),
+            CoreError::ValidationError(s) => Self::ValidationError(s),
+            CoreError::ImportExportError(s) => Self::ImportExportError(s),
+            CoreError::NoAccountsSelected => Self::NoAccountsSelected,
+            CoreError::UnsupportedFileVersion => Self::UnsupportedFileVersion,
+            CoreError::StorageError(s) => Self::CredentialError(s),
+            CoreError::NetworkError(s) => Self::ApiError {
+                provider: "network".to_string(),
+                message: s,
+            },
+            CoreError::Provider(e) => Self::Provider(e),
+        }
+    }
+}
