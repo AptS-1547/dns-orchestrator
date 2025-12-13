@@ -121,7 +121,7 @@ pub struct AliyunDomain {
     pub record_count: Option<u32>,
 }
 
-/// RequireCheck: DescribeDomainInfo API 响应结构，需验证字段映射是否正确
+/// ErrorRequireCheck: DescribeDomainInfo API 响应结构，需验证字段映射是否正确
 #[derive(Debug, Deserialize)]
 pub struct DescribeDomainInfoResponse {
     #[serde(rename = "DomainId")]

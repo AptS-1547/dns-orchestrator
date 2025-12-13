@@ -96,7 +96,7 @@ impl DnsProvider for HuaweicloudProvider {
         ))
     }
 
-    /// RequireCheck: 使用 ShowPublicZone API 直接获取域名信息
+    /// 使用 ShowPublicZone API 直接获取域名信息
     async fn get_domain(&self, domain_id: &str) -> Result<ProviderDomain> {
         let path = format!("/v2/zones/{domain_id}");
         let ctx = ErrorContext {

@@ -113,7 +113,7 @@ impl DnsProvider for AliyunProvider {
         ))
     }
 
-    /// RequireCheck: 使用 DescribeDomainInfo API 直接获取域名信息
+    /// ErrorRequireCheck: 使用 DescribeDomainInfo API 直接获取域名信息
     /// 注意：阿里云 API 需要域名名称作为参数，这里假设 domain_id 就是域名名称
     async fn get_domain(&self, domain_id: &str) -> Result<ProviderDomain> {
         #[derive(Serialize)]

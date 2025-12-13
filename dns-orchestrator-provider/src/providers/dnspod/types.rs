@@ -59,14 +59,14 @@ pub struct DnspodDomain {
     pub record_count: Option<u32>,
 }
 
-/// RequireCheck: DescribeDomain API 响应结构，需验证字段映射是否正确
+/// DescribeDomain API 响应结构
 #[derive(Debug, Deserialize)]
 pub struct DescribeDomainResponse {
     #[serde(rename = "DomainInfo")]
     pub domain_info: DescribeDomainInfo,
 }
 
-/// RequireCheck: DomainInfo 嵌套结构
+/// DomainInfo 嵌套结构
 #[derive(Debug, Deserialize)]
 pub struct DescribeDomainInfo {
     #[serde(rename = "DomainId")]

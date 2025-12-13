@@ -111,7 +111,7 @@ impl DnsProvider for DnspodProvider {
         ))
     }
 
-    /// RequireCheck: 使用 DescribeDomain API 直接获取域名信息
+    /// 使用 DescribeDomain API 直接获取域名信息
     /// 注意：DNSPod API 需要域名名称，如果传入的是数字 ID 则 fallback 到列表查找
     async fn get_domain(&self, domain_id: &str) -> Result<ProviderDomain> {
         // 如果 domain_id 包含 '.'，认为是域名名称，直接调用 API

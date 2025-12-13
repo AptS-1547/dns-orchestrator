@@ -24,7 +24,7 @@ pub struct HuaweicloudZone {
     pub record_num: Option<u32>,
 }
 
-/// RequireCheck: ShowPublicZone API 响应结构，需验证是否直接返回 zone 对象
+/// ShowPublicZone API 响应结构，需验证是否直接返回 zone 对象
 pub type ShowPublicZoneResponse = HuaweicloudZone;
 
 #[derive(Debug, Deserialize)]
