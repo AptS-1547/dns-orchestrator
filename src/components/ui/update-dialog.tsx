@@ -79,7 +79,7 @@ export function UpdateDialog({ open, onOpenChange }: UpdateDialogProps) {
           <div className="space-y-2">
             <p className="font-medium text-sm">{t("settings.releaseNotes")}</p>
             <ScrollArea className="h-[200px] rounded-md border bg-muted/50 p-3">
-              <pre className="whitespace-pre-wrap text-sm">{notes}</pre>
+              <pre className="whitespace-pre-wrap break-all text-sm">{notes}</pre>
             </ScrollArea>
           </div>
         )}

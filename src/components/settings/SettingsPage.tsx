@@ -307,7 +307,9 @@ export function SettingsPage() {
                   <div className="space-y-2 border-t pt-3">
                     <p className="font-medium text-sm">{t("settings.releaseNotes")}</p>
                     <ScrollArea className="h-[150px] rounded-md border bg-muted/50 p-3">
-                      <pre className="whitespace-pre-wrap text-xs">{getUpdateNotes(available)}</pre>
+                      <pre className="whitespace-pre-wrap break-all text-xs">
+                        {getUpdateNotes(available)}
+                      </pre>
                     </ScrollArea>
                   </div>
                 )}
