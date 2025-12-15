@@ -22,7 +22,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { PAGINATION, TIMING } from "@/constants"
+import { TIMING } from "@/constants"
 import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { useDnsStore, useSettingsStore } from "@/stores"
