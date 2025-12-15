@@ -3,6 +3,7 @@ import { STORAGE_KEYS } from "@/constants"
 import { changeLanguage, type LanguageCode, supportedLanguages } from "@/i18n"
 
 type Theme = "light" | "dark" | "system"
+type PaginationMode = "infinite" | "paginated"
 
 // 获取初始语言（与 i18n 逻辑保持一致）
 const getInitialLanguage = (): LanguageCode => {
@@ -22,10 +23,12 @@ interface SettingsState {
   language: LanguageCode
   debugMode: boolean
   sidebarCollapsed: boolean
+  paginationMode: PaginationMode
   setTheme: (theme: Theme) => void
   setLanguage: (lang: LanguageCode) => void
   setDebugMode: (enabled: boolean) => void
   setSidebarCollapsed: (collapsed: boolean) => void
+  setPaginationMode: (mode: PaginationMode) => void
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -33,6 +36,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   language: getInitialLanguage(),
   debugMode: localStorage.getItem("debugMode") === "true",
   sidebarCollapsed: localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === "true",
+  paginationMode:
+    (localStorage.getItem(STORAGE_KEYS.PAGINATION_MODE) as PaginationMode) || "infinite",
 
   setTheme: (theme) => {
     set({ theme })
@@ -63,6 +68,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setSidebarCollapsed: (collapsed) => {
     set({ sidebarCollapsed: collapsed })
     localStorage.setItem(STORAGE_KEYS.SIDEBAR_COLLAPSED, String(collapsed))
+  },
+
+  setPaginationMode: (mode) => {
+    set({ paginationMode: mode })
+    localStorage.setItem(STORAGE_KEYS.PAGINATION_MODE, mode)
   },
 }))
 

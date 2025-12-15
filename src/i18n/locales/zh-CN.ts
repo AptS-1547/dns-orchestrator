@@ -224,6 +224,13 @@ export default {
     notificationsDesc: "管理通知偏好设置",
     operationNotifications: "操作通知",
     operationNotificationsDesc: "显示操作成功/失败的提示",
+    // Pagination
+    pagination: "分页模式",
+    paginationDesc: "选择 DNS 记录列表的分页方式",
+    infiniteScroll: "无限滚动",
+    infiniteScrollDesc: "滚动到底部自动加载更多，适合移动端",
+    traditionalPagination: "传统分页",
+    traditionalPaginationDesc: "使用分页器快速跳转，适合桌面端",
     // Debug
     debug: "调试模式",
     debugDesc: "开发者选项",

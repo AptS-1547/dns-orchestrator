@@ -19,17 +19,17 @@ import type {
  *
  * 根据账户的 provider 限制动态计算，确保不超过 API 限制
  */
-const getRecordPageSize = (accountId: string): number => {
+const getRecordPageSize = (accountId: string, preferredSize: number): number => {
   const { accounts, providers } = useAccountStore.getState()
   const account = accounts.find((a) => a.id === accountId)
   if (!account) {
-    return PAGINATION.PAGE_SIZE
+    return preferredSize
   }
 
   const provider = providers.find((p) => p.id === account.provider)
   const maxPageSize = provider?.limits.maxPageSizeRecords ?? 100
 
-  return Math.min(PAGINATION.PAGE_SIZE, maxPageSize)
+  return Math.min(preferredSize, maxPageSize)
 }
 
 interface DnsState {
@@ -41,6 +41,7 @@ interface DnsState {
   error: string | null
   // 分页状态
   page: number
+  pageSize: number
   hasMore: boolean
   totalCount: number
   // 搜索状态
@@ -58,6 +59,8 @@ interface DnsState {
     recordType?: string
   ) => Promise<void>
   fetchMoreRecords: (accountId: string, domainId: string) => Promise<void>
+  jumpToPage: (accountId: string, domainId: string, targetPage: number) => Promise<void>
+  setPageSize: (accountId: string, domainId: string, size: number) => Promise<void>
   setKeyword: (keyword: string) => void
   setRecordType: (recordType: string) => void
   createRecord: (accountId: string, request: CreateDnsRecordRequest) => Promise<DnsRecord | null>
@@ -84,6 +87,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
   isDeleting: false,
   error: null,
   page: 1,
+  pageSize: PAGINATION.PAGE_SIZE,
   hasMore: false,
   totalCount: 0,
   keyword: "",
@@ -91,6 +95,12 @@ export const useDnsStore = create<DnsState>((set, get) => ({
   selectedRecordIds: new Set(),
   isSelectMode: false,
   isBatchDeleting: false,
+
+  setPageSize: async (accountId, domainId, size) => {
+    set({ pageSize: size, page: 1 })
+    // 重新加载第一页数据
+    await get().fetchRecords(accountId, domainId)
+  },
 
   setKeyword: (keyword) => {
     set({ keyword })
@@ -120,7 +130,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
       ...(isDomainChange && { records: [], totalCount: 0 }),
     })
     try {
-      const pageSize = getRecordPageSize(accountId)
+      const pageSize = getRecordPageSize(accountId, get().pageSize)
       const response = await dnsService.listRecords({
         accountId,
         domainId,
@@ -169,7 +179,7 @@ export const useDnsStore = create<DnsState>((set, get) => ({
     const nextPage = page + 1
 
     try {
-      const pageSize = getRecordPageSize(accountId)
+      const pageSize = getRecordPageSize(accountId, get().pageSize)
       const response = await dnsService.listRecords({
         accountId,
         domainId,
@@ -194,6 +204,67 @@ export const useDnsStore = create<DnsState>((set, get) => ({
     } finally {
       if (get().currentDomainId === domainId) {
         set({ isLoadingMore: false })
+      }
+    }
+  },
+
+  jumpToPage: async (accountId, domainId, targetPage) => {
+    const { keyword, recordType, totalCount, pageSize } = get()
+
+    // 验证页码有效性
+    const actualPageSize = getRecordPageSize(accountId, pageSize)
+    const maxPage = Math.ceil(totalCount / actualPageSize)
+
+    if (targetPage < 1 || targetPage > maxPage) {
+      toast.error(`页码必须在 1-${maxPage} 之间`)
+      return
+    }
+
+    // 设置加载状态并清空当前记录
+    set({
+      isLoading: true,
+      error: null,
+      records: [],
+      page: targetPage,
+    })
+
+    try {
+      const response = await dnsService.listRecords({
+        accountId,
+        domainId,
+        page: targetPage,
+        pageSize: actualPageSize,
+        keyword: keyword || null,
+        recordType: recordType || null,
+      })
+
+      // 验证请求是否仍然有效
+      if (get().currentDomainId !== domainId) {
+        return
+      }
+
+      if (response.success && response.data) {
+        set({
+          records: response.data.items,
+          page: response.data.page,
+          hasMore: response.data.hasMore,
+          totalCount: response.data.totalCount,
+        })
+      } else {
+        const msg = getErrorMessage(response.error)
+        set({ error: msg })
+        toast.error(msg)
+      }
+    } catch (err) {
+      if (get().currentDomainId !== domainId) {
+        return
+      }
+      const msg = extractErrorMessage(err)
+      set({ error: msg })
+      toast.error(msg)
+    } finally {
+      if (get().currentDomainId === domainId) {
+        set({ isLoading: false })
       }
     }
   },

@@ -9,10 +9,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { useDnsStore, useSettingsStore } from "@/stores"
 import { RECORD_TYPES } from "@/types/dns"
 
 interface DnsTableToolbarProps {
+  /** 账户 ID */
+  accountId: string
+  /** 域名 ID */
+  domainId: string
   /** 总记录数 */
   totalCount: number
   /** 是否正在加载 */
@@ -40,6 +52,8 @@ interface DnsTableToolbarProps {
 }
 
 export function DnsTableToolbar({
+  accountId,
+  domainId,
   totalCount,
   isLoading,
   keyword,
@@ -55,6 +69,9 @@ export function DnsTableToolbar({
 }: DnsTableToolbarProps) {
   const { t } = useTranslation()
   const hasActiveFilters = keyword || recordType
+  const paginationMode = useSettingsStore((state) => state.paginationMode)
+  const pageSize = useDnsStore((state) => state.pageSize)
+  const setPageSize = useDnsStore((state) => state.setPageSize)
 
   return (
     <div className="flex flex-col gap-3 border-b bg-muted/30 px-6 py-3">
@@ -73,6 +90,28 @@ export function DnsTableToolbar({
           <span className="text-muted-foreground text-sm">{t("common.total")}</span>
           <Badge variant="secondary">{totalCount}</Badge>
           <span className="text-muted-foreground text-sm">{t("common.records")}</span>
+
+          {/* 分页大小选择器（仅传统分页模式显示） */}
+          {paginationMode === "paginated" && (
+            <div className="ml-4 flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">每页</span>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(val) => setPageSize(accountId, domainId, Number(val))}
+              >
+                <SelectTrigger className="h-8 w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-muted-foreground text-sm">条</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button

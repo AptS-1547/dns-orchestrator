@@ -39,6 +39,7 @@ export const STORAGE_KEYS = {
   RECENT_DOMAINS: "recent_domains",
   SIDEBAR_COLLAPSED: "sidebarCollapsed",
   DOMAINS_CACHE: "dns-orchestrator-domains-cache",
+  PAGINATION_MODE: "paginationMode",
 } as const
 
 /** 业务限制 */

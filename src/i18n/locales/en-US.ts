@@ -229,6 +229,13 @@ export default {
     notificationsDesc: "Manage notification preferences",
     operationNotifications: "Operation Notifications",
     operationNotificationsDesc: "Show success/failure notifications for operations",
+    // Pagination
+    pagination: "Pagination Mode",
+    paginationDesc: "Choose how DNS records are displayed",
+    infiniteScroll: "Infinite Scroll",
+    infiniteScrollDesc: "Auto-load more when scrolling, mobile-friendly",
+    traditionalPagination: "Traditional Pagination",
+    traditionalPaginationDesc: "Use page numbers for quick navigation, desktop-friendly",
     // Debug
     debug: "Debug Mode",
     debugDesc: "Developer Options",

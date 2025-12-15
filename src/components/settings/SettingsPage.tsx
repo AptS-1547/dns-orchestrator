@@ -18,7 +18,16 @@ import { getUpdateNotes, useUpdaterStore } from "@/stores/updaterStore"
 
 export function SettingsPage() {
   const { t } = useTranslation()
-  const { theme, language, debugMode, setTheme, setLanguage, setDebugMode } = useSettingsStore()
+  const {
+    theme,
+    language,
+    debugMode,
+    paginationMode,
+    setTheme,
+    setLanguage,
+    setDebugMode,
+    setPaginationMode,
+  } = useSettingsStore()
   const {
     checking,
     downloading,
@@ -187,6 +196,53 @@ export function SettingsPage() {
                 </p>
               </div>
               <Switch id="notifications" defaultChecked />
+            </div>
+          </div>
+
+          {/* 分页模式设置 */}
+          <div className="space-y-3 sm:space-y-5">
+            <div>
+              <h3 className="mb-1 font-semibold text-lg">{t("settings.pagination")}</h3>
+              <p className="text-muted-foreground text-sm">{t("settings.paginationDesc")}</p>
+            </div>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setPaginationMode("infinite")}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-xl border-2 p-4 transition-all sm:p-5",
+                  paginationMode === "infinite"
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-border bg-card hover:border-accent-foreground/20 hover:bg-accent"
+                )}
+              >
+                <div className="text-left">
+                  <p className="font-medium text-sm">{t("settings.infiniteScroll")}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("settings.infiniteScrollDesc")}
+                  </p>
+                </div>
+                {paginationMode === "infinite" && <Check className="h-5 w-5 text-primary" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaginationMode("paginated")}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-xl border-2 p-4 transition-all sm:p-5",
+                  paginationMode === "paginated"
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-border bg-card hover:border-accent-foreground/20 hover:bg-accent"
+                )}
+              >
+                <div className="text-left">
+                  <p className="font-medium text-sm">{t("settings.traditionalPagination")}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("settings.traditionalPaginationDesc")}
+                  </p>
+                </div>
+                {paginationMode === "paginated" && <Check className="h-5 w-5 text-primary" />}
+              </button>
             </div>
           </div>
 
