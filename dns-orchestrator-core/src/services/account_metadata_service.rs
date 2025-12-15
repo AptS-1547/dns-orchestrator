@@ -22,8 +22,7 @@ impl AccountMetadataService {
 
     /// 列出所有账户
     pub async fn list_accounts(&self) -> CoreResult<Vec<Account>> {
-        let accounts = self.account_repository.find_all().await?;
-        Ok((*accounts).clone())
+        self.account_repository.find_all().await
     }
 
     /// 根据 ID 获取账户

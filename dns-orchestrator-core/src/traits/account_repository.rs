@@ -1,7 +1,6 @@
 //! 账户持久化抽象 Trait
 
 use async_trait::async_trait;
-use std::sync::Arc;
 
 use crate::error::CoreResult;
 use crate::types::{Account, AccountStatus};
@@ -14,9 +13,7 @@ use crate::types::{Account, AccountStatus};
 #[async_trait]
 pub trait AccountRepository: Send + Sync {
     /// 获取所有账户
-    ///
-    /// 返回 Arc<Vec> 以避免不必要的 clone
-    async fn find_all(&self) -> CoreResult<Arc<Vec<Account>>>;
+    async fn find_all(&self) -> CoreResult<Vec<Account>>;
 
     /// 根据 ID 获取账户
     ///
