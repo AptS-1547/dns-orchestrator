@@ -1,6 +1,7 @@
 import { MoreHorizontal, Pencil, Shield, ShieldOff, Trash2 } from "lucide-react"
 import { memo } from "react"
 import { useTranslation } from "react-i18next"
+import { CopyableText } from "@/components/toolbox/shared/CopyableText"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -72,7 +73,7 @@ export const DnsRecordRow = memo(function DnsRecordRow({
                 {record.priority !== undefined && (
                   <span className="mr-2 text-muted-foreground">[{record.priority}]</span>
                 )}
-                {record.value}
+                <CopyableText value={record.value}>{record.value}</CopyableText>
               </span>
             </TooltipTrigger>
             <TooltipContent>

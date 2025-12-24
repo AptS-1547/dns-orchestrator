@@ -1,6 +1,7 @@
 import { MoreHorizontal, Pencil, Shield, ShieldOff, Trash2 } from "lucide-react"
 import { memo } from "react"
 import { useTranslation } from "react-i18next"
+import { CopyableText } from "@/components/toolbox/shared/CopyableText"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -112,7 +113,7 @@ export const DnsRecordCard = memo(function DnsRecordCard({
           {record.priority !== undefined && (
             <span className="mr-1 text-xs">[{record.priority}]</span>
           )}
-          {record.value}
+          <CopyableText value={record.value}>{record.value}</CopyableText>
         </p>
       </div>
 
