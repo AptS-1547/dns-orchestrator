@@ -72,7 +72,11 @@ export const DnsRecordRow = memo(function DnsRecordRow({
             <TooltipTrigger asChild>
               <span className="block max-w-xs truncate">
                 <CopyableText value={fullDomain}>
-                  {record.name === "@" ? <span className="text-muted-foreground">@</span> : record.name}
+                  {record.name === "@" ? (
+                    <span className="text-muted-foreground">@</span>
+                  ) : (
+                    record.name
+                  )}
                 </CopyableText>
               </span>
             </TooltipTrigger>
