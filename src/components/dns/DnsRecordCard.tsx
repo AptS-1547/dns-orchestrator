@@ -86,9 +86,11 @@ export const DnsRecordCard = memo(function DnsRecordCard({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <CopyableText value={fullDomain} className="truncate font-mono text-sm">
-                  {record.name === "@" ? <span className="text-muted-foreground">@</span> : record.name}
-                </CopyableText>
+                <span className="block min-w-0 max-w-full truncate">
+                  <CopyableText value={fullDomain} className="font-mono text-sm">
+                    {record.name === "@" ? <span className="text-muted-foreground">@</span> : record.name}
+                  </CopyableText>
+                </span>
               </TooltipTrigger>
               <TooltipContent>
                 <p className="font-mono text-xs">{fullDomain}</p>
