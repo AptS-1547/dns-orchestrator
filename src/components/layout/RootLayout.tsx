@@ -18,6 +18,27 @@ import { initTheme, useAccountStore, useDomainStore } from "@/stores"
 import { useUpdaterStore } from "@/stores/updaterStore"
 import { AppLayout } from "./AppLayout"
 
+/** 清理无效的域名缓存 */
+function cleanupInvalidDomainCache(
+  accounts: { id: string; status?: string }[],
+  domainsByAccount: Record<string, unknown>,
+  clearAllCache: () => void,
+  clearAccountCache: (accountId: string) => void
+) {
+  const validAccountIds = new Set(accounts.map((a) => a.id))
+  const cachedAccountIds = Object.keys(domainsByAccount)
+
+  if (accounts.length === 0 && cachedAccountIds.length > 0) {
+    clearAllCache()
+  } else {
+    for (const accountId of cachedAccountIds) {
+      if (!validAccountIds.has(accountId)) {
+        clearAccountCache(accountId)
+      }
+    }
+  }
+}
+
 /** 路由路径到导航项的映射 */
 function getNavItemFromPath(
   pathname: string
@@ -56,20 +77,7 @@ export function RootLayout() {
 
     // 清理无效的域名缓存
     const { domainsByAccount, clearAllCache, clearAccountCache } = useDomainStore.getState()
-    const validAccountIds = new Set(accounts.map((a) => a.id))
-    const cachedAccountIds = Object.keys(domainsByAccount)
-
-    if (accounts.length === 0 && cachedAccountIds.length > 0) {
-      // 如果账户全部删除，清理所有缓存
-      clearAllCache()
-    } else {
-      // 否则只清理不存在的账户缓存
-      for (const accountId of cachedAccountIds) {
-        if (!validAccountIds.has(accountId)) {
-          clearAccountCache(accountId)
-        }
-      }
-    }
+    cleanupInvalidDomainCache(accounts, domainsByAccount, clearAllCache, clearAccountCache)
 
     // 刷新有效账户的域名
     if (accounts.length > 0) {

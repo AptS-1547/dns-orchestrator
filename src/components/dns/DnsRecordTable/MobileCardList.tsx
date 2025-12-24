@@ -24,7 +24,7 @@ export function MobileCardList({
   const { t } = useTranslation()
 
   return (
-    <div className="scroll-pb-safe flex flex-col gap-3 p-4">
+    <div className="flex scroll-pb-safe flex-col gap-3 p-4">
       {/* 选择模式下显示全选行 */}
       {isSelectMode && records.length > 0 && (
         <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">

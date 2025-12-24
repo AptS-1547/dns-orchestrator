@@ -35,7 +35,12 @@ import { DesktopTable } from "./DesktopTable"
 import { MobileCardList } from "./MobileCardList"
 import type { DnsRecordTableProps } from "./types"
 
-export function DnsRecordTable({ accountId, domainId, domainName, supportsProxy }: DnsRecordTableProps) {
+export function DnsRecordTable({
+  accountId,
+  domainId,
+  domainName,
+  supportsProxy,
+}: DnsRecordTableProps) {
   const { t } = useTranslation()
   const isMobile = useIsMobile()
   const paginationMode = useSettingsStore((state) => state.paginationMode)
@@ -311,7 +316,7 @@ export function DnsRecordTable({ accountId, domainId, domainName, supportsProxy 
 
                 return pages.map((p, i) =>
                   p === "ellipsis" ? (
-                    <PaginationItem key={`ellipsis-${i}`}>
+                    <PaginationItem key={`ellipsis-${p === "ellipsis" ? (i < pages.length / 2 ? "start" : "end") : p}`}>
                       <PaginationEllipsis className="h-8 w-8" />
                     </PaginationItem>
                   ) : (

@@ -33,6 +33,13 @@ export function DnsRecordPage() {
     return domains.find((d) => d.id === domainId)
   }, [getDomainsForAccount, accountId, domainId])
 
+  // 获取当前账户对应的提供商功能
+  const providerFeatures = useMemo(() => {
+    if (!selectedAccount) return null
+    const provider = providers.find((p) => p.id === selectedAccount.provider)
+    return provider?.features ?? null
+  }, [selectedAccount, providers])
+
   // 添加到最近访问记录
   useEffect(() => {
     if (selectedAccount && selectedDomain && accountId && domainId) {
@@ -57,13 +64,6 @@ export function DnsRecordPage() {
   if (!(accountId && domainId)) {
     return null
   }
-
-  // 获取当前账户对应的提供商功能
-  const providerFeatures = useMemo(() => {
-    if (!selectedAccount) return null
-    const provider = providers.find((p) => p.id === selectedAccount.provider)
-    return provider?.features ?? null
-  }, [selectedAccount, providers])
 
   return (
     <PageLayout>
