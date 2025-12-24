@@ -70,7 +70,9 @@ export const DnsRecordRow = memo(function DnsRecordRow({
             <TooltipTrigger asChild>
               <span className="block max-w-xs truncate font-mono text-sm">
                 {record.priority !== undefined && (
-                  <span className="mr-2 text-muted-foreground">[{record.priority}]</span>
+                  <span className="mr-2 inline-flex items-center rounded-full border border-violet-400 bg-violet-100 px-2 py-0.5 font-medium text-violet-700 text-xs dark:border-violet-500 dark:bg-violet-900/50 dark:text-violet-300">
+                    {record.priority}
+                  </span>
                 )}
                 {record.value}
               </span>

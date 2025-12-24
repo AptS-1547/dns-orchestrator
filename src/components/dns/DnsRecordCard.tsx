@@ -110,7 +110,9 @@ export const DnsRecordCard = memo(function DnsRecordCard({
       <div className="mt-2">
         <p className="break-all font-mono text-muted-foreground text-sm">
           {record.priority !== undefined && (
-            <span className="mr-1 text-xs">[{record.priority}]</span>
+            <span className="mr-1.5 inline-flex items-center rounded-full border border-violet-400 bg-violet-100 px-1.5 py-0.5 font-medium text-violet-700 text-xs dark:border-violet-500 dark:bg-violet-900/50 dark:text-violet-300">
+              {record.priority}
+            </span>
           )}
           {record.value}
         </p>
