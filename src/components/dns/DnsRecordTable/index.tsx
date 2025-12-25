@@ -41,10 +41,11 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
   const paginationMode = useSettingsStore((state) => state.paginationMode)
 
   // 获取当前域名名称（用于 @ 记录显示）
-  const domainName = useDomainStore((state) => {
-    const domains = state.getDomainsForAccount(accountId)
+  const getDomainsForAccount = useDomainStore((state) => state.getDomainsForAccount)
+  const domainName = useMemo(() => {
+    const domains = getDomainsForAccount(accountId)
     return domains.find((d) => d.id === domainId)?.name
-  })
+  }, [getDomainsForAccount, accountId, domainId])
 
   // 使用 useShallow 优化 store 订阅粒度
   const {

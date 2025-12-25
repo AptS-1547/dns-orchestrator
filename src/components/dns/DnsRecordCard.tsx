@@ -136,12 +136,13 @@ export const DnsRecordCard = memo(function DnsRecordCard({
           <Badge variant="secondary" className={TYPE_COLORS[record.data.type] || ""}>
             {record.data.type}
           </Badge>
-          <span className="select-text truncate font-mono text-sm">
-            {record.name === "@" ? (
-              <span className="text-muted-foreground">{domainName || "@"}</span>
-            ) : (
-              record.name
+          <span
+            className={cn(
+              "select-text truncate font-mono text-sm",
+              record.name === "@" && "text-muted-foreground"
             )}
+          >
+            {record.name === "@" ? domainName || "@" : record.name}
           </span>
         </div>
         {!isSelectMode && (
