@@ -16,6 +16,7 @@ export interface MobileCardListProps {
   selectedRecordIds: Set<string>
   hasActiveFilters: boolean
   supportsProxy: boolean
+  domainName?: string
   onEdit: (record: DnsRecord) => void
   onDelete: (record: DnsRecord) => void
   onToggleSelect: (id: string) => void
@@ -33,6 +34,7 @@ export interface DesktopTableProps {
   selectedRecordIds: Set<string>
   hasActiveFilters: boolean
   supportsProxy: boolean
+  domainName?: string
   sortField: SortField | null
   sortDirection: "asc" | "desc" | null
   onSort: (field: SortField) => void

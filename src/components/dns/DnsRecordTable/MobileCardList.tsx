@@ -13,6 +13,7 @@ export function MobileCardList({
   selectedRecordIds,
   hasActiveFilters,
   supportsProxy,
+  domainName,
   onEdit,
   onDelete,
   onToggleSelect,
@@ -58,6 +59,7 @@ export function MobileCardList({
               onDelete={() => onDelete(record)}
               disabled={isDeleting}
               showProxy={supportsProxy}
+              domainName={domainName}
               isSelectMode={isSelectMode}
               isSelected={selectedRecordIds.has(record.id)}
               onToggleSelect={() => onToggleSelect(record.id)}
