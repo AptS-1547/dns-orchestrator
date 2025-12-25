@@ -133,6 +133,11 @@ export const DnsRecordRow = memo(function DnsRecordRow({
   domainName,
 }: DnsRecordRowProps) {
   const { t } = useTranslation()
+
+  // Name 列显示内容：@ 记录显示域名，其他显示 record.name
+  const displayName = record.name === "@" ? domainName || "@" : record.name
+  const isApex = record.name === "@"
+
   const cells = (
     <>
       <TableCell>
@@ -144,16 +149,12 @@ export const DnsRecordRow = memo(function DnsRecordRow({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              {record.name === "@" ? (
-                <span className="text-muted-foreground">{domainName || "@"}</span>
-              ) : (
-                <span className="block max-w-[10rem] truncate">{record.name}</span>
-              )}
+              <span className={isApex ? "text-muted-foreground" : "block max-w-40 truncate"}>
+                {displayName}
+              </span>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="font-mono text-xs">
-                {record.name === "@" ? domainName || "@" : record.name}
-              </p>
+              <p className="font-mono text-xs">{displayName}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
