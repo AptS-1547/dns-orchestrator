@@ -11,6 +11,29 @@ export interface UseDnsTableSortResult {
   handleSort: (field: SortField) => void
 }
 
+/** 获取记录的显示值（用于排序） */
+function getRecordDisplayValue(record: DnsRecord): string {
+  const { data } = record
+
+  switch (data.type) {
+    case "A":
+    case "AAAA":
+      return data.content.address
+    case "CNAME":
+      return data.content.target
+    case "MX":
+      return data.content.exchange
+    case "TXT":
+      return data.content.text
+    case "NS":
+      return data.content.nameserver
+    case "SRV":
+      return data.content.target
+    case "CAA":
+      return data.content.value
+  }
+}
+
 /**
  * DNS 记录表格排序 hook
  */
@@ -47,16 +70,16 @@ export function useDnsTableSort(records: DnsRecord[]): UseDnsTableSortResult {
 
       switch (sortField) {
         case "type":
-          aVal = a.type
-          bVal = b.type
+          aVal = a.data.type
+          bVal = b.data.type
           break
         case "name":
           aVal = a.name
           bVal = b.name
           break
         case "value":
-          aVal = a.value
-          bVal = b.value
+          aVal = getRecordDisplayValue(a)
+          bVal = getRecordDisplayValue(b)
           break
         case "ttl":
           aVal = a.ttl

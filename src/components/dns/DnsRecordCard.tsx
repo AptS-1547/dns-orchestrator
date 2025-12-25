@@ -39,12 +39,68 @@ const TYPE_COLORS: Record<string, string> = {
   CAA: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
 }
 
-function formatTTL(ttl: number): string {
-  if (ttl === 1) return "自动"
-  if (ttl < 60) return `${ttl} 秒`
-  if (ttl < 3600) return `${Math.floor(ttl / 60)} 分钟`
-  if (ttl < 86400) return `${Math.floor(ttl / 3600)} 小时`
-  return `${Math.floor(ttl / 86400)} 天`
+function formatTTL(
+  ttl: number,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  if (ttl === 1) return t("dns.ttlAuto")
+  if (ttl < 60) return t("dns.ttlSeconds", { count: ttl })
+  if (ttl < 3600) return t("dns.ttlMinutes", { count: Math.floor(ttl / 60) })
+  if (ttl < 86400) return t("dns.ttlHours", { count: Math.floor(ttl / 3600) })
+  return t("dns.ttlDay")
+}
+
+/** 渲染记录的值显示（移动端） */
+function renderRecordValueMobile(record: DnsRecord) {
+  const { data } = record
+
+  switch (data.type) {
+    case "A":
+    case "AAAA":
+      return data.content.address
+    case "CNAME":
+      return data.content.target
+    case "MX":
+      return (
+        <>
+          <span className="mr-1.5 inline-flex items-center rounded-full border border-violet-400 bg-violet-100 px-1.5 py-0.5 font-medium text-violet-700 text-xs dark:border-violet-500 dark:bg-violet-900/50 dark:text-violet-300">
+            {data.content.priority}
+          </span>
+          {data.content.exchange}
+        </>
+      )
+    case "TXT":
+      return data.content.text
+    case "NS":
+      return data.content.nameserver
+    case "SRV":
+      return (
+        <>
+          <span className="mr-1.5 inline-flex items-center rounded-full border border-violet-400 bg-violet-100 px-1.5 py-0.5 font-medium text-violet-700 text-xs dark:border-violet-500 dark:bg-violet-900/50 dark:text-violet-300">
+            {data.content.priority}
+          </span>
+          <span className="mr-1.5 inline-flex items-center rounded-full border border-blue-400 bg-blue-100 px-1.5 py-0.5 font-medium text-blue-700 text-xs dark:border-blue-500 dark:bg-blue-900/50 dark:text-blue-300">
+            {data.content.weight}
+          </span>
+          <span className="mr-1.5 inline-flex items-center rounded-full border border-green-400 bg-green-100 px-1.5 py-0.5 font-medium text-green-700 text-xs dark:border-green-500 dark:bg-green-900/50 dark:text-green-300">
+            {data.content.port}
+          </span>
+          {data.content.target}
+        </>
+      )
+    case "CAA":
+      return (
+        <>
+          <span className="mr-1.5 inline-flex items-center rounded-full border border-red-400 bg-red-100 px-1.5 py-0.5 font-medium text-red-700 text-xs dark:border-red-500 dark:bg-red-900/50 dark:text-red-300">
+            {data.content.flags}
+          </span>
+          <span className="mr-1.5 inline-flex items-center rounded-full border border-orange-400 bg-orange-100 px-1.5 py-0.5 font-medium text-orange-700 text-xs dark:border-orange-500 dark:bg-orange-900/50 dark:text-orange-300">
+            {data.content.tag}
+          </span>
+          {data.content.value}
+        </>
+      )
+  }
 }
 
 export const DnsRecordCard = memo(function DnsRecordCard({
@@ -74,8 +130,8 @@ export const DnsRecordCard = memo(function DnsRecordCard({
               onClick={(e) => e.stopPropagation()}
             />
           )}
-          <Badge variant="secondary" className={TYPE_COLORS[record.type] || ""}>
-            {record.type}
+          <Badge variant="secondary" className={TYPE_COLORS[record.data.type] || ""}>
+            {record.data.type}
           </Badge>
           <span className="truncate font-mono text-sm">
             {record.name === "@" ? <span className="text-muted-foreground">@</span> : record.name}
@@ -109,18 +165,13 @@ export const DnsRecordCard = memo(function DnsRecordCard({
       {/* 第二行：value */}
       <div className="mt-2">
         <p className="break-all font-mono text-muted-foreground text-sm">
-          {record.priority !== undefined && (
-            <span className="mr-1.5 inline-flex items-center rounded-full border border-violet-400 bg-violet-100 px-1.5 py-0.5 font-medium text-violet-700 text-xs dark:border-violet-500 dark:bg-violet-900/50 dark:text-violet-300">
-              {record.priority}
-            </span>
-          )}
-          {record.value}
+          {renderRecordValueMobile(record)}
         </p>
       </div>
 
       {/* 第三行：ttl + proxy */}
       <div className="mt-2 flex items-center gap-3 text-muted-foreground text-xs">
-        <span>TTL: {formatTTL(record.ttl)}</span>
+        <span>TTL: {formatTTL(record.ttl, t)}</span>
         {showProxy && record.proxied !== undefined && (
           <span className="flex items-center gap-1">
             {record.proxied ? (

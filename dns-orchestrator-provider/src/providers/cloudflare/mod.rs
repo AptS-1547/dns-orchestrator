@@ -9,7 +9,9 @@ use reqwest::Client;
 
 use crate::providers::common::create_http_client;
 
-pub(crate) use types::{CloudflareDnsRecord, CloudflareResponse, CloudflareZone};
+pub(crate) use types::{
+    CloudflareCaaData, CloudflareDnsRecord, CloudflareResponse, CloudflareSrvData, CloudflareZone,
+};
 
 pub(crate) const CF_API_BASE: &str = "https://api.cloudflare.com/client/v4";
 /// Cloudflare Zones API 单页最大记录数

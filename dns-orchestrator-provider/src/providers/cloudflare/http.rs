@@ -261,6 +261,108 @@ impl CloudflareProvider {
             .ok_or_else(|| self.parse_error("响应中缺少 result 字段"))
     }
 
+    /// 执行 POST 请求（直接使用 JSON Value）
+    pub(crate) async fn post_json<T: for<'de> Deserialize<'de>>(
+        &self,
+        path: &str,
+        body: serde_json::Value,
+        ctx: ErrorContext,
+    ) -> Result<T> {
+        let url = format!("{CF_API_BASE}{path}");
+        let body_json =
+            serde_json::to_string_pretty(&body).unwrap_or_else(|_| "无法序列化请求体".to_string());
+        log::debug!("Request Body: {body_json}");
+
+        // 使用 HttpUtils 发送请求（带重试）
+        let request = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_token))
+            .json(&body);
+
+        let (_status, response_text) = HttpUtils::execute_request_with_retry(
+            request,
+            self.provider_name(),
+            "POST",
+            &url,
+            self.max_retries,
+        )
+        .await?;
+
+        // 解析 Cloudflare 响应
+        let cf_response: CloudflareResponse<T> =
+            HttpUtils::parse_json(&response_text, self.provider_name())?;
+
+        // 处理 API 错误
+        if !cf_response.success {
+            let (code, message) = cf_response
+                .errors
+                .and_then(|errors| {
+                    errors
+                        .first()
+                        .map(|e| (e.code.to_string(), e.message.clone()))
+                })
+                .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
+            log::error!("API 错误: {message}");
+            return Err(self.map_error(RawApiError::with_code(code, message), ctx));
+        }
+
+        cf_response
+            .result
+            .ok_or_else(|| self.parse_error("响应中缺少 result 字段"))
+    }
+
+    /// 执行 PATCH 请求（直接使用 JSON Value）
+    pub(crate) async fn patch_json<T: for<'de> Deserialize<'de>>(
+        &self,
+        path: &str,
+        body: serde_json::Value,
+        ctx: ErrorContext,
+    ) -> Result<T> {
+        let url = format!("{CF_API_BASE}{path}");
+        let body_json =
+            serde_json::to_string_pretty(&body).unwrap_or_else(|_| "无法序列化请求体".to_string());
+        log::debug!("Request Body: {body_json}");
+
+        // 使用 HttpUtils 发送请求（带重试）
+        let request = self
+            .client
+            .patch(&url)
+            .header("Authorization", format!("Bearer {}", self.api_token))
+            .json(&body);
+
+        let (_status, response_text) = HttpUtils::execute_request_with_retry(
+            request,
+            self.provider_name(),
+            "PATCH",
+            &url,
+            self.max_retries,
+        )
+        .await?;
+
+        // 解析 Cloudflare 响应
+        let cf_response: CloudflareResponse<T> =
+            HttpUtils::parse_json(&response_text, self.provider_name())?;
+
+        // 处理 API 错误
+        if !cf_response.success {
+            let (code, message) = cf_response
+                .errors
+                .and_then(|errors| {
+                    errors
+                        .first()
+                        .map(|e| (e.code.to_string(), e.message.clone()))
+                })
+                .unwrap_or_else(|| (String::new(), "Unknown error".to_string()));
+            log::error!("API 错误: {message}");
+            return Err(self.map_error(RawApiError::with_code(code, message), ctx));
+        }
+
+        cf_response
+            .result
+            .ok_or_else(|| self.parse_error("响应中缺少 result 字段"))
+    }
+
     /// 执行 DELETE 请求
     pub(crate) async fn delete(&self, path: &str, ctx: ErrorContext) -> Result<()> {
         let url = format!("{CF_API_BASE}{path}");

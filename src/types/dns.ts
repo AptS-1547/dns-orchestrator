@@ -4,15 +4,24 @@ export type DnsRecordType = "A" | "AAAA" | "CNAME" | "MX" | "TXT" | "NS" | "SRV"
 /** 所有可用的记录类型列表 */
 export const RECORD_TYPES: DnsRecordType[] = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"]
 
+/** DNS 记录数据 - 类型安全的多态表示 */
+export type RecordData =
+  | { type: "A"; content: { address: string } }
+  | { type: "AAAA"; content: { address: string } }
+  | { type: "CNAME"; content: { target: string } }
+  | { type: "MX"; content: { priority: number; exchange: string } }
+  | { type: "TXT"; content: { text: string } }
+  | { type: "NS"; content: { nameserver: string } }
+  | { type: "SRV"; content: { priority: number; weight: number; port: number; target: string } }
+  | { type: "CAA"; content: { flags: number; tag: string; value: string } }
+
 /** DNS 记录 */
 export interface DnsRecord {
   id: string
   domainId: string
-  type: DnsRecordType
   name: string
-  value: string
   ttl: number
-  priority?: number
+  data: RecordData
   proxied?: boolean
   createdAt?: string
   updatedAt?: string
@@ -21,22 +30,18 @@ export interface DnsRecord {
 /** 创建 DNS 记录请求 */
 export interface CreateDnsRecordRequest {
   domainId: string
-  type: DnsRecordType
   name: string
-  value: string
   ttl: number
-  priority?: number
+  data: RecordData
   proxied?: boolean
 }
 
 /** 更新 DNS 记录请求 */
 export interface UpdateDnsRecordRequest {
   domainId: string
-  type: DnsRecordType
   name: string
-  value: string
   ttl: number
-  priority?: number
+  data: RecordData
   proxied?: boolean
 }
 
@@ -82,6 +87,6 @@ export const RECORD_TYPE_INFO: Record<DnsRecordType, { descriptionKey: string; e
     MX: { descriptionKey: "dns.recordTypes.MX", example: "mail.example.com" },
     TXT: { descriptionKey: "dns.recordTypes.TXT", example: "v=spf1 include:..." },
     NS: { descriptionKey: "dns.recordTypes.NS", example: "ns1.example.com" },
-    SRV: { descriptionKey: "dns.recordTypes.SRV", example: "0 5 5060 sip.example.com" },
-    CAA: { descriptionKey: "dns.recordTypes.CAA", example: '0 issue "letsencrypt.org"' },
+    SRV: { descriptionKey: "dns.recordTypes.SRV", example: "sip.example.com" },
+    CAA: { descriptionKey: "dns.recordTypes.CAA", example: "letsencrypt.org" },
   }

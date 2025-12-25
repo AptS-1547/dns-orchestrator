@@ -1,20 +1,21 @@
 //! Cloudflare DnsProvider trait 实现
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::error::Result;
-use crate::providers::common::{
-    full_name_to_relative, parse_record_type, record_type_to_string, relative_to_full_name,
-};
+use crate::providers::common::{full_name_to_relative, relative_to_full_name};
 use crate::traits::{DnsProvider, ErrorContext, ProviderErrorMapper};
 use crate::types::{
-    CreateDnsRecordRequest, DnsRecord, DnsRecordType, DomainStatus, FieldType, PaginatedResponse,
+    CreateDnsRecordRequest, DnsRecord, DomainStatus, FieldType, PaginatedResponse,
     PaginationParams, ProviderCredentialField, ProviderDomain, ProviderFeatures, ProviderLimits,
-    ProviderMetadata, ProviderType, RecordQueryParams, UpdateDnsRecordRequest,
+    ProviderMetadata, ProviderType, RecordData, RecordQueryParams, UpdateDnsRecordRequest,
 };
 
-use super::{CloudflareDnsRecord, CloudflareProvider, CloudflareZone, MAX_PAGE_SIZE_RECORDS};
+use super::{
+    CloudflareCaaData, CloudflareDnsRecord, CloudflareProvider, CloudflareSrvData, CloudflareZone,
+    MAX_PAGE_SIZE_RECORDS,
+};
 
 impl CloudflareProvider {
     /// 将 Cloudflare zone 转换为 ProviderDomain
@@ -43,21 +44,14 @@ impl CloudflareProvider {
         zone_id: &str,
         zone_name: &str,
     ) -> Result<DnsRecord> {
-        let record_type = parse_record_type(&cf_record.record_type, self.provider_name())?;
-        // 只有 MX 和 SRV 记录才有 priority，其他类型忽略
-        let priority = match record_type {
-            DnsRecordType::Mx | DnsRecordType::Srv => cf_record.priority,
-            _ => None,
-        };
+        let data = self.parse_record_data(&cf_record)?;
 
         Ok(DnsRecord {
             id: cf_record.id,
             domain_id: zone_id.to_string(),
-            record_type,
             name: full_name_to_relative(&cf_record.name, zone_name),
-            value: cf_record.content,
             ttl: cf_record.ttl,
-            priority,
+            data,
             proxied: cf_record.proxied,
             created_at: cf_record.created_on.and_then(|s| {
                 chrono::DateTime::parse_from_rfc3339(&s)
@@ -70,6 +64,182 @@ impl CloudflareProvider {
                     .map(|dt| dt.with_timezone(&chrono::Utc))
             }),
         })
+    }
+
+    /// 解析 Cloudflare 记录为 RecordData
+    fn parse_record_data(&self, cf_record: &CloudflareDnsRecord) -> Result<RecordData> {
+        match cf_record.record_type.as_str() {
+            "A" => Ok(RecordData::A {
+                address: cf_record.content.clone(),
+            }),
+            "AAAA" => Ok(RecordData::AAAA {
+                address: cf_record.content.clone(),
+            }),
+            "CNAME" => Ok(RecordData::CNAME {
+                target: cf_record.content.clone(),
+            }),
+            "MX" => Ok(RecordData::MX {
+                priority: cf_record.priority.unwrap_or(10),
+                exchange: cf_record.content.clone(),
+            }),
+            "TXT" => Ok(RecordData::TXT {
+                text: cf_record.content.clone(),
+            }),
+            "NS" => Ok(RecordData::NS {
+                nameserver: cf_record.content.clone(),
+            }),
+            "SRV" => {
+                // SRV 记录使用 data 字段
+                if let Some(ref data) = cf_record.data {
+                    let srv: CloudflareSrvData =
+                        serde_json::from_value(data.clone()).map_err(|e| {
+                            crate::error::ProviderError::ParseError {
+                                provider: self.provider_name().to_string(),
+                                detail: format!("Failed to parse SRV data: {e}"),
+                            }
+                        })?;
+                    Ok(RecordData::SRV {
+                        priority: srv.priority,
+                        weight: srv.weight,
+                        port: srv.port,
+                        target: srv.target,
+                    })
+                } else {
+                    // Fallback: 尝试从 content 解析
+                    let parts: Vec<&str> = cf_record.content.split_whitespace().collect();
+                    if parts.len() >= 3 {
+                        Ok(RecordData::SRV {
+                            priority: cf_record.priority.unwrap_or(0),
+                            weight: parts[0].parse().unwrap_or(0),
+                            port: parts[1].parse().unwrap_or(0),
+                            target: parts[2].to_string(),
+                        })
+                    } else {
+                        Ok(RecordData::SRV {
+                            priority: cf_record.priority.unwrap_or(0),
+                            weight: 0,
+                            port: 0,
+                            target: cf_record.content.clone(),
+                        })
+                    }
+                }
+            }
+            "CAA" => {
+                // CAA 记录使用 data 字段
+                if let Some(ref data) = cf_record.data {
+                    let caa: CloudflareCaaData =
+                        serde_json::from_value(data.clone()).map_err(|e| {
+                            crate::error::ProviderError::ParseError {
+                                provider: self.provider_name().to_string(),
+                                detail: format!("Failed to parse CAA data: {e}"),
+                            }
+                        })?;
+                    Ok(RecordData::CAA {
+                        flags: caa.flags,
+                        tag: caa.tag,
+                        value: caa.value,
+                    })
+                } else {
+                    // Fallback: 尝试从 content 解析 "flags tag value"
+                    let parts: Vec<&str> = cf_record.content.splitn(3, ' ').collect();
+                    if parts.len() >= 3 {
+                        Ok(RecordData::CAA {
+                            flags: parts[0].parse().unwrap_or(0),
+                            tag: parts[1].to_string(),
+                            value: parts[2].trim_matches('"').to_string(),
+                        })
+                    } else {
+                        Ok(RecordData::CAA {
+                            flags: 0,
+                            tag: "issue".to_string(),
+                            value: cf_record.content.clone(),
+                        })
+                    }
+                }
+            }
+            _ => Err(crate::error::ProviderError::UnsupportedRecordType {
+                provider: self.provider_name().to_string(),
+                record_type: cf_record.record_type.clone(),
+            }),
+        }
+    }
+
+    /// 将 RecordData 转换为 Cloudflare API 请求体
+    fn build_create_body(
+        &self,
+        full_name: &str,
+        ttl: u32,
+        data: &RecordData,
+        proxied: Option<bool>,
+    ) -> serde_json::Value {
+        match data {
+            RecordData::A { address } => serde_json::json!({
+                "type": "A",
+                "name": full_name,
+                "content": address,
+                "ttl": ttl,
+                "proxied": proxied,
+            }),
+            RecordData::AAAA { address } => serde_json::json!({
+                "type": "AAAA",
+                "name": full_name,
+                "content": address,
+                "ttl": ttl,
+                "proxied": proxied,
+            }),
+            RecordData::CNAME { target } => serde_json::json!({
+                "type": "CNAME",
+                "name": full_name,
+                "content": target,
+                "ttl": ttl,
+                "proxied": proxied,
+            }),
+            RecordData::MX { priority, exchange } => serde_json::json!({
+                "type": "MX",
+                "name": full_name,
+                "content": exchange,
+                "ttl": ttl,
+                "priority": priority,
+            }),
+            RecordData::TXT { text } => serde_json::json!({
+                "type": "TXT",
+                "name": full_name,
+                "content": text,
+                "ttl": ttl,
+            }),
+            RecordData::NS { nameserver } => serde_json::json!({
+                "type": "NS",
+                "name": full_name,
+                "content": nameserver,
+                "ttl": ttl,
+            }),
+            RecordData::SRV {
+                priority,
+                weight,
+                port,
+                target,
+            } => serde_json::json!({
+                "type": "SRV",
+                "name": full_name,
+                "ttl": ttl,
+                "data": {
+                    "priority": priority,
+                    "weight": weight,
+                    "port": port,
+                    "target": target,
+                }
+            }),
+            RecordData::CAA { flags, tag, value } => serde_json::json!({
+                "type": "CAA",
+                "name": full_name,
+                "ttl": ttl,
+                "data": {
+                    "flags": flags,
+                    "tag": tag,
+                    "value": value,
+                }
+            }),
+        }
     }
 }
 
@@ -174,7 +344,7 @@ impl DnsProvider for CloudflareProvider {
 
         // 添加记录类型过滤
         if let Some(ref record_type) = params.record_type {
-            let type_str = record_type_to_string(record_type);
+            let type_str = crate::providers::common::record_type_to_string(record_type);
             url.push_str(&format!("&type={}", urlencoding::encode(type_str)));
         }
 
@@ -207,31 +377,10 @@ impl DnsProvider for CloudflareProvider {
         let zone_name = zone.name;
 
         let full_name = relative_to_full_name(&req.name, &zone_name);
-
-        #[derive(Serialize)]
-        struct CreateRecordBody {
-            #[serde(rename = "type")]
-            record_type: String,
-            name: String,
-            content: String,
-            ttl: u32,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            priority: Option<u16>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            proxied: Option<bool>,
-        }
-
-        let body = CreateRecordBody {
-            record_type: record_type_to_string(&req.record_type).to_string(),
-            name: full_name,
-            content: req.value.clone(),
-            ttl: req.ttl,
-            priority: req.priority,
-            proxied: req.proxied,
-        };
+        let body = self.build_create_body(&full_name, req.ttl, &req.data, req.proxied);
 
         let cf_record: CloudflareDnsRecord = self
-            .post(&format!("/zones/{}/dns_records", req.domain_id), &body, ctx)
+            .post_json(&format!("/zones/{}/dns_records", req.domain_id), body, ctx)
             .await?;
 
         self.cf_record_to_dns_record(cf_record, &req.domain_id, &zone_name)
@@ -255,33 +404,12 @@ impl DnsProvider for CloudflareProvider {
         let zone_name = zone.name;
 
         let full_name = relative_to_full_name(&req.name, &zone_name);
-
-        #[derive(Serialize)]
-        struct UpdateRecordBody {
-            #[serde(rename = "type")]
-            record_type: String,
-            name: String,
-            content: String,
-            ttl: u32,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            priority: Option<u16>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            proxied: Option<bool>,
-        }
-
-        let body = UpdateRecordBody {
-            record_type: record_type_to_string(&req.record_type).to_string(),
-            name: full_name,
-            content: req.value.clone(),
-            ttl: req.ttl,
-            priority: req.priority,
-            proxied: req.proxied,
-        };
+        let body = self.build_create_body(&full_name, req.ttl, &req.data, req.proxied);
 
         let cf_record: CloudflareDnsRecord = self
-            .patch(
+            .patch_json(
                 &format!("/zones/{}/dns_records/{}", req.domain_id, record_id),
-                &body,
+                body,
                 ctx,
             )
             .await?;

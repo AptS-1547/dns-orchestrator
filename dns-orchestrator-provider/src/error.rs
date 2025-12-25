@@ -35,6 +35,12 @@ pub enum ProviderError {
         detail: String,
     },
 
+    /// 不支持的记录类型
+    UnsupportedRecordType {
+        provider: String,
+        record_type: String,
+    },
+
     /// 配额超限
     QuotaExceeded {
         provider: String,
@@ -111,6 +117,12 @@ impl std::fmt::Display for ProviderError {
                 detail,
             } => {
                 write!(f, "[{provider}] Invalid parameter '{param}': {detail}")
+            }
+            Self::UnsupportedRecordType {
+                provider,
+                record_type,
+            } => {
+                write!(f, "[{provider}] Unsupported record type: {record_type}")
             }
             Self::QuotaExceeded { provider, .. } => {
                 write!(f, "[{provider}] Quota exceeded")

@@ -133,6 +133,7 @@ pub struct ProviderDomain {
 
 // ============ DNS 记录相关类型 ============
 
+/// DNS 记录类型（用于查询过滤）
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum DnsRecordType {
@@ -146,53 +147,112 @@ pub enum DnsRecordType {
     Caa,
 }
 
+/// DNS 记录数据 - 类型安全的多态表示
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "content")]
+pub enum RecordData {
+    /// A 记录：IPv4 地址
+    A { address: String },
+
+    /// AAAA 记录：IPv6 地址
+    AAAA { address: String },
+
+    /// CNAME 记录：别名
+    CNAME { target: String },
+
+    /// MX 记录：邮件交换
+    MX { priority: u16, exchange: String },
+
+    /// TXT 记录：文本
+    TXT { text: String },
+
+    /// NS 记录：域名服务器
+    NS { nameserver: String },
+
+    /// SRV 记录：服务定位
+    SRV {
+        priority: u16,
+        weight: u16,
+        port: u16,
+        target: String,
+    },
+
+    /// CAA 记录：证书颁发机构授权
+    CAA {
+        flags: u8,
+        tag: String,
+        value: String,
+    },
+}
+
+impl RecordData {
+    /// 获取记录类型
+    pub fn record_type(&self) -> DnsRecordType {
+        match self {
+            Self::A { .. } => DnsRecordType::A,
+            Self::AAAA { .. } => DnsRecordType::Aaaa,
+            Self::CNAME { .. } => DnsRecordType::Cname,
+            Self::MX { .. } => DnsRecordType::Mx,
+            Self::TXT { .. } => DnsRecordType::Txt,
+            Self::NS { .. } => DnsRecordType::Ns,
+            Self::SRV { .. } => DnsRecordType::Srv,
+            Self::CAA { .. } => DnsRecordType::Caa,
+        }
+    }
+
+    /// 获取显示用的主要值（用于列表显示）
+    pub fn display_value(&self) -> String {
+        match self {
+            Self::A { address } | Self::AAAA { address } => address.clone(),
+            Self::CNAME { target } => target.clone(),
+            Self::MX { exchange, .. } => exchange.clone(),
+            Self::TXT { text } => text.clone(),
+            Self::NS { nameserver } => nameserver.clone(),
+            Self::SRV { target, .. } => target.clone(),
+            Self::CAA { value, .. } => value.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DnsRecord {
     pub id: String,
-    #[serde(rename = "domainId")]
     pub domain_id: String,
-    #[serde(rename = "type")]
-    pub record_type: DnsRecordType,
     pub name: String,
-    pub value: String,
     pub ttl: u32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub priority: Option<u16>,
+    pub data: RecordData,
+
+    /// Cloudflare 专用：是否启用代理
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proxied: Option<bool>,
-    #[serde(rename = "createdAt")]
+
     #[serde(with = "crate::utils::datetime")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "updatedAt")]
+
     #[serde(with = "crate::utils::datetime")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateDnsRecordRequest {
-    #[serde(rename = "domainId")]
     pub domain_id: String,
-    #[serde(rename = "type")]
-    pub record_type: DnsRecordType,
     pub name: String,
-    pub value: String,
     pub ttl: u32,
-    pub priority: Option<u16>,
+    pub data: RecordData,
     pub proxied: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateDnsRecordRequest {
-    #[serde(rename = "domainId")]
     pub domain_id: String,
-    #[serde(rename = "type")]
-    pub record_type: DnsRecordType,
     pub name: String,
-    pub value: String,
     pub ttl: u32,
-    pub priority: Option<u16>,
+    pub data: RecordData,
     pub proxied: Option<bool>,
 }
 
