@@ -79,7 +79,12 @@ impl CloudflareProvider {
                 target: cf_record.content.clone(),
             }),
             "MX" => Ok(RecordData::MX {
-                priority: cf_record.priority.unwrap_or(10),
+                priority: cf_record.priority.ok_or_else(|| {
+                    crate::error::ProviderError::ParseError {
+                        provider: self.provider_name().to_string(),
+                        detail: "MX record missing priority field".to_string(),
+                    }
+                })?,
                 exchange: cf_record.content.clone(),
             }),
             "TXT" => Ok(RecordData::TXT {
@@ -109,17 +114,33 @@ impl CloudflareProvider {
                     let parts: Vec<&str> = cf_record.content.split_whitespace().collect();
                     if parts.len() >= 3 {
                         Ok(RecordData::SRV {
-                            priority: cf_record.priority.unwrap_or(0),
-                            weight: parts[0].parse().unwrap_or(0),
-                            port: parts[1].parse().unwrap_or(0),
+                            priority: cf_record.priority.ok_or_else(|| {
+                                crate::error::ProviderError::ParseError {
+                                    provider: self.provider_name().to_string(),
+                                    detail: "SRV record missing priority field".to_string(),
+                                }
+                            })?,
+                            weight: parts[0].parse().map_err(|_| {
+                                crate::error::ProviderError::ParseError {
+                                    provider: self.provider_name().to_string(),
+                                    detail: format!("Invalid SRV weight: '{}'", parts[0]),
+                                }
+                            })?,
+                            port: parts[1].parse().map_err(|_| {
+                                crate::error::ProviderError::ParseError {
+                                    provider: self.provider_name().to_string(),
+                                    detail: format!("Invalid SRV port: '{}'", parts[1]),
+                                }
+                            })?,
                             target: parts[2].to_string(),
                         })
                     } else {
-                        Ok(RecordData::SRV {
-                            priority: cf_record.priority.unwrap_or(0),
-                            weight: 0,
-                            port: 0,
-                            target: cf_record.content.clone(),
+                        Err(crate::error::ProviderError::ParseError {
+                            provider: self.provider_name().to_string(),
+                            detail: format!(
+                                "Invalid SRV record format: expected 'weight port target', got '{}'",
+                                cf_record.content
+                            ),
                         })
                     }
                 }
@@ -144,15 +165,22 @@ impl CloudflareProvider {
                     let parts: Vec<&str> = cf_record.content.splitn(3, ' ').collect();
                     if parts.len() >= 3 {
                         Ok(RecordData::CAA {
-                            flags: parts[0].parse().unwrap_or(0),
+                            flags: parts[0].parse().map_err(|_| {
+                                crate::error::ProviderError::ParseError {
+                                    provider: self.provider_name().to_string(),
+                                    detail: format!("Invalid CAA flags: '{}'", parts[0]),
+                                }
+                            })?,
                             tag: parts[1].to_string(),
                             value: parts[2].trim_matches('"').to_string(),
                         })
                     } else {
-                        Ok(RecordData::CAA {
-                            flags: 0,
-                            tag: "issue".to_string(),
-                            value: cf_record.content.clone(),
+                        Err(crate::error::ProviderError::ParseError {
+                            provider: self.provider_name().to_string(),
+                            detail: format!(
+                                "Invalid CAA record format: expected 'flags tag value', got '{}'",
+                                cf_record.content
+                            ),
                         })
                     }
                 }

@@ -42,7 +42,10 @@ impl DnspodProvider {
                 target: value.to_string(),
             }),
             "MX" => Ok(RecordData::MX {
-                priority: mx.unwrap_or(10),
+                priority: mx.ok_or_else(|| ProviderError::ParseError {
+                    provider: "dnspod".to_string(),
+                    detail: "MX record missing priority field".to_string(),
+                })?,
                 exchange: value.to_string(),
             }),
             "TXT" => Ok(RecordData::TXT {
@@ -56,17 +59,26 @@ impl DnspodProvider {
                 let parts: Vec<&str> = value.splitn(4, ' ').collect();
                 if parts.len() == 4 {
                     Ok(RecordData::SRV {
-                        priority: parts[0].parse().unwrap_or(0),
-                        weight: parts[1].parse().unwrap_or(0),
-                        port: parts[2].parse().unwrap_or(0),
+                        priority: parts[0].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "dnspod".to_string(),
+                            detail: format!("Invalid SRV priority: '{}'", parts[0]),
+                        })?,
+                        weight: parts[1].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "dnspod".to_string(),
+                            detail: format!("Invalid SRV weight: '{}'", parts[1]),
+                        })?,
+                        port: parts[2].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "dnspod".to_string(),
+                            detail: format!("Invalid SRV port: '{}'", parts[2]),
+                        })?,
                         target: parts[3].to_string(),
                     })
                 } else {
-                    Ok(RecordData::SRV {
-                        priority: 0,
-                        weight: 0,
-                        port: 0,
-                        target: value.to_string(),
+                    Err(ProviderError::ParseError {
+                        provider: "dnspod".to_string(),
+                        detail: format!(
+                            "Invalid SRV record format: expected 'priority weight port target', got '{value}'"
+                        ),
                     })
                 }
             }
@@ -75,15 +87,19 @@ impl DnspodProvider {
                 let parts: Vec<&str> = value.splitn(3, ' ').collect();
                 if parts.len() >= 3 {
                     Ok(RecordData::CAA {
-                        flags: parts[0].parse().unwrap_or(0),
+                        flags: parts[0].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "dnspod".to_string(),
+                            detail: format!("Invalid CAA flags: '{}'", parts[0]),
+                        })?,
                         tag: parts[1].to_string(),
                         value: parts[2].trim_matches('"').to_string(),
                     })
                 } else {
-                    Ok(RecordData::CAA {
-                        flags: 0,
-                        tag: "issue".to_string(),
-                        value: value.to_string(),
+                    Err(ProviderError::ParseError {
+                        provider: "dnspod".to_string(),
+                        detail: format!(
+                            "Invalid CAA record format: expected 'flags tag value', got '{value}'"
+                        ),
                     })
                 }
             }

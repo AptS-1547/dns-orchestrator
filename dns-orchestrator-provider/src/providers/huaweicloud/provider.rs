@@ -56,13 +56,18 @@ impl HuaweicloudProvider {
                 let parts: Vec<&str> = record.splitn(2, ' ').collect();
                 if parts.len() == 2 {
                     Ok(RecordData::MX {
-                        priority: parts[0].parse().unwrap_or(10),
+                        priority: parts[0].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "huaweicloud".to_string(),
+                            detail: format!("Invalid MX priority: '{}'", parts[0]),
+                        })?,
                         exchange: parts[1].to_string(),
                     })
                 } else {
-                    Ok(RecordData::MX {
-                        priority: 10,
-                        exchange: record.to_string(),
+                    Err(ProviderError::ParseError {
+                        provider: "huaweicloud".to_string(),
+                        detail: format!(
+                            "Invalid MX record format: expected 'priority exchange', got '{record}'"
+                        ),
                     })
                 }
             }
@@ -77,17 +82,26 @@ impl HuaweicloudProvider {
                 let parts: Vec<&str> = record.splitn(4, ' ').collect();
                 if parts.len() == 4 {
                     Ok(RecordData::SRV {
-                        priority: parts[0].parse().unwrap_or(0),
-                        weight: parts[1].parse().unwrap_or(0),
-                        port: parts[2].parse().unwrap_or(0),
+                        priority: parts[0].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "huaweicloud".to_string(),
+                            detail: format!("Invalid SRV priority: '{}'", parts[0]),
+                        })?,
+                        weight: parts[1].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "huaweicloud".to_string(),
+                            detail: format!("Invalid SRV weight: '{}'", parts[1]),
+                        })?,
+                        port: parts[2].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "huaweicloud".to_string(),
+                            detail: format!("Invalid SRV port: '{}'", parts[2]),
+                        })?,
                         target: parts[3].to_string(),
                     })
                 } else {
-                    Ok(RecordData::SRV {
-                        priority: 0,
-                        weight: 0,
-                        port: 0,
-                        target: record.to_string(),
+                    Err(ProviderError::ParseError {
+                        provider: "huaweicloud".to_string(),
+                        detail: format!(
+                            "Invalid SRV record format: expected 'priority weight port target', got '{record}'"
+                        ),
                     })
                 }
             }
@@ -96,15 +110,19 @@ impl HuaweicloudProvider {
                 let parts: Vec<&str> = record.splitn(3, ' ').collect();
                 if parts.len() >= 3 {
                     Ok(RecordData::CAA {
-                        flags: parts[0].parse().unwrap_or(0),
+                        flags: parts[0].parse().map_err(|_| ProviderError::ParseError {
+                            provider: "huaweicloud".to_string(),
+                            detail: format!("Invalid CAA flags: '{}'", parts[0]),
+                        })?,
                         tag: parts[1].to_string(),
                         value: parts[2].trim_matches('"').to_string(),
                     })
                 } else {
-                    Ok(RecordData::CAA {
-                        flags: 0,
-                        tag: "issue".to_string(),
-                        value: record.to_string(),
+                    Err(ProviderError::ParseError {
+                        provider: "huaweicloud".to_string(),
+                        detail: format!(
+                            "Invalid CAA record format: expected 'flags tag value', got '{record}'"
+                        ),
                     })
                 }
             }
