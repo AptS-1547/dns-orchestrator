@@ -36,7 +36,7 @@ export function RootLayout() {
   const isMobile = useIsMobile()
 
   const { checkForUpdates, showUpdateDialog, setShowUpdateDialog } = useUpdaterStore()
-  const { accounts, checkRestoreStatus } = useAccountStore()
+  const { accounts, checkRestoreStatus, fetchProviders } = useAccountStore()
   const { loadFromStorage, refreshAllAccounts } = useDomainStore()
 
   // 初始化
@@ -44,8 +44,9 @@ export function RootLayout() {
     initTheme()
     initDebugMode()
     checkRestoreStatus()
+    fetchProviders()
     loadFromStorage()
-  }, [checkRestoreStatus, loadFromStorage])
+  }, [checkRestoreStatus, fetchProviders, loadFromStorage])
 
   // 账户加载完成后，清理无效记录并后台刷新域名
   useEffect(() => {
