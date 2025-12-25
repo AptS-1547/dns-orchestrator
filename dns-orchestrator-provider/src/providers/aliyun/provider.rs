@@ -8,7 +8,7 @@ use crate::error::{ProviderError, Result};
 use crate::providers::common::{parse_record_type, record_type_to_string};
 use crate::traits::{DnsProvider, ErrorContext};
 use crate::types::{
-    CreateDnsRecordRequest, DnsRecord, DomainStatus, FieldType, PaginatedResponse,
+    CreateDnsRecordRequest, DnsRecord, DnsRecordType, DomainStatus, FieldType, PaginatedResponse,
     PaginationParams, ProviderCredentialField, ProviderDomain, ProviderFeatures, ProviderLimits,
     ProviderMetadata, ProviderType, RecordQueryParams, UpdateDnsRecordRequest,
 };
@@ -224,6 +224,11 @@ impl DnsProvider for AliyunProvider {
             .into_iter()
             .filter_map(|r| {
                 let record_type = parse_record_type(&r.record_type, "aliyun").ok()?;
+                // 只有 MX 和 SRV 记录才有 priority，其他类型忽略
+                let priority = match record_type {
+                    DnsRecordType::Mx | DnsRecordType::Srv => r.priority,
+                    _ => None,
+                };
                 Some(DnsRecord {
                     id: r.record_id,
                     domain_id: domain_id.to_string(),
@@ -231,7 +236,7 @@ impl DnsProvider for AliyunProvider {
                     name: r.rr,
                     value: r.value,
                     ttl: r.ttl,
-                    priority: r.priority,
+                    priority,
                     proxied: None, // 阿里云不支持代理
                     created_at: Self::timestamp_to_datetime(r.create_timestamp),
                     updated_at: Self::timestamp_to_datetime(r.update_timestamp),

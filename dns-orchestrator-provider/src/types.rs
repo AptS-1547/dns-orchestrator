@@ -156,7 +156,9 @@ pub struct DnsRecord {
     pub name: String,
     pub value: String,
     pub ttl: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub proxied: Option<bool>,
     #[serde(rename = "createdAt")]
     #[serde(with = "crate::utils::datetime")]

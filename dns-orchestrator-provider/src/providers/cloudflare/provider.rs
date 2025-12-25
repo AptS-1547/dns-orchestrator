@@ -9,7 +9,7 @@ use crate::providers::common::{
 };
 use crate::traits::{DnsProvider, ErrorContext, ProviderErrorMapper};
 use crate::types::{
-    CreateDnsRecordRequest, DnsRecord, DomainStatus, FieldType, PaginatedResponse,
+    CreateDnsRecordRequest, DnsRecord, DnsRecordType, DomainStatus, FieldType, PaginatedResponse,
     PaginationParams, ProviderCredentialField, ProviderDomain, ProviderFeatures, ProviderLimits,
     ProviderMetadata, ProviderType, RecordQueryParams, UpdateDnsRecordRequest,
 };
@@ -44,6 +44,11 @@ impl CloudflareProvider {
         zone_name: &str,
     ) -> Result<DnsRecord> {
         let record_type = parse_record_type(&cf_record.record_type, self.provider_name())?;
+        // 只有 MX 和 SRV 记录才有 priority，其他类型忽略
+        let priority = match record_type {
+            DnsRecordType::Mx | DnsRecordType::Srv => cf_record.priority,
+            _ => None,
+        };
 
         Ok(DnsRecord {
             id: cf_record.id,
@@ -52,7 +57,7 @@ impl CloudflareProvider {
             name: full_name_to_relative(&cf_record.name, zone_name),
             value: cf_record.content,
             ttl: cf_record.ttl,
-            priority: cf_record.priority,
+            priority,
             proxied: cf_record.proxied,
             created_at: cf_record.created_on.and_then(|s| {
                 chrono::DateTime::parse_from_rfc3339(&s)

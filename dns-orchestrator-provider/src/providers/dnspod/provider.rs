@@ -7,7 +7,7 @@ use crate::error::{ProviderError, Result};
 use crate::providers::common::{parse_record_type, record_type_to_string};
 use crate::traits::{DnsProvider, ErrorContext, ProviderErrorMapper};
 use crate::types::{
-    CreateDnsRecordRequest, DnsRecord, DomainStatus, FieldType, PaginatedResponse,
+    CreateDnsRecordRequest, DnsRecord, DnsRecordType, DomainStatus, FieldType, PaginatedResponse,
     PaginationParams, ProviderCredentialField, ProviderDomain, ProviderFeatures, ProviderLimits,
     ProviderMetadata, ProviderType, RecordQueryParams, UpdateDnsRecordRequest,
 };
@@ -246,6 +246,11 @@ impl DnsProvider for DnspodProvider {
                     .into_iter()
                     .filter_map(|r| {
                         let record_type = parse_record_type(&r.record_type, "dnspod").ok()?;
+                        // 只有 MX 和 SRV 记录才有 priority，其他类型忽略
+                        let priority = match record_type {
+                            DnsRecordType::Mx | DnsRecordType::Srv => r.mx,
+                            _ => None,
+                        };
                         Some(DnsRecord {
                             id: r.record_id.to_string(),
                             domain_id: domain_id.to_string(),
@@ -253,7 +258,7 @@ impl DnsProvider for DnspodProvider {
                             name: r.name,
                             value: r.value,
                             ttl: r.ttl,
-                            priority: r.mx,
+                            priority,
                             proxied: None,
                             created_at: None,
                             updated_at: r.updated_on.and_then(|s| {
