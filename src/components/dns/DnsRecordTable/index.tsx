@@ -25,7 +25,7 @@ import {
 import { TIMING } from "@/constants"
 import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
-import { useDnsStore, useSettingsStore } from "@/stores"
+import { useDnsStore, useDomainStore, useSettingsStore } from "@/stores"
 import type { DnsRecord } from "@/types"
 import { DnsBatchActionBar } from "../DnsBatchActionBar"
 import { DnsRecordForm } from "../DnsRecordForm"
@@ -39,6 +39,13 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
   const { t } = useTranslation()
   const isMobile = useIsMobile()
   const paginationMode = useSettingsStore((state) => state.paginationMode)
+
+  // 获取当前域名名称（用于 @ 记录显示）
+  const getDomainsForAccount = useDomainStore((state) => state.getDomainsForAccount)
+  const domainName = useMemo(() => {
+    const domains = getDomainsForAccount(accountId)
+    return domains.find((d) => d.id === domainId)?.name
+  }, [getDomainsForAccount, accountId, domainId])
 
   // 使用 useShallow 优化 store 订阅粒度
   const {
@@ -231,6 +238,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
             selectedRecordIds={selectedRecordIds}
             hasActiveFilters={hasActiveFilters}
             supportsProxy={supportsProxy}
+            domainName={domainName}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onToggleSelect={toggleRecordSelection}
@@ -248,6 +256,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
             selectedRecordIds={selectedRecordIds}
             hasActiveFilters={hasActiveFilters}
             supportsProxy={supportsProxy}
+            domainName={domainName}
             sortField={sortField}
             sortDirection={sortDirection}
             onSort={handleSort}

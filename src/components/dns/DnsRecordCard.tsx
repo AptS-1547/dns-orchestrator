@@ -26,6 +26,8 @@ interface DnsRecordCardProps {
   isSelected?: boolean
   /** 切换选中状态 */
   onToggleSelect?: () => void
+  /** 域名名称，用于 @ 记录显示完整域名 */
+  domainName?: string
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -112,6 +114,7 @@ export const DnsRecordCard = memo(function DnsRecordCard({
   isSelectMode = false,
   isSelected = false,
   onToggleSelect,
+  domainName,
 }: DnsRecordCardProps) {
   const { t } = useTranslation()
 
@@ -133,8 +136,13 @@ export const DnsRecordCard = memo(function DnsRecordCard({
           <Badge variant="secondary" className={TYPE_COLORS[record.data.type] || ""}>
             {record.data.type}
           </Badge>
-          <span className="truncate font-mono text-sm">
-            {record.name === "@" ? <span className="text-muted-foreground">@</span> : record.name}
+          <span
+            className={cn(
+              "select-text truncate font-mono text-sm",
+              record.name === "@" && "text-muted-foreground"
+            )}
+          >
+            {record.name === "@" ? domainName || "@" : record.name}
           </span>
         </div>
         {!isSelectMode && (
@@ -164,7 +172,7 @@ export const DnsRecordCard = memo(function DnsRecordCard({
 
       {/* 第二行：value */}
       <div className="mt-2">
-        <p className="break-all font-mono text-muted-foreground text-sm">
+        <p className="select-text break-all font-mono text-muted-foreground text-sm">
           {renderRecordValueMobile(record)}
         </p>
       </div>

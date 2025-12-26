@@ -66,6 +66,6 @@ pub struct CreateRecordSetResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct ErrorResponse {
-    pub error_code: Option<String>,
-    pub error_msg: Option<String>,
+    pub code: Option<String>,
+    pub message: Option<String>,
 }

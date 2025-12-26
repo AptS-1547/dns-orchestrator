@@ -21,6 +21,8 @@ interface DnsRecordRowProps {
   showProxy?: boolean
   /** 作为 Fragment 渲染（不包含 TableRow，用于外部添加 checkbox） */
   asFragment?: boolean
+  /** 域名名称，用于 @ 记录显示完整域名 */
+  domainName?: string
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -128,8 +130,14 @@ export const DnsRecordRow = memo(function DnsRecordRow({
   disabled = false,
   showProxy = false,
   asFragment = false,
+  domainName,
 }: DnsRecordRowProps) {
   const { t } = useTranslation()
+
+  // Name 列显示内容：@ 记录显示域名，其他显示 record.name
+  const displayName = record.name === "@" ? domainName || "@" : record.name
+  const isApex = record.name === "@"
+
   const cells = (
     <>
       <TableCell>
@@ -137,19 +145,32 @@ export const DnsRecordRow = memo(function DnsRecordRow({
           {record.data.type}
         </Badge>
       </TableCell>
-      <TableCell className="font-mono text-sm">
-        {record.name === "@" ? <span className="text-muted-foreground">@</span> : record.name}
+      <TableCell className="select-text font-mono text-sm">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className={isApex ? "text-muted-foreground" : "block max-w-40 truncate"}>
+                {displayName}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-mono text-xs">{displayName}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </TableCell>
       <TableCell>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="block max-w-xs truncate font-mono text-sm">
+              <span className="block max-w-xs select-text truncate font-mono text-sm">
                 {renderRecordValue(record)}
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="max-w-md break-all font-mono text-xs">{getDisplayText(record)}</p>
+              <p className="max-w-md select-text break-all font-mono text-xs">
+                {getDisplayText(record)}
+              </p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

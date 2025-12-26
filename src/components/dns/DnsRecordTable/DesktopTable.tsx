@@ -41,6 +41,7 @@ export function DesktopTable({
   selectedRecordIds,
   hasActiveFilters,
   supportsProxy,
+  domainName,
   sortField,
   sortDirection,
   onSort,
@@ -140,6 +141,7 @@ export function DesktopTable({
                   onDelete={() => onDelete(record)}
                   disabled={isDeleting || isSelectMode}
                   showProxy={supportsProxy}
+                  domainName={domainName}
                   asFragment
                 />
               </TableRow>

@@ -1,73 +1,73 @@
-# Architecture Documentation
+# 架构文档
 
-This document provides an in-depth look at the architectural design of DNS Orchestrator, explaining the key components, design patterns, and technical decisions.
+本文档深入介绍 DNS Orchestrator 的架构设计，解释关键组件、设计模式和技术决策。
 
-## Table of Contents
+## 目录
 
-- [Overview](#overview)
-- [Architecture Diagram](#architecture-diagram)
-- [Project Structure](#project-structure)
-- [Frontend Architecture](#frontend-architecture)
-- [Core Library](#core-library)
-- [Backend Architecture](#backend-architecture)
-- [Provider Library](#provider-library)
-- [Security Architecture](#security-architecture)
-- [Performance Optimizations](#performance-optimizations)
-- [Data Flow](#data-flow)
-- [Design Decisions](#design-decisions)
+- [概述](#概述)
+- [架构图](#架构图)
+- [项目结构](#项目结构)
+- [前端架构](#前端架构)
+- [核心库](#核心库)
+- [后端架构](#后端架构)
+- [Provider 库](#provider-库)
+- [安全架构](#安全架构)
+- [性能优化](#性能优化)
+- [数据流](#数据流)
+- [设计决策](#设计决策)
 
-## Overview
+## 概述
 
-DNS Orchestrator is a cross-platform application built with a **four-layer architecture**:
+DNS Orchestrator 是一个采用**四层架构**的跨平台应用：
 
 ```
-Frontend → Backend → Core Library → Provider Library → DNS APIs
+前端 → 后端 → 核心库 → Provider 库 → DNS APIs
 ```
 
-- **Frontend**: React-based UI with TypeScript, Tailwind CSS, and Zustand for state management
-- **Backend**: Rust-based Tauri commands (desktop/mobile), with actix-web backend for web
-- **Core Library**: Platform-agnostic business logic (`dns-orchestrator-core` crate)
-- **Provider Library**: Standalone `dns-orchestrator-provider` crate for DNS provider integrations
-- **Communication**: Transport abstraction layer supports both Tauri IPC and HTTP
+- **前端**：基于 React 的 UI，使用 TypeScript、Tailwind CSS 和 Zustand 状态管理
+- **后端**：基于 Rust 的 Tauri 命令（桌面/移动端），以及用于 Web 的 actix-web 后端
+- **核心库**：平台无关的业务逻辑（`dns-orchestrator-core` crate）
+- **Provider 库**：独立的 `dns-orchestrator-provider` crate，用于 DNS 提供商集成
+- **通信**：Transport 抽象层支持 Tauri IPC 和 HTTP 两种方式
 
-### Technology Choices
+### 技术选型
 
-| Component | Technology | Rationale |
-|-----------|-----------|-----------|
-| **UI Framework** | React 19 + TypeScript 5 | Strong ecosystem, type safety, component reusability |
-| **State Management** | Zustand 5 | Lightweight, no boilerplate, simple API |
-| **Styling** | Tailwind CSS 4 | Utility-first, rapid development, consistent design |
-| **Desktop Framework** | Tauri 2 | Smaller bundle size than Electron, Rust security benefits |
-| **Core Library** | Standalone Rust crate | Platform-agnostic business logic, trait-based DI |
-| **Web Backend** | actix-web | High performance, async, production-ready |
-| **Provider Library** | Standalone Rust crate | Reusable across Tauri and web backends |
-| **HTTP Client** | reqwest | Industry standard, async, TLS support |
-| **Credential Storage** | keyring / Stronghold | Cross-platform system keychain integration |
-| **Build Tool** | Vite 7 | Fast HMR, optimized production builds |
+| 组件 | 技术 | 选择理由 |
+|------|------|----------|
+| **UI 框架** | React 19 + TypeScript 5 | 强大的生态系统、类型安全、组件可复用 |
+| **状态管理** | Zustand 5 | 轻量级、无样板代码、简洁的 API |
+| **样式方案** | Tailwind CSS 4 | 实用优先、快速开发、设计一致性 |
+| **桌面框架** | Tauri 2 | 比 Electron 体积更小、Rust 的安全优势 |
+| **核心库** | 独立 Rust crate | 平台无关的业务逻辑、基于 trait 的依赖注入 |
+| **Web 后端** | actix-web | 高性能、异步、生产就绪 |
+| **Provider 库** | 独立 Rust crate | 可在 Tauri 和 Web 后端复用 |
+| **HTTP 客户端** | reqwest | 行业标准、异步、支持 TLS |
+| **凭证存储** | keyring / Stronghold | 跨平台系统钥匙串集成 |
+| **构建工具** | Vite 7 | 快速 HMR、优化的生产构建 |
 
-## Architecture Diagram
+## 架构图
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         USER INTERFACE                               │
+│                           用户界面                                   │
 │  ┌───────────────────────────────────────────────────────────────┐  │
-│  │  React Components (src/components/)                           │  │
+│  │  React 组件 (src/components/)                                 │  │
 │  │  - AccountList, DnsRecordTable, DomainList, Toolbox           │  │
 │  └──────────────────────┬────────────────────────────────────────┘  │
 │                         │                                            │
 │  ┌──────────────────────▼────────────────────────────────────────┐  │
-│  │  Zustand Stores (src/stores/)                                 │  │
+│  │  Zustand 状态管理 (src/stores/)                               │  │
 │  │  - accountStore, dnsStore, domainStore, toolboxStore          │  │
 │  └──────────────────────┬────────────────────────────────────────┘  │
 │                         │                                            │
 │  ┌──────────────────────▼────────────────────────────────────────┐  │
-│  │  Service Layer (src/services/)                                │  │
+│  │  服务层 (src/services/)                                       │  │
 │  │  - accountService, dnsService, domainService, toolboxService  │  │
 │  └──────────────────────┬────────────────────────────────────────┘  │
 │                         │                                            │
 │  ┌──────────────────────▼────────────────────────────────────────┐  │
-│  │  Transport Abstraction (src/services/transport/)              │  │
-│  │  - ITransport interface                                       │  │
+│  │  Transport 抽象层 (src/services/transport/)                   │  │
+│  │  - ITransport 接口                                            │  │
 │  │  - TauriTransport (Tauri IPC) | HttpTransport (REST API)      │  │
 │  └──────────────────────┬────────────────────────────────────────┘  │
 └─────────────────────────┼────────────────────────────────────────────┘
@@ -76,20 +76,20 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
         │                                   │
         ▼ Tauri IPC                         ▼ HTTP REST
 ┌───────────────────────────┐    ┌───────────────────────────┐
-│   TAURI BACKEND           │    │   ACTIX-WEB BACKEND       │
+│   TAURI 后端              │    │   ACTIX-WEB 后端          │
 │   (src-tauri/)            │    │   (src-actix-web/)        │
 │                           │    │                           │
 │  ┌─────────────────────┐  │    │  ┌─────────────────────┐  │
-│  │  Commands Layer     │  │    │  │  HTTP Handlers      │  │
-│  │  - account.rs       │  │    │  │  (REST endpoints)   │  │
+│  │  命令层             │  │    │  │  HTTP 处理器        │  │
+│  │  - account.rs       │  │    │  │  (REST 端点)        │  │
 │  │  - dns.rs           │  │    │  │                     │  │
 │  │  - domain.rs        │  │    │  └──────────┬──────────┘  │
 │  │  - toolbox.rs       │  │    │             │             │
 │  └──────────┬──────────┘  │    │  ┌──────────▼──────────┐  │
-│             │             │    │  │  SeaORM Database    │  │
+│             │             │    │  │  SeaORM 数据库      │  │
 │  ┌──────────▼──────────┐  │    │  │  (MySQL/PG/SQLite)  │  │
 │  │  AppState           │  │    │  └─────────────────────┘  │
-│  │  (9 services)       │  │    │                           │
+│  │  (9 个服务)         │  │    │                           │
 │  └──────────┬──────────┘  │    └───────────┬───────────────┘
 │             │             │                │
 └─────────────┼─────────────┘                │
@@ -97,7 +97,7 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
               └──────────────┬───────────────┘
                              │
               ┌──────────────▼───────────────┐
-              │  CORE LIBRARY                │
+              │  核心库                       │
               │  (dns-orchestrator-core)     │
               │                              │
               │  ┌────────────────────────┐  │
@@ -108,7 +108,7 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
               │  └───────────┬────────────┘  │
               │              │               │
               │  ┌───────────▼────────────┐  │
-              │  │  Business Services     │  │
+              │  │  业务服务              │  │
               │  │  - AccountLifecycle    │  │
               │  │  - CredentialManagement│  │
               │  │  - DnsService          │  │
@@ -118,7 +118,7 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
               └──────────────┼───────────────┘
                              │
               ┌──────────────▼───────────────┐
-              │  PROVIDER LIBRARY            │
+              │  Provider 库                 │
               │  (dns-orchestrator-provider) │
               │                              │
               │  ┌────────────────────────┐  │
@@ -131,7 +131,7 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
               │  └───────────┬────────────┘  │
               │              │               │
               │  ┌───────────▼────────────┐  │
-              │  │  Provider Impls        │  │
+              │  │  Provider 实现         │  │
               │  │  - CloudflareProvider  │  │
               │  │  - AliyunProvider      │  │
               │  │  - DnspodProvider      │  │
@@ -140,58 +140,58 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
               └──────────────┼───────────────┘
                              │ HTTPS
               ┌──────────────▼───────────────┐
-              │       EXTERNAL DNS APIS       │
-              │  Cloudflare | Aliyun | DNSPod │
-              │  Huawei Cloud                 │
+              │       外部 DNS API            │
+              │  Cloudflare | 阿里云 | DNSPod │
+              │  华为云                       │
               └───────────────────────────────┘
 ```
 
-## Project Structure
+## 项目结构
 
 ```
 dns-orchestrator/
-├── src/                              # Frontend (React + TypeScript)
-│   ├── components/                   # React components by feature
-│   │   ├── ui/                       # Radix UI wrappers (shadcn/ui)
-│   │   ├── account/                  # Account management
-│   │   ├── accounts/                 # Accounts page
-│   │   ├── dns/                      # DNS record management
-│   │   ├── domain/                   # Domain components
-│   │   ├── domains/                  # Domain selector page
-│   │   ├── toolbox/                  # Network utilities
-│   │   ├── settings/                 # Settings page
-│   │   ├── layout/                   # Layout components
-│   │   ├── navigation/               # Navigation components
-│   │   ├── titlebar/                 # Window title bar
-│   │   └── error/                    # Error boundary
-│   ├── services/                     # Service layer
-│   │   ├── transport/                # Transport abstraction
-│   │   │   ├── types.ts              # ITransport interface, CommandMap
-│   │   │   ├── tauri.transport.ts    # Tauri IPC implementation
-│   │   │   └── http.transport.ts     # HTTP REST implementation
+├── src/                              # 前端 (React + TypeScript)
+│   ├── components/                   # 按功能组织的 React 组件
+│   │   ├── ui/                       # Radix UI 封装 (shadcn/ui)
+│   │   ├── account/                  # 账户管理
+│   │   ├── accounts/                 # 账户页面
+│   │   ├── dns/                      # DNS 记录管理
+│   │   ├── domain/                   # 域名组件
+│   │   ├── domains/                  # 域名选择器页面
+│   │   ├── toolbox/                  # 网络工具
+│   │   ├── settings/                 # 设置页面
+│   │   ├── layout/                   # 布局组件
+│   │   ├── navigation/               # 导航组件
+│   │   ├── titlebar/                 # 窗口标题栏
+│   │   └── error/                    # 错误边界
+│   ├── services/                     # 服务层
+│   │   ├── transport/                # Transport 抽象
+│   │   │   ├── types.ts              # ITransport 接口, CommandMap
+│   │   │   ├── tauri.transport.ts    # Tauri IPC 实现
+│   │   │   └── http.transport.ts     # HTTP REST 实现
 │   │   ├── account.service.ts
 │   │   ├── dns.service.ts
 │   │   ├── domain.service.ts
 │   │   ├── toolbox.service.ts
 │   │   └── file.service.ts
-│   ├── stores/                       # Zustand state management
-│   │   ├── accountStore.ts           # Account state + providers
-│   │   ├── dnsStore.ts               # DNS records + pagination
-│   │   ├── domainStore.ts            # Domains by account
-│   │   ├── settingsStore.ts          # Theme, language, debug
-│   │   ├── toolboxStore.ts           # Toolbox history
-│   │   └── updaterStore.ts           # Auto-update state
-│   ├── types/                        # TypeScript type definitions
-│   ├── i18n/                         # Internationalization (en, zh-CN)
-│   ├── hooks/                        # Custom React hooks
-│   ├── lib/                          # Utility functions
-│   └── constants/                    # Constants
+│   ├── stores/                       # Zustand 状态管理
+│   │   ├── accountStore.ts           # 账户状态 + providers
+│   │   ├── dnsStore.ts               # DNS 记录 + 分页
+│   │   ├── domainStore.ts            # 按账户的域名
+│   │   ├── settingsStore.ts          # 主题、语言、调试
+│   │   ├── toolboxStore.ts           # 工具箱历史
+│   │   └── updaterStore.ts           # 自动更新状态
+│   ├── types/                        # TypeScript 类型定义
+│   ├── i18n/                         # 国际化 (en, zh-CN)
+│   ├── hooks/                        # 自定义 React hooks
+│   ├── lib/                          # 工具函数
+│   └── constants/                    # 常量
 │
-├── dns-orchestrator-core/            # Core Business Logic Library
+├── dns-orchestrator-core/            # 核心业务逻辑库
 │   ├── src/
-│   │   ├── lib.rs                    # Library entry, re-exports
+│   │   ├── lib.rs                    # 库入口, 重导出
 │   │   ├── error.rs                  # CoreError, CoreResult
-│   │   ├── services/                 # Business services
+│   │   ├── services/                 # 业务服务
 │   │   │   ├── mod.rs                # ServiceContext
 │   │   │   ├── account_metadata_service.rs
 │   │   │   ├── credential_management_service.rs
@@ -201,61 +201,61 @@ dns-orchestrator/
 │   │   │   ├── import_export_service.rs
 │   │   │   ├── domain_service.rs
 │   │   │   ├── dns_service.rs
-│   │   │   └── toolbox/              # Toolbox services
-│   │   ├── traits/                   # Platform abstraction traits
+│   │   │   └── toolbox/              # 工具箱服务
+│   │   ├── traits/                   # 平台抽象 trait
 │   │   │   ├── credential_store.rs   # CredentialStore trait
 │   │   │   ├── account_repository.rs # AccountRepository trait
 │   │   │   └── provider_registry.rs  # ProviderRegistry trait
-│   │   ├── types/                    # Internal types
-│   │   ├── crypto/                   # AES-GCM encryption
-│   │   └── utils/                    # Utilities
+│   │   ├── types/                    # 内部类型
+│   │   ├── crypto/                   # AES-GCM 加密
+│   │   └── utils/                    # 工具函数
 │   └── Cargo.toml
 │
-├── dns-orchestrator-provider/        # DNS Provider Library
+├── dns-orchestrator-provider/        # DNS Provider 库
 │   ├── src/
-│   │   ├── lib.rs                    # Library entry, re-exports
+│   │   ├── lib.rs                    # 库入口, 重导出
 │   │   ├── traits.rs                 # DnsProvider trait
-│   │   ├── types.rs                  # RecordData, ProviderCredentials, etc.
-│   │   ├── error.rs                  # ProviderError enum (13 variants)
+│   │   ├── types.rs                  # RecordData, ProviderCredentials 等
+│   │   ├── error.rs                  # ProviderError 枚举 (13 种变体)
 │   │   ├── factory.rs                # create_provider(), metadata
-│   │   ├── http_client.rs            # HTTP client wrapper
-│   │   └── providers/                # Provider implementations
+│   │   ├── http_client.rs            # HTTP 客户端封装
+│   │   └── providers/                # Provider 实现
 │   │       ├── cloudflare/           # Cloudflare (mod, provider, http, types, error)
-│   │       ├── aliyun/               # Aliyun DNS
-│   │       ├── dnspod/               # Tencent DNSPod
-│   │       └── huaweicloud/          # Huawei Cloud DNS
-│   ├── tests/                        # Integration tests
+│   │       ├── aliyun/               # 阿里云 DNS
+│   │       ├── dnspod/               # 腾讯云 DNSPod
+│   │       └── huaweicloud/          # 华为云 DNS
+│   ├── tests/                        # 集成测试
 │   └── Cargo.toml                    # Feature flags
 │
-├── src-tauri/                        # Tauri Backend (Desktop/Mobile)
+├── src-tauri/                        # Tauri 后端 (桌面/移动端)
 │   ├── src/
 │   │   ├── lib.rs                    # AppState, run()
-│   │   ├── commands/                 # Tauri command handlers
-│   │   │   ├── account.rs            # 10 commands
-│   │   │   ├── domain.rs             # 2 commands
-│   │   │   ├── dns.rs                # 5 commands
-│   │   │   ├── toolbox.rs            # 4 commands
-│   │   │   └── updater.rs            # Android-only (3 commands)
-│   │   ├── adapters/                 # Core trait implementations
+│   │   ├── commands/                 # Tauri 命令处理器
+│   │   │   ├── account.rs            # 10 个命令
+│   │   │   ├── domain.rs             # 2 个命令
+│   │   │   ├── dns.rs                # 5 个命令
+│   │   │   ├── toolbox.rs            # 4 个命令
+│   │   │   └── updater.rs            # 仅 Android (3 个命令)
+│   │   ├── adapters/                 # 核心 trait 实现
 │   │   │   ├── credential_store.rs   # TauriCredentialStore
 │   │   │   └── account_repository.rs # TauriAccountRepository
-│   │   ├── types.rs                  # Frontend-facing types
-│   │   └── error.rs                  # Error conversions
-│   ├── capabilities/                 # Tauri 2 permissions
-│   └── Cargo.toml                    # Platform-specific deps
+│   │   ├── types.rs                  # 前端类型
+│   │   └── error.rs                  # 错误转换
+│   ├── capabilities/                 # Tauri 2 权限配置
+│   └── Cargo.toml                    # 平台特定依赖
 │
-├── src-actix-web/                    # Web Backend (WIP)
-│   ├── src/main.rs                   # Actix-web server entry
-│   └── migration/                    # SeaORM database migrations
+├── src-actix-web/                    # Web 后端 (开发中)
+│   ├── src/main.rs                   # Actix-web 服务器入口
+│   └── migration/                    # SeaORM 数据库迁移
 │
-└── vite.config.ts                    # Platform-aware build config
+└── vite.config.ts                    # 平台感知的构建配置
 ```
 
-## Frontend Architecture
+## 前端架构
 
-### Service Layer
+### 服务层
 
-The service layer abstracts backend communication:
+服务层抽象了后端通信：
 
 ```typescript
 // src/services/transport/types.ts
@@ -267,18 +267,18 @@ export interface ITransport {
   ): Promise<CommandMap[K]["result"]>
 }
 
-// CommandMap provides type-safe command definitions
+// CommandMap 提供类型安全的命令定义
 export interface CommandMap {
   list_accounts: { args: Record<string, never>; result: ApiResponse<Account[]> }
   create_account: { args: { request: CreateAccountRequest }; result: ApiResponse<Account> }
-  // ... all 24 commands with full type safety
+  // ... 全部 24 个命令，完全类型安全
 }
 ```
 
-**Transport Implementations**:
+**Transport 实现**：
 
 ```typescript
-// src/services/transport/tauri.transport.ts (Desktop/Mobile)
+// src/services/transport/tauri.transport.ts (桌面/移动端)
 export class TauriTransport implements ITransport {
   async invoke(command, args?) {
     return await tauriInvoke(command, args)
@@ -293,7 +293,7 @@ export class HttpTransport implements ITransport {
 }
 ```
 
-**Build-time Transport Selection**:
+**编译时 Transport 选择**：
 
 ```typescript
 // vite.config.ts
@@ -306,35 +306,35 @@ resolve: {
 }
 ```
 
-### Component Structure
+### 组件结构
 
-Components are organized by feature domain:
+组件按功能域组织：
 
 ```
 src/components/
-├── account/              # Account forms, dialogs
-├── accounts/             # Accounts page, batch actions
-├── dns/                  # DNS record table, forms, row
-├── domain/               # Domain list, selector
-├── domains/              # Domain page
-├── home/                 # Home dashboard
-├── toolbox/              # WHOIS, DNS, IP, SSL lookup
-├── settings/             # Settings page
+├── account/              # 账户表单、对话框
+├── accounts/             # 账户页面、批量操作
+├── dns/                  # DNS 记录表格、表单、行
+├── domain/               # 域名列表、选择器
+├── domains/              # 域名页面
+├── home/                 # 首页仪表盘
+├── toolbox/              # WHOIS、DNS、IP、SSL 查询
+├── settings/             # 设置页面
 ├── layout/               # RootLayout, Sidebar
-├── navigation/           # Breadcrumb, tabs
-├── titlebar/             # Window controls
-├── error/                # Error boundary
-└── ui/                   # Radix UI wrappers (shadcn/ui)
+├── navigation/           # 面包屑、标签页
+├── titlebar/             # 窗口控件
+├── error/                # 错误边界
+└── ui/                   # Radix UI 封装 (shadcn/ui)
 ```
 
-### State Management (Zustand)
+### 状态管理 (Zustand)
 
-Each feature domain has its own store with fine-grained selectors:
+每个功能域有独立的 store，支持细粒度选择器：
 
 ```typescript
 // src/stores/dnsStore.ts
 interface DnsStore {
-  // State
+  // 状态
   records: DnsRecord[]
   currentPage: number
   pageSize: number
@@ -344,33 +344,33 @@ interface DnsStore {
   filterType: RecordType | 'ALL'
   selectedIds: Set<string>
 
-  // Actions
+  // 操作
   fetchRecords: (accountId: string, domainId: string) => Promise<void>
   createRecord: (request: CreateDnsRecordRequest) => Promise<void>
   updateRecord: (recordId: string, request: UpdateDnsRecordRequest) => Promise<void>
   deleteRecord: (recordId: string, domainId: string) => Promise<void>
   batchDelete: (recordIds: string[], domainId: string) => Promise<BatchDeleteResult>
 
-  // Selection
+  // 选择
   toggleSelection: (recordId: string) => void
   selectAll: () => void
   clearSelection: () => void
 }
 
-// Usage with useShallow to optimize re-renders
+// 使用 useShallow 优化重渲染
 const { records, hasMore } = useDnsStore(useShallow(state => ({
   records: state.records,
   hasMore: state.hasMore,
 })))
 ```
 
-## Core Library
+## 核心库
 
-The `dns-orchestrator-core` crate provides **platform-agnostic business logic** through trait-based dependency injection.
+`dns-orchestrator-core` crate 通过基于 trait 的依赖注入提供**平台无关的业务逻辑**。
 
 ### ServiceContext
 
-The central dependency container:
+核心依赖容器：
 
 ```rust
 // dns-orchestrator-core/src/services/mod.rs
@@ -381,7 +381,7 @@ pub struct ServiceContext {
 }
 
 impl ServiceContext {
-    /// Get provider instance for an account
+    /// 获取账户的 provider 实例
     pub async fn get_provider(&self, account_id: &str) -> CoreResult<Arc<dyn DnsProvider>> {
         self.provider_registry
             .get(account_id)
@@ -389,21 +389,21 @@ impl ServiceContext {
             .ok_or_else(|| CoreError::AccountNotFound(account_id.to_string()))
     }
 
-    /// Mark account as invalid (credential error)
+    /// 标记账户为无效（凭证错误）
     pub async fn mark_account_invalid(&self, account_id: &str, error: &str) -> CoreResult<()> {
         self.account_repository.update_status(account_id, AccountStatus::Error, Some(error)).await
     }
 }
 ```
 
-### Trait Abstractions
+### Trait 抽象
 
-Platform-specific implementations injected via traits:
+平台特定实现通过 trait 注入：
 
 ```rust
 // dns-orchestrator-core/src/traits/credential_store.rs
 
-/// Map of account_id -> credential key-value pairs
+/// account_id -> 凭证键值对 的映射
 pub type CredentialsMap = HashMap<String, HashMap<String, String>>;
 
 #[async_trait]
@@ -434,24 +434,24 @@ pub trait ProviderRegistry: Send + Sync {
 }
 ```
 
-### Fine-grained Services
+### 细粒度服务
 
-Business logic split into focused services:
+业务逻辑拆分为专注的服务：
 
-| Service | Responsibility |
-|---------|---------------|
-| `AccountMetadataService` | Account CRUD (metadata only, no credentials) |
-| `CredentialManagementService` | Validate, store, delete credentials |
-| `AccountLifecycleService` | Full account lifecycle (combines metadata + credentials) |
-| `AccountBootstrapService` | Restore accounts on app startup |
-| `ProviderMetadataService` | Query provider metadata (stateless) |
-| `ImportExportService` | Encrypted account backup/restore |
-| `DomainService` | List domains, get domain details |
-| `DnsService` | DNS record CRUD, batch delete |
-| `ToolboxService` | WHOIS, DNS, IP, SSL lookups |
+| 服务 | 职责 |
+|------|------|
+| `AccountMetadataService` | 账户 CRUD（仅元数据，不含凭证） |
+| `CredentialManagementService` | 验证、存储、删除凭证 |
+| `AccountLifecycleService` | 完整账户生命周期（组合元数据 + 凭证） |
+| `AccountBootstrapService` | 应用启动时恢复账户 |
+| `ProviderMetadataService` | 查询 provider 元数据（无状态） |
+| `ImportExportService` | 加密账户备份/恢复 |
+| `DomainService` | 列出域名、获取域名详情 |
+| `DnsService` | DNS 记录 CRUD、批量删除 |
+| `ToolboxService` | WHOIS、DNS、IP、SSL 查询 |
 
 ```rust
-// Example: AccountLifecycleService composition
+// 示例：AccountLifecycleService 组合
 pub struct AccountLifecycleService {
     metadata_service: Arc<AccountMetadataService>,
     credential_service: Arc<CredentialManagementService>,
@@ -459,26 +459,26 @@ pub struct AccountLifecycleService {
 
 impl AccountLifecycleService {
     pub async fn create_account(&self, request: CreateAccountRequest) -> CoreResult<Account> {
-        // 1. Validate credentials with the provider's API.
-        // 2. Save credentials securely using CredentialStore.
-        // 3. Register the new provider instance in ProviderRegistry.
-        // 4. Save account metadata using AccountRepository.
+        // 1. 使用提供商的 API 验证凭证。
+        // 2. 使用 CredentialStore 安全地保存凭证。
+        // 3. 在 ProviderRegistry 中注册新的提供商实例。
+        // 4. 使用 AccountRepository 保存账户元数据。
         // ...
     }
 }
 ```
 
-## Backend Architecture
+## 后端架构
 
-### Tauri Application State
+### Tauri 应用状态
 
 ```rust
 // src-tauri/src/lib.rs
 pub struct AppState {
-    /// Service context (DI container)
+    /// 服务上下文（依赖注入容器）
     pub ctx: Arc<ServiceContext>,
 
-    /// Fine-grained services
+    /// 细粒度服务
     pub account_metadata_service: Arc<AccountMetadataService>,
     pub credential_management_service: Arc<CredentialManagementService>,
     pub account_lifecycle_service: Arc<AccountLifecycleService>,
@@ -488,20 +488,20 @@ pub struct AppState {
     pub domain_service: DomainService,
     pub dns_service: DnsService,
 
-    /// Account restoration flag
+    /// 账户恢复标志
     pub restore_completed: AtomicBool,
 }
 ```
 
-### Adapter Implementations
+### 适配器实现
 
-The Tauri backend implements core traits:
+Tauri 后端实现核心 trait：
 
-| Trait | Adapter | Backend |
-|-------|---------|---------|
-| `CredentialStore` | `TauriCredentialStore` | keyring (Desktop) / Stronghold (Android) |
-| `AccountRepository` | `TauriAccountRepository` | tauri-plugin-store (JSON file) |
-| `ProviderRegistry` | `InMemoryProviderRegistry` | HashMap in memory |
+| Trait | 适配器 | 后端 |
+|-------|--------|------|
+| `CredentialStore` | `TauriCredentialStore` | keyring (桌面) / Stronghold (Android) |
+| `AccountRepository` | `TauriAccountRepository` | tauri-plugin-store (JSON 文件) |
+| `ProviderRegistry` | `InMemoryProviderRegistry` | 内存中的 HashMap |
 
 ```rust
 // src-tauri/src/adapters/credential_store.rs
@@ -514,32 +514,32 @@ pub struct TauriCredentialStore {
 #[async_trait]
 impl CredentialStore for TauriCredentialStore {
     async fn get(&self, account_id: &str) -> CoreResult<Option<ProviderCredentials>> {
-        // Check cache first
+        // 先检查缓存
         if let Some(cred) = self.cache.read().await.get(account_id) {
             return Ok(Some(cred.clone()));
         }
 
-        // Load from system keychain
+        // 从系统钥匙串加载
         #[cfg(not(target_os = "android"))]
         {
             let entry = Entry::new("dns-orchestrator", account_id)?;
-            // ... load and deserialize
+            // ... 加载并反序列化
         }
 
         #[cfg(target_os = "android")]
         {
-            // Use Stronghold
+            // 使用 Stronghold
         }
     }
 }
 ```
 
-### Platform-Specific Dependencies
+### 平台特定依赖
 
 ```toml
 # src-tauri/Cargo.toml
 
-# Desktop (macOS, Windows, Linux)
+# 桌面端 (macOS, Windows, Linux)
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 dns-orchestrator-provider = { path = "../dns-orchestrator-provider", features = ["all-providers", "native-tls"] }
 dns-orchestrator-core = { path = "../dns-orchestrator-core" }
@@ -552,14 +552,14 @@ dns-orchestrator-core = { path = "../dns-orchestrator-core", default-features = 
 tauri-plugin-stronghold = "2"
 ```
 
-## Provider Library
+## Provider 库
 
-### Design Goals
+### 设计目标
 
-1. **Reusability**: Same provider code works in Tauri and actix-web backends
-2. **Feature Flags**: Enable providers and TLS backends selectively
-3. **Type Safety**: `RecordData` enum for structured DNS record data
-4. **Unified Error Handling**: `ProviderError` maps all provider-specific errors
+1. **可复用性**：相同的 provider 代码可在 Tauri 和 actix-web 后端使用
+2. **Feature Flags**：选择性启用 provider 和 TLS 后端
+3. **类型安全**：`RecordData` 枚举提供结构化的 DNS 记录数据
+4. **统一错误处理**：`ProviderError` 映射所有 provider 特定错误
 
 ### DnsProvider Trait
 
@@ -567,69 +567,69 @@ tauri-plugin-stronghold = "2"
 // dns-orchestrator-provider/src/traits.rs
 #[async_trait]
 pub trait DnsProvider: Send + Sync {
-    /// Provider identifier (e.g., "cloudflare")
+    /// Provider 标识符（如 "cloudflare"）
     fn id(&self) -> &'static str;
 
-    /// Provider metadata (type-level, no instance needed)
+    /// Provider 元数据（类型级别，无需实例）
     fn metadata() -> ProviderMetadata where Self: Sized;
 
-    /// Validate credentials
+    /// 验证凭证
     async fn validate_credentials(&self) -> Result<bool>;
 
-    /// List domains (paginated)
+    /// 列出域名（分页）
     async fn list_domains(&self, params: &PaginationParams) -> Result<PaginatedResponse<ProviderDomain>>;
 
-    /// Get domain details
+    /// 获取域名详情
     async fn get_domain(&self, domain_id: &str) -> Result<ProviderDomain>;
 
-    /// List DNS records (paginated + search + filter)
+    /// 列出 DNS 记录（分页 + 搜索 + 过滤）
     async fn list_records(&self, domain_id: &str, params: &RecordQueryParams) -> Result<PaginatedResponse<DnsRecord>>;
 
-    /// Create DNS record
+    /// 创建 DNS 记录
     async fn create_record(&self, req: &CreateDnsRecordRequest) -> Result<DnsRecord>;
 
-    /// Update DNS record
+    /// 更新 DNS 记录
     async fn update_record(&self, record_id: &str, req: &UpdateDnsRecordRequest) -> Result<DnsRecord>;
 
-    /// Delete DNS record
+    /// 删除 DNS 记录
     async fn delete_record(&self, record_id: &str, domain_id: &str) -> Result<()>;
 
-    // Batch operations (TODO - see trait docs for implementation plan)
+    // 批量操作（TODO - 查看 trait 文档中的实现计划）
     async fn batch_create_records(&self, requests: &[CreateDnsRecordRequest]) -> Result<BatchCreateResult>;
     async fn batch_update_records(&self, updates: &[BatchUpdateItem]) -> Result<BatchUpdateResult>;
     async fn batch_delete_records(&self, domain_id: &str, record_ids: &[String]) -> Result<BatchDeleteResult>;
 }
 ```
 
-### Type-Safe Record Data (v1.5.0)
+### 类型安全的记录数据 (v1.5.0)
 
 ```rust
 // dns-orchestrator-provider/src/types.rs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "content")]
 pub enum RecordData {
-    /// A record: IPv4 address
+    /// A 记录：IPv4 地址
     A { address: String },
 
-    /// AAAA record: IPv6 address
+    /// AAAA 记录：IPv6 地址
     AAAA { address: String },
 
-    /// CNAME record: Alias
+    /// CNAME 记录：别名
     CNAME { target: String },
 
-    /// MX record: Mail exchange
+    /// MX 记录：邮件交换
     MX { priority: u16, exchange: String },
 
-    /// TXT record: Text
+    /// TXT 记录：文本
     TXT { text: String },
 
-    /// NS record: Name server
+    /// NS 记录：域名服务器
     NS { nameserver: String },
 
-    /// SRV record: Service location
+    /// SRV 记录：服务定位
     SRV { priority: u16, weight: u16, port: u16, target: String },
 
-    /// CAA record: Certificate Authority Authorization
+    /// CAA 记录：证书颁发机构授权
     CAA { flags: u8, tag: String, value: String },
 }
 
@@ -639,8 +639,8 @@ pub struct DnsRecord {
     pub domain_id: String,
     pub name: String,
     pub ttl: u32,
-    pub data: RecordData,           // Type-safe record data
-    pub proxied: Option<bool>,      // Cloudflare-specific
+    pub data: RecordData,           // 类型安全的记录数据
+    pub proxied: Option<bool>,      // Cloudflare 专用
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -653,11 +653,11 @@ pub struct DnsRecord {
 [features]
 default = ["native-tls", "all-providers"]
 
-# TLS backend (choose one)
-native-tls = ["reqwest/native-tls"]     # Desktop default
-rustls = ["reqwest/rustls-tls"]          # Android (avoids OpenSSL cross-compile)
+# TLS 后端（二选一）
+native-tls = ["reqwest/native-tls"]     # 桌面端默认
+rustls = ["reqwest/rustls-tls"]          # Android（避免 OpenSSL 交叉编译）
 
-# Providers (enable individually or all)
+# Provider（单独启用或全部启用）
 cloudflare = []
 aliyun = []
 dnspod = []
@@ -665,148 +665,148 @@ huaweicloud = []
 all-providers = ["cloudflare", "aliyun", "dnspod", "huaweicloud"]
 ```
 
-### Error Handling
+### 错误处理
 
 ```rust
 // dns-orchestrator-provider/src/error.rs
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "code")]
 pub enum ProviderError {
-    /// Network request failed
+    /// 网络请求失败
     NetworkError { provider: String, detail: String },
 
-    /// Invalid credentials
+    /// 凭证无效
     InvalidCredentials { provider: String, raw_message: Option<String> },
 
-    /// Record already exists
+    /// 记录已存在
     RecordExists { provider: String, record_name: String, raw_message: Option<String> },
 
-    /// Record not found
+    /// 记录不存在
     RecordNotFound { provider: String, record_id: String, raw_message: Option<String> },
 
-    /// Invalid parameter (TTL, value, etc.)
+    /// 参数无效（TTL、值等）
     InvalidParameter { provider: String, param: String, detail: String },
 
-    /// Unsupported record type
+    /// 不支持的记录类型
     UnsupportedRecordType { provider: String, record_type: String },
 
-    /// Quota exceeded
+    /// 配额超限
     QuotaExceeded { provider: String, raw_message: Option<String> },
 
-    /// Domain not found
+    /// 域名不存在
     DomainNotFound { provider: String, domain: String, raw_message: Option<String> },
 
-    /// Domain locked/disabled
+    /// 域名被锁定/禁用
     DomainLocked { provider: String, domain: String, raw_message: Option<String> },
 
-    /// Permission denied
+    /// 权限被拒绝
     PermissionDenied { provider: String, raw_message: Option<String> },
 
-    /// Response parse error
+    /// 响应解析错误
     ParseError { provider: String, detail: String },
 
-    /// Serialization error
+    /// 序列化错误
     SerializationError { provider: String, detail: String },
 
-    /// Unknown error (fallback)
+    /// 未知错误（兜底）
     Unknown { provider: String, raw_code: Option<String>, raw_message: String },
 }
 ```
 
-**Error Mapping**:
+**错误映射**：
 
-Each provider implements `ProviderErrorMapper` to map raw API errors:
+每个 provider 实现 `ProviderErrorMapper` 来映射原始 API 错误：
 
 ```rust
-// Internal trait for error mapping
+// 内部错误映射 trait
 pub(crate) trait ProviderErrorMapper {
     fn provider_name(&self) -> &'static str;
     fn map_error(&self, raw: RawApiError, context: ErrorContext) -> ProviderError;
 }
 ```
 
-### Provider Structure
+### Provider 结构
 
-Each provider is organized in a subdirectory:
+每个 provider 组织在子目录中：
 
 ```
 providers/cloudflare/
-├── mod.rs          # Provider struct, re-exports
-├── provider.rs     # DnsProvider trait implementation
-├── http.rs         # HTTP client wrapper
-├── types.rs        # Cloudflare-specific types
-└── error.rs        # ProviderErrorMapper implementation
+├── mod.rs          # Provider 结构体, 重导出
+├── provider.rs     # DnsProvider trait 实现
+├── http.rs         # HTTP 客户端封装
+├── types.rs        # Cloudflare 特定类型
+└── error.rs        # ProviderErrorMapper 实现
 ```
 
-## Security Architecture
+## 安全架构
 
-### Credential Storage by Platform
+### 各平台凭证存储
 
-| Platform | Storage Mechanism |
-|----------|-------------------|
-| **macOS** | Keychain via `keyring` crate |
-| **Windows** | Credential Manager via `keyring` crate |
-| **Linux** | Secret Service (GNOME Keyring/KWallet) via `keyring` crate |
-| **Android** | Stronghold via `tauri-plugin-stronghold` |
+| 平台 | 存储机制 |
+|------|----------|
+| **macOS** | Keychain（通过 `keyring` crate） |
+| **Windows** | Credential Manager（通过 `keyring` crate） |
+| **Linux** | Secret Service（GNOME Keyring/KWallet，通过 `keyring` crate） |
+| **Android** | Stronghold（通过 `tauri-plugin-stronghold`） |
 
-### Credential Flow
+### 凭证流程
 
 ```
-Create Account
+创建账户
      │
      ▼
 ┌─────────────────────────────────────┐
 │ CredentialManagementService         │
 │                                     │
-│ 1. Create provider instance         │
-│ 2. Validate credentials (API call)  │
-│ 3. Store in CredentialStore         │
-│ 4. Register in ProviderRegistry     │
+│ 1. 创建 provider 实例               │
+│ 2. 验证凭证（API 调用）             │
+│ 3. 存储到 CredentialStore           │
+│ 4. 注册到 ProviderRegistry          │
 └─────────────────────────────────────┘
 ```
 
-### Account Import/Export Encryption
+### 账户导入导出加密
 
 ```rust
-// AES-GCM encryption with PBKDF2 key derivation
+// AES-GCM 加密 + PBKDF2 密钥派生
 pub fn encrypt_data(data: &str, password: &str) -> Result<String>
 pub fn decrypt_data(encrypted: &str, password: &str) -> Result<String>
 ```
 
-## Performance Optimizations
+## 性能优化
 
-1. **Pagination**: Server-side pagination with configurable page size
-2. **Search Debouncing**: 300ms debounce on search input
-3. **Infinite Scroll**: IntersectionObserver-based loading
-4. **Memory Cache**: Credentials and accounts cached in memory
-5. **Background Restoration**: Account restoration runs async, doesn't block startup
-6. **Rust Async**: Tokio async runtime for non-blocking I/O
-7. **Feature Flags**: Only compile enabled providers
-8. **useShallow**: Fine-grained Zustand subscriptions
+1. **分页**：服务端分页，可配置页大小
+2. **搜索防抖**：搜索输入 300ms 防抖
+3. **无限滚动**：基于 IntersectionObserver 的加载
+4. **内存缓存**：凭证和账户缓存在内存中
+5. **后台恢复**：账户恢复异步运行，不阻塞启动
+6. **Rust 异步**：Tokio 异步运行时实现非阻塞 I/O
+7. **Feature Flags**：只编译启用的 provider
+8. **useShallow**：细粒度 Zustand 订阅
 
-## Data Flow
+## 数据流
 
-### DNS Record Query Flow
+### DNS 记录查询流程
 
 ```
-1. User types in search box (debounced 300ms)
-2. dnsStore.fetchRecords() called
-3. dnsService.listRecords() invoked
+1. 用户在搜索框输入（300ms 防抖）
+2. 调用 dnsStore.fetchRecords()
+3. 调用 dnsService.listRecords()
 4. Transport.invoke('list_dns_records', args)
-5. Route to backend:
-   ├─ Tauri: IPC to Rust command
-   └─ Web: HTTP POST to actix-web
-6. Command handler calls DnsService
-7. DnsService gets provider from ServiceContext
-8. Provider makes HTTPS request to DNS API
-9. Response flows back through layers
-10. Store updates, UI re-renders
+5. 路由到后端：
+   ├─ Tauri：IPC 到 Rust 命令
+   └─ Web：HTTP POST 到 actix-web
+6. 命令处理器调用 DnsService
+7. DnsService 从 ServiceContext 获取 provider
+8. Provider 向 DNS API 发起 HTTPS 请求
+9. 响应沿着各层返回
+10. Store 更新，UI 重新渲染
 ```
 
-### Account Creation Flow
+### 账户创建流程
 
 ```
-Frontend                           Backend                          Core
+前端                             后端                             核心库
    │                                  │                               │
    │ createAccount(request)           │                               │
    ├─────────────────────────────────►│                               │
@@ -833,51 +833,51 @@ Frontend                           Backend                          Core
    │        Account                   │                               │
 ```
 
-## Design Decisions
+## 设计决策
 
-### Why Separate Core Library?
+### 为什么分离核心库？
 
-| Benefit | Description |
-|---------|-------------|
-| **Platform Agnostic** | Same business logic for Tauri, actix-web, CLI |
-| **Testability** | Mock traits for unit testing |
-| **Single Responsibility** | Backend adapters only handle platform APIs |
-| **Type Safety** | Shared types across all backends |
+| 优势 | 描述 |
+|------|------|
+| **平台无关** | 相同的业务逻辑用于 Tauri、actix-web、CLI |
+| **可测试性** | 通过 mock trait 进行单元测试 |
+| **单一职责** | 后端适配器只处理平台 API |
+| **类型安全** | 所有后端共享类型 |
 
-### Why Separate Provider Library?
+### 为什么分离 Provider 库？
 
-| Benefit | Description |
-|---------|-------------|
-| **Reusability** | Same code for Tauri and actix-web backends |
-| **Testability** | Unit test providers independently |
-| **Feature Flags** | Compile only needed providers |
-| **TLS Flexibility** | Switch between native-tls and rustls per platform |
+| 优势 | 描述 |
+|------|------|
+| **可复用性** | 相同代码用于 Tauri 和 actix-web 后端 |
+| **可测试性** | 独立测试各个 provider |
+| **Feature Flags** | 只编译需要的 provider |
+| **TLS 灵活性** | 按平台切换 native-tls 和 rustls |
 
-### Why Transport Abstraction?
+### 为什么使用 Transport 抽象？
 
-| Benefit | Description |
-|---------|-------------|
-| **Multi-Platform** | Same frontend code for desktop, mobile, and web |
-| **Type Safety** | CommandMap enforces correct args/return types |
-| **Testability** | Mock transport for frontend testing |
+| 优势 | 描述 |
+|------|------|
+| **多平台** | 桌面、移动端、Web 使用相同的前端代码 |
+| **类型安全** | CommandMap 确保正确的参数/返回类型 |
+| **可测试性** | 前端测试时 mock transport |
 
-### Why Fine-grained Services?
+### 为什么使用细粒度服务？
 
-| Benefit | Description |
-|---------|-------------|
-| **Single Responsibility** | Each service has one clear purpose |
-| **Composability** | Services can be composed (e.g., AccountLifecycle) |
-| **Testability** | Test each service in isolation |
-| **Flexibility** | Replace or extend individual services |
+| 优势 | 描述 |
+|------|------|
+| **单一职责** | 每个服务有一个明确的目的 |
+| **可组合性** | 服务可以组合（如 AccountLifecycle） |
+| **可测试性** | 独立测试每个服务 |
+| **灵活性** | 替换或扩展单个服务 |
 
-### Why actix-web for Web Backend?
+### 为什么 Web 后端选择 actix-web？
 
-| Criterion | actix-web | axum |
-|-----------|-----------|------|
-| **Performance** | Fastest Rust web framework | Very fast |
-| **Maturity** | Battle-tested in production | Newer |
-| **Ecosystem** | Large plugin ecosystem | Growing |
+| 标准 | actix-web | axum |
+|------|-----------|------|
+| **性能** | 最快的 Rust Web 框架 | 非常快 |
+| **成熟度** | 生产环境久经考验 | 较新 |
+| **生态系统** | 大型插件生态 | 正在成长 |
 
 ---
 
-This architecture balances simplicity, security, and performance while supporting multiple platforms with shared code.
+这个架构在简洁性、安全性和性能之间取得平衡，同时通过共享代码支持多平台。

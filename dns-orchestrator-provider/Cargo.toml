@@ -46,3 +46,7 @@ urlencoding = "2.1"
 # 日志
 log = "0.4"
 
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+uuid = { version = "1", features = ["v4"] }
+
