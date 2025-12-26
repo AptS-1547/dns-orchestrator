@@ -4,8 +4,8 @@ use std::env;
 use std::sync::Arc;
 
 use dns_orchestrator_provider::{
-    create_provider, CreateDnsRecordRequest, DnsProvider, DnsRecord, PaginationParams,
-    ProviderCredentials, RecordData, RecordQueryParams,
+    CreateDnsRecordRequest, DnsProvider, DnsRecord, PaginationParams, ProviderCredentials,
+    RecordData, RecordQueryParams, create_provider,
 };
 
 /// 跳过测试的宏（当环境变量缺失时）

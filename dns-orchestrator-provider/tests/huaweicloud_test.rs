@@ -1,9 +1,9 @@
-//! Cloudflare Provider 集成测试
+//! Huaweicloud DNS Provider 集成测试
 //!
 //! 运行方式:
 //! ```bash
-//! CLOUDFLARE_API_TOKEN=xxx TEST_DOMAIN=example.com \
-//!     cargo test -p dns-orchestrator-provider --test cloudflare_test -- --ignored --nocapture
+//! HUAWEICLOUD_ACCESS_KEY_ID=xxx HUAWEICLOUD_SECRET_ACCESS_KEY=xxx TEST_DOMAIN=example.com \
+//!     cargo test -p dns-orchestrator-provider --test huaweicloud_test -- --ignored --nocapture
 //! ```
 
 mod common;
@@ -17,10 +17,14 @@ use dns_orchestrator_provider::{
 
 #[tokio::test]
 #[ignore]
-async fn test_cloudflare_validate_credentials() {
-    skip_if_no_credentials!("CLOUDFLARE_API_TOKEN", "TEST_DOMAIN");
+async fn test_huaweicloud_validate_credentials() {
+    skip_if_no_credentials!(
+        "HUAWEICLOUD_ACCESS_KEY_ID",
+        "HUAWEICLOUD_SECRET_ACCESS_KEY",
+        "TEST_DOMAIN"
+    );
 
-    let ctx = TestContext::cloudflare().expect("创建测试上下文失败");
+    let ctx = TestContext::huaweicloud().expect("创建测试上下文失败");
     let result = ctx.provider.validate_credentials().await;
 
     assert!(
@@ -35,10 +39,14 @@ async fn test_cloudflare_validate_credentials() {
 
 #[tokio::test]
 #[ignore]
-async fn test_cloudflare_list_domains() {
-    skip_if_no_credentials!("CLOUDFLARE_API_TOKEN", "TEST_DOMAIN");
+async fn test_huaweicloud_list_domains() {
+    skip_if_no_credentials!(
+        "HUAWEICLOUD_ACCESS_KEY_ID",
+        "HUAWEICLOUD_SECRET_ACCESS_KEY",
+        "TEST_DOMAIN"
+    );
 
-    let ctx = TestContext::cloudflare().expect("创建测试上下文失败");
+    let ctx = TestContext::huaweicloud().expect("创建测试上下文失败");
     let params = PaginationParams::default();
 
     let result = ctx.provider.list_domains(&params).await;
@@ -55,10 +63,14 @@ async fn test_cloudflare_list_domains() {
 
 #[tokio::test]
 #[ignore]
-async fn test_cloudflare_get_domain() {
-    skip_if_no_credentials!("CLOUDFLARE_API_TOKEN", "TEST_DOMAIN");
+async fn test_huaweicloud_get_domain() {
+    skip_if_no_credentials!(
+        "HUAWEICLOUD_ACCESS_KEY_ID",
+        "HUAWEICLOUD_SECRET_ACCESS_KEY",
+        "TEST_DOMAIN"
+    );
 
-    let mut ctx = TestContext::cloudflare().expect("创建测试上下文失败");
+    let mut ctx = TestContext::huaweicloud().expect("创建测试上下文失败");
     let domain_id = ctx.find_domain_id().await.expect("找不到测试域名");
 
     let result = ctx.provider.get_domain(&domain_id).await;
@@ -72,10 +84,14 @@ async fn test_cloudflare_get_domain() {
 
 #[tokio::test]
 #[ignore]
-async fn test_cloudflare_list_records() {
-    skip_if_no_credentials!("CLOUDFLARE_API_TOKEN", "TEST_DOMAIN");
+async fn test_huaweicloud_list_records() {
+    skip_if_no_credentials!(
+        "HUAWEICLOUD_ACCESS_KEY_ID",
+        "HUAWEICLOUD_SECRET_ACCESS_KEY",
+        "TEST_DOMAIN"
+    );
 
-    let mut ctx = TestContext::cloudflare().expect("创建测试上下文失败");
+    let mut ctx = TestContext::huaweicloud().expect("创建测试上下文失败");
     let domain_id = ctx.find_domain_id().await.expect("找不到测试域名");
 
     let params = RecordQueryParams::default();
@@ -94,10 +110,14 @@ async fn test_cloudflare_list_records() {
 /// 清理所有残留的测试记录（手动运行）
 #[tokio::test]
 #[ignore]
-async fn test_cloudflare_cleanup_test_records() {
-    skip_if_no_credentials!("CLOUDFLARE_API_TOKEN", "TEST_DOMAIN");
+async fn test_huaweicloud_cleanup_test_records() {
+    skip_if_no_credentials!(
+        "HUAWEICLOUD_ACCESS_KEY_ID",
+        "HUAWEICLOUD_SECRET_ACCESS_KEY",
+        "TEST_DOMAIN"
+    );
 
-    let mut ctx = TestContext::cloudflare().expect("创建测试上下文失败");
+    let mut ctx = TestContext::huaweicloud().expect("创建测试上下文失败");
     let domain_id = ctx.find_domain_id().await.expect("找不到测试域名");
 
     ctx.cleanup_all_test_records(&domain_id).await;
@@ -111,9 +131,13 @@ macro_rules! crud_test {
         #[tokio::test]
         #[ignore]
         async fn $test_name() {
-            skip_if_no_credentials!("CLOUDFLARE_API_TOKEN", "TEST_DOMAIN");
+            skip_if_no_credentials!(
+                "HUAWEICLOUD_ACCESS_KEY_ID",
+                "HUAWEICLOUD_SECRET_ACCESS_KEY",
+                "TEST_DOMAIN"
+            );
 
-            let mut ctx = TestContext::cloudflare().expect("创建测试上下文失败");
+            let mut ctx = TestContext::huaweicloud().expect("创建测试上下文失败");
             let domain_id = ctx.find_domain_id().await.expect("找不到测试域名");
 
             let record_name = common::generate_test_record_name();
@@ -216,18 +240,18 @@ macro_rules! crud_test {
 
 // ============ 各类型 CRUD 测试 ============
 
-crud_test!(test_cloudflare_crud_a_record, TestRecordType::A, "A");
+crud_test!(test_huaweicloud_crud_a_record, TestRecordType::A, "A");
 crud_test!(
-    test_cloudflare_crud_aaaa_record,
+    test_huaweicloud_crud_aaaa_record,
     TestRecordType::Aaaa,
     "AAAA"
 );
 crud_test!(
-    test_cloudflare_crud_cname_record,
+    test_huaweicloud_crud_cname_record,
     TestRecordType::Cname,
     "CNAME"
 );
-crud_test!(test_cloudflare_crud_mx_record, TestRecordType::Mx, "MX");
-crud_test!(test_cloudflare_crud_txt_record, TestRecordType::Txt, "TXT");
-crud_test!(test_cloudflare_crud_srv_record, TestRecordType::Srv, "SRV");
-crud_test!(test_cloudflare_crud_caa_record, TestRecordType::Caa, "CAA");
+crud_test!(test_huaweicloud_crud_mx_record, TestRecordType::Mx, "MX");
+crud_test!(test_huaweicloud_crud_txt_record, TestRecordType::Txt, "TXT");
+crud_test!(test_huaweicloud_crud_srv_record, TestRecordType::Srv, "SRV");
+crud_test!(test_huaweicloud_crud_caa_record, TestRecordType::Caa, "CAA");

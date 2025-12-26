@@ -58,8 +58,8 @@ pub use types::{
     BatchUpdateFailure, BatchUpdateItem, BatchUpdateResult, CreateDnsRecordRequest,
     CredentialValidationError, DnsRecord, DnsRecordType, DomainStatus, FieldType,
     PaginatedResponse, PaginationParams, ProviderCredentialField, ProviderCredentials,
-    ProviderDomain, ProviderFeatures, ProviderLimits, ProviderMetadata, ProviderType,
-    RecordData, RecordQueryParams, UpdateDnsRecordRequest,
+    ProviderDomain, ProviderFeatures, ProviderLimits, ProviderMetadata, ProviderType, RecordData,
+    RecordQueryParams, UpdateDnsRecordRequest,
 };
 
 // Re-export utils module
