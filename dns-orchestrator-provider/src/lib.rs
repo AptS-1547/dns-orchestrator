@@ -59,7 +59,7 @@ pub use types::{
     CredentialValidationError, DnsRecord, DnsRecordType, DomainStatus, FieldType,
     PaginatedResponse, PaginationParams, ProviderCredentialField, ProviderCredentials,
     ProviderDomain, ProviderFeatures, ProviderLimits, ProviderMetadata, ProviderType,
-    RecordQueryParams, UpdateDnsRecordRequest,
+    RecordData, RecordQueryParams, UpdateDnsRecordRequest,
 };
 
 // Re-export utils module
