@@ -3,7 +3,7 @@
 //! 运行方式:
 //! ```bash
 //! CLOUDFLARE_API_TOKEN=xxx TEST_DOMAIN=example.com \
-//!     cargo test -p dns-orchestrator-provider --test cloudflare_test -- --ignored --nocapture
+//!     cargo test -p dns-orchestrator-provider --test cloudflare_test -- --ignored --nocapture --test-threads=1
 //! ```
 
 mod common;
@@ -107,7 +107,7 @@ async fn test_cloudflare_cleanup_test_records() {
 // ============ CRUD 测试宏 ============
 
 macro_rules! crud_test {
-    ($test_name:ident, $record_type:expr, $type_name:expr) => {
+    ($test_name:ident, $record_type:expr, $type_name:expr, $name_gen:expr) => {
         #[tokio::test]
         #[ignore]
         async fn $test_name() {
@@ -116,7 +116,7 @@ macro_rules! crud_test {
             let mut ctx = TestContext::cloudflare().expect("创建测试上下文失败");
             let domain_id = ctx.find_domain_id().await.expect("找不到测试域名");
 
-            let record_name = common::generate_test_record_name();
+            let record_name = $name_gen();
             let (create_data, update_data) = get_test_record_data($record_type);
 
             println!("测试 {} 记录: {}", $type_name, record_name);
@@ -216,18 +216,45 @@ macro_rules! crud_test {
 
 // ============ 各类型 CRUD 测试 ============
 
-crud_test!(test_cloudflare_crud_a_record, TestRecordType::A, "A");
+crud_test!(
+    test_cloudflare_crud_a_record,
+    TestRecordType::A,
+    "A",
+    common::generate_test_record_name
+);
 crud_test!(
     test_cloudflare_crud_aaaa_record,
     TestRecordType::Aaaa,
-    "AAAA"
+    "AAAA",
+    common::generate_test_record_name
 );
 crud_test!(
     test_cloudflare_crud_cname_record,
     TestRecordType::Cname,
-    "CNAME"
+    "CNAME",
+    common::generate_test_record_name
 );
-crud_test!(test_cloudflare_crud_mx_record, TestRecordType::Mx, "MX");
-crud_test!(test_cloudflare_crud_txt_record, TestRecordType::Txt, "TXT");
-crud_test!(test_cloudflare_crud_srv_record, TestRecordType::Srv, "SRV");
-crud_test!(test_cloudflare_crud_caa_record, TestRecordType::Caa, "CAA");
+crud_test!(
+    test_cloudflare_crud_mx_record,
+    TestRecordType::Mx,
+    "MX",
+    common::generate_test_record_name
+);
+crud_test!(
+    test_cloudflare_crud_txt_record,
+    TestRecordType::Txt,
+    "TXT",
+    common::generate_test_record_name
+);
+crud_test!(
+    test_cloudflare_crud_srv_record,
+    TestRecordType::Srv,
+    "SRV",
+    common::generate_srv_test_record_name
+);
+crud_test!(
+    test_cloudflare_crud_caa_record,
+    TestRecordType::Caa,
+    "CAA",
+    common::generate_test_record_name
+);
