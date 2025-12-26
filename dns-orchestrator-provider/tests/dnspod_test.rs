@@ -209,10 +209,45 @@ macro_rules! crud_test {
 
 // ============ 各类型 CRUD 测试 ============
 
-crud_test!(test_dnspod_crud_a_record, TestRecordType::A, "A", common::generate_test_record_name);
-crud_test!(test_dnspod_crud_aaaa_record, TestRecordType::Aaaa, "AAAA", common::generate_test_record_name);
-crud_test!(test_dnspod_crud_cname_record, TestRecordType::Cname, "CNAME", common::generate_test_record_name);
-crud_test!(test_dnspod_crud_mx_record, TestRecordType::Mx, "MX", common::generate_test_record_name);
-crud_test!(test_dnspod_crud_txt_record, TestRecordType::Txt, "TXT", common::generate_test_record_name);
-crud_test!(test_dnspod_crud_caa_record, TestRecordType::Caa, "CAA", common::generate_test_record_name);
-crud_test!(test_dnspod_crud_srv_record, TestRecordType::Srv, "SRV", common::generate_srv_test_record_name);
+crud_test!(
+    test_dnspod_crud_a_record,
+    TestRecordType::A,
+    "A",
+    common::generate_test_record_name
+);
+crud_test!(
+    test_dnspod_crud_aaaa_record,
+    TestRecordType::Aaaa,
+    "AAAA",
+    common::generate_test_record_name
+);
+crud_test!(
+    test_dnspod_crud_cname_record,
+    TestRecordType::Cname,
+    "CNAME",
+    common::generate_test_record_name
+);
+crud_test!(
+    test_dnspod_crud_mx_record,
+    TestRecordType::Mx,
+    "MX",
+    common::generate_test_record_name
+);
+crud_test!(
+    test_dnspod_crud_txt_record,
+    TestRecordType::Txt,
+    "TXT",
+    common::generate_test_record_name
+);
+crud_test!(
+    test_dnspod_crud_caa_record,
+    TestRecordType::Caa,
+    "CAA",
+    common::generate_test_record_name
+);
+crud_test!(
+    test_dnspod_crud_srv_record,
+    TestRecordType::Srv,
+    "SRV",
+    common::generate_srv_test_record_name
+);

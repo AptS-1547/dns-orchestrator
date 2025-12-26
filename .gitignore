@@ -31,3 +31,6 @@ keystore.base64
 
 # cargo build
 target/
+
+# DNS Provider Error Codes
+/docs/ErrorCode/
