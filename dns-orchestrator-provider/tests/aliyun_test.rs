@@ -213,7 +213,7 @@ macro_rules! crud_test {
             );
 
             let updated_record = update_result.unwrap();
-            assert_eq!(updated_record.ttl, 900, "TTL 应该被更新为 300");
+            assert_eq!(updated_record.ttl, 900, "TTL 应该被更新为 900");
             println!("  ✓ 更新成功");
 
             // 4. 删除记录
