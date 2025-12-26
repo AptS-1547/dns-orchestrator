@@ -38,7 +38,7 @@ impl ProviderErrorMapper for CloudflareProvider {
             Some(code @ ("1004" | "9000" | "9005" | "9006" | "9009" | "9021" | "9041")) => {
                 let param = match code {
                     "9000" => "name",
-                    "9005" | "9006" | "9009" => "content",
+                    "9005" | "9006" | "9009" => "value",
                     "9021" => "ttl",
                     "9041" => "proxied",
                     // "1004" is a general validation error.
