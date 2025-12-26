@@ -157,7 +157,7 @@ impl ServiceContext {
         self.provider_registry
             .get(account_id)
             .await
-            .ok_or_else(|| CoreError::ProviderNotFound(account_id.to_string()))
+            .ok_or_else(|| CoreError::AccountNotFound(account_id.to_string()))
     }
 
     /// 标记账户为无效状态（如凭证过期）
@@ -725,9 +725,10 @@ async fn list_records(...) -> CoreResult<...> {
 
     match provider.list_records(domain_id, params).await {
         Ok(response) => Ok(response),
-        Err(ProviderError::InvalidCredentials { .. }) => {
-            // 标记账户为无效
-            self.ctx.mark_account_invalid(account_id, "凭证已过期").await;
+        Err(ProviderError::InvalidCredentials { raw_message, .. }) => {
+            // 使用原始错误消息标记账户为无效
+            let error_message = raw_message.unwrap_or_else(|| "凭证无效".to_string());
+            self.ctx.mark_account_invalid(account_id, &error_message).await;
             Err(CoreError::InvalidCredentials(account_id.to_string()))
         }
         Err(e) => Err(CoreError::Provider(e)),

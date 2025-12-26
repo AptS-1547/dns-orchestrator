@@ -157,7 +157,7 @@ impl ServiceContext {
         self.provider_registry
             .get(account_id)
             .await
-            .ok_or_else(|| CoreError::ProviderNotFound(account_id.to_string()))
+            .ok_or_else(|| CoreError::AccountNotFound(account_id.to_string()))
     }
 
     /// Mark an account as invalid (e.g., credentials expired)
@@ -725,9 +725,10 @@ async fn list_records(...) -> CoreResult<...> {
 
     match provider.list_records(domain_id, params).await {
         Ok(response) => Ok(response),
-        Err(ProviderError::InvalidCredentials { .. }) => {
-            // Mark account as invalid
-            self.ctx.mark_account_invalid(account_id, "Credentials expired").await;
+        Err(ProviderError::InvalidCredentials { raw_message, .. }) => {
+            // Mark account as invalid with original error message
+            let error_message = raw_message.unwrap_or_else(|| "Invalid credentials".to_string());
+            self.ctx.mark_account_invalid(account_id, &error_message).await;
             Err(CoreError::InvalidCredentials(account_id.to_string()))
         }
         Err(e) => Err(CoreError::Provider(e)),

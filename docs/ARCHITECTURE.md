@@ -386,7 +386,7 @@ impl ServiceContext {
         self.provider_registry
             .get(account_id)
             .await
-            .ok_or(CoreError::ProviderNotFound { account_id: account_id.to_string() })
+            .ok_or_else(|| CoreError::AccountNotFound(account_id.to_string()))
     }
 
     /// Mark account as invalid (credential error)
@@ -402,13 +402,17 @@ Platform-specific implementations injected via traits:
 
 ```rust
 // dns-orchestrator-core/src/traits/credential_store.rs
+
+/// Map of account_id -> credential key-value pairs
+pub type CredentialsMap = HashMap<String, HashMap<String, String>>;
+
 #[async_trait]
 pub trait CredentialStore: Send + Sync {
-    async fn load_all(&self) -> CoreResult<HashMap<String, ProviderCredentials>>;
-    async fn save_all(&self, credentials: &HashMap<String, ProviderCredentials>) -> CoreResult<()>;
-    async fn get(&self, account_id: &str) -> CoreResult<Option<ProviderCredentials>>;
-    async fn set(&self, account_id: &str, credentials: ProviderCredentials) -> CoreResult<()>;
-    async fn remove(&self, account_id: &str) -> CoreResult<()>;
+    async fn load_all(&self) -> CoreResult<CredentialsMap>;
+    async fn save(&self, account_id: &str, credentials: &HashMap<String, String>) -> CoreResult<()>;
+    async fn load(&self, account_id: &str) -> CoreResult<HashMap<String, String>>;
+    async fn delete(&self, account_id: &str) -> CoreResult<()>;
+    async fn exists(&self, account_id: &str) -> CoreResult<bool>;
 }
 
 // dns-orchestrator-core/src/traits/account_repository.rs
@@ -546,8 +550,8 @@ keyring = { version = "3", features = ["apple-native", "windows-native", "sync-s
 
 # Android
 [target."cfg(target_os = \"android\")".dependencies]
-dns-orchestrator-provider = { path = "../dns-orchestrator-provider", features = ["all-providers", "rustls"] }
-dns-orchestrator-core = { path = "../dns-orchestrator-core" }
+dns-orchestrator-provider = { path = "../dns-orchestrator-provider", default-features = false, features = ["all-providers", "rustls"] }
+dns-orchestrator-core = { path = "../dns-orchestrator-core", default-features = false, features = ["rustls"] }
 tauri-plugin-stronghold = "2"
 ```
 
