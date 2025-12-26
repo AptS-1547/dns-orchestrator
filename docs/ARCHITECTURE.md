@@ -459,14 +459,11 @@ pub struct AccountLifecycleService {
 
 impl AccountLifecycleService {
     pub async fn create_account(&self, request: CreateAccountRequest) -> CoreResult<Account> {
-        // 1. Validate and register credentials
-        self.credential_service.validate_and_register(&request.id, request.credentials).await?;
-
-        // 2. Create account metadata
-        let account = Account::new(request.id, request.name, request.provider);
-        self.metadata_service.create(account.clone()).await?;
-
-        Ok(account)
+        // 1. Validate credentials with the provider's API.
+        // 2. Save credentials securely using CredentialStore.
+        // 3. Register the new provider instance in ProviderRegistry.
+        // 4. Save account metadata using AccountRepository.
+        // ...
     }
 }
 ```
