@@ -28,7 +28,8 @@ fn ensure_crypto_provider() {
     use std::sync::Once;
     static INIT: Once = Once::new();
     INIT.call_once(|| {
-        let _ = CryptoProvider::install_default(rustls::crypto::ring::default_provider());
+        CryptoProvider::install_default(rustls::crypto::ring::default_provider())
+            .expect("Failed to install default rustls crypto provider");
     });
 }
 
@@ -139,7 +140,7 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     let tls_start = std::time::Instant::now();
     let tls_result = timeout(TLS_TIMEOUT, connector.connect(server_name, stream)).await;
 
-    let mut tls_stream = match tls_result {
+    let tls_stream = match tls_result {
         Ok(Ok(stream)) => {
             trace!(
                 "[SSL] TLS handshake succeeded, took {:?}",
@@ -198,13 +199,6 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
             });
         }
     };
-
-    // 发送 HTTP 请求以确保握手完成
-    let request = format!("HEAD / HTTP/1.1\r\nHost: {domain}\r\nConnection: close\r\n\r\n");
-    if tls_stream.write_all(request.as_bytes()).await.is_ok() {
-        let mut response = vec![0u8; 1024];
-        let _ = tls_stream.read(&mut response).await.ok();
-    }
 
     // 4. 获取证书链
     trace!("[SSL] Retrieving certificate chain...");
