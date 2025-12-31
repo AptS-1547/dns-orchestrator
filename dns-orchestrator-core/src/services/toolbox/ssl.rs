@@ -5,6 +5,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use log::{debug, trace, warn};
 use rustls::crypto::CryptoProvider;
 use rustls::{ClientConfig, RootCertStore};
 use rustls_pki_types::{CertificateDer, ServerName};
@@ -69,15 +70,26 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     let port = port.unwrap_or(443);
     let domain = domain.to_string();
 
+    debug!("[SSL] Starting check for {}:{}", domain, port);
+    let start_time = std::time::Instant::now();
+
     // 1. 建立 TCP 连接（带超时）
+    trace!("[SSL] Establishing TCP connection...");
     let stream = match timeout(
         CONNECT_TIMEOUT,
         TcpStream::connect(format!("{domain}:{port}")),
     )
     .await
     {
-        Ok(Ok(s)) => s,
+        Ok(Ok(s)) => {
+            trace!(
+                "[SSL] TCP connection succeeded, took {:?}",
+                start_time.elapsed()
+            );
+            s
+        }
         Ok(Err(e)) => {
+            warn!("[SSL] TCP connection failed: {}", e);
             return Ok(SslCheckResult {
                 domain,
                 port,
@@ -87,6 +99,10 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
             });
         }
         Err(_) => {
+            warn!(
+                "[SSL] TCP connection timeout ({}s)",
+                CONNECT_TIMEOUT.as_secs()
+            );
             return Ok(SslCheckResult {
                 domain,
                 port,
@@ -108,6 +124,7 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     let connector = TlsConnector::from(Arc::new(config));
 
     let Ok(server_name) = ServerName::try_from(domain.clone()) else {
+        warn!("[SSL] Invalid domain name: {}", domain);
         return Ok(SslCheckResult {
             domain,
             port,
@@ -118,13 +135,27 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     };
 
     // 3. TLS 握手（带超时）
+    trace!("[SSL] Performing TLS handshake...");
+    let tls_start = std::time::Instant::now();
     let tls_result = timeout(TLS_TIMEOUT, connector.connect(server_name, stream)).await;
 
     let mut tls_stream = match tls_result {
-        Ok(Ok(stream)) => stream,
+        Ok(Ok(stream)) => {
+            trace!(
+                "[SSL] TLS handshake succeeded, took {:?}",
+                tls_start.elapsed()
+            );
+            stream
+        }
         Ok(Err(e)) => {
+            warn!("[SSL] TLS handshake failed: {}", e);
             // TLS 握手失败，检查是否为 HTTP
+            trace!("[SSL] Checking if HTTP connection...");
             if check_http_connection(&domain, port).await {
+                debug!(
+                    "[SSL] Detected HTTP connection, total time {:?}",
+                    start_time.elapsed()
+                );
                 return Ok(SslCheckResult {
                     domain,
                     port,
@@ -142,8 +173,14 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
             });
         }
         Err(_) => {
+            warn!("[SSL] TLS handshake timeout ({}s)", TLS_TIMEOUT.as_secs());
             // 超时
+            trace!("[SSL] Checking if HTTP connection...");
             if check_http_connection(&domain, port).await {
+                debug!(
+                    "[SSL] Detected HTTP connection, total time {:?}",
+                    start_time.elapsed()
+                );
                 return Ok(SslCheckResult {
                     domain,
                     port,
@@ -170,10 +207,15 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     }
 
     // 4. 获取证书链
+    trace!("[SSL] Retrieving certificate chain...");
     let (_, tls_conn) = tls_stream.get_ref();
     let certs = match tls_conn.peer_certificates() {
-        Some(c) if !c.is_empty() => c,
+        Some(c) if !c.is_empty() => {
+            trace!("[SSL] Retrieved {} certificate(s)", c.len());
+            c
+        }
         _ => {
+            warn!("[SSL] No certificates found");
             return Ok(SslCheckResult {
                 domain,
                 port,
@@ -187,9 +229,11 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     let cert_der = certs[0].as_ref();
 
     // 5. 解析叶子证书
+    trace!("[SSL] Parsing certificate...");
     let (_, cert) = match X509Certificate::from_der(cert_der) {
         Ok(c) => c,
         Err(e) => {
+            warn!("[SSL] Certificate parsing failed: {}", e);
             return Ok(SslCheckResult {
                 domain,
                 port,
@@ -216,6 +260,16 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
                 })
         })
         .collect();
+
+    debug!(
+        "[SSL] Check completed: {} - valid={}, expired={}, days_remaining={}, chain_length={}, total_time={:?}",
+        domain,
+        cert_info.is_valid,
+        cert_info.is_expired,
+        cert_info.days_remaining,
+        cert_info.certificate_chain.len(),
+        start_time.elapsed()
+    );
 
     Ok(SslCheckResult {
         domain: domain.clone(),
