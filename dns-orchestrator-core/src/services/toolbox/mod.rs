@@ -37,7 +37,7 @@ impl ToolboxService {
     }
 
     /// SSL 证书检查
-    #[cfg(any(feature = "native-tls", feature = "rustls"))]
+    #[cfg(feature = "rustls")]
     pub async fn ssl_check(
         domain: &str,
         port: Option<u16>,
