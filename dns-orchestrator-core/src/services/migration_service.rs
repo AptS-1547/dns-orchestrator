@@ -45,10 +45,12 @@ impl MigrationService {
     }
 
     /// 执行迁移
+    ///
+    /// 注意：备份逻辑已在 Tauri 层实现（src-tauri/src/lib.rs），
+    /// 在调用 migrate_if_needed() 之前执行。
     async fn perform_migration(&self) -> CoreResult<MigrationResult> {
-        // 1. 加载原始 JSON 并备份
+        // 1. 加载原始 JSON（备份已在调用此方法前由 Tauri 层完成）
         let raw_json = self.credential_store.load_raw_json().await?;
-        self.backup_credentials(&raw_json).await?;
 
         // 2. 解析旧格式
         let old_creds: HashMap<String, HashMap<String, String>> =
@@ -103,15 +105,9 @@ impl MigrationService {
         })
     }
 
-    /// 备份旧凭证（防止迁移失败导致数据丢失）
-    ///
-    /// 简化实现：记录日志，实际备份由平台存储层处理
-    async fn backup_credentials(&self, _json: &str) -> CoreResult<()> {
-        log::info!("凭证迁移前已备份到平台存储");
-        // TODO: 实际写入备份文件到应用数据目录
-        // 例如：credentials.backup.json
-        Ok(())
-    }
+    // 注意：backup_credentials 方法已移除
+    // 备份逻辑现在在 Tauri 层实现（src-tauri/src/lib.rs），
+    // 因为 MigrationService 位于平台无关的 Core 层，不应访问文件系统。
 }
 
 /// 迁移结果

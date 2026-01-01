@@ -1,7 +1,7 @@
 {
   "name": "dns-orchestrator",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "author": "AptS:1547 (Yuhan Bian / 卞雨涵 <apts-1547@esaps.net>)",
   "type": "module",
   "scripts": {
@@ -33,6 +33,12 @@
     "lint:rust": "pnpm lint:rust:all",
     "lint:rust:all": "pnpm lint:rust:tauri && pnpm lint:rust:actix-web && pnpm lint:rust:core && pnpm lint:rust:provider",
     "lint:rust:fix": "pnpm lint:rust:tauri --fix && pnpm lint:rust:actix-web --fix && pnpm lint:rust:core --fix && pnpm lint:rust:provider --fix",
+    "clean:rust:tauri": "cd src-tauri && cargo clean && cd ..",
+    "clean:rust:actix-web": "cd src-actix-web && cargo clean && cd ..",
+    "clean:rust:core": "cd dns-orchestrator-core && cargo clean && cd ..",
+    "clean:rust:provider": "cd dns-orchestrator-provider && cargo clean && cd ..",
+    "clean:rust": "pnpm clean:rust:all",
+    "clean:rust:all": "pnpm clean:rust:tauri && pnpm clean:rust:actix-web && pnpm clean:rust:core && pnpm clean:rust:provider",
     "postinstall": "pnpm sync-version"
   },
   "dependencies": {

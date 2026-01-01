@@ -158,33 +158,113 @@ pub fn run() {
         tauri::async_runtime::block_on(async move {
             let state = app_handle.state::<AppState>();
 
-            // 创建迁移服务
+            // 1. 备份凭证（迁移前）
+            let backup_result = async {
+                let raw_json = state.ctx.credential_store.load_raw_json().await?;
+
+                let data_dir = app_handle.path().app_data_dir().map_err(|e| {
+                    dns_orchestrator_core::error::CoreError::StorageError(format!(
+                        "Failed to get data dir: {e}"
+                    ))
+                })?;
+
+                std::fs::create_dir_all(&data_dir).map_err(|e| {
+                    dns_orchestrator_core::error::CoreError::StorageError(format!(
+                        "Failed to create data dir: {e}"
+                    ))
+                })?;
+
+                let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+                let backup_path = data_dir.join(format!("credentials.backup.{timestamp}.json"));
+
+                std::fs::write(&backup_path, raw_json.as_bytes()).map_err(|e| {
+                    dns_orchestrator_core::error::CoreError::StorageError(format!(
+                        "Failed to write backup: {e}"
+                    ))
+                })?;
+
+                log::info!("凭证已备份到: {}", backup_path.display());
+                Ok::<_, dns_orchestrator_core::error::CoreError>(backup_path)
+            }
+            .await;
+
+            // 保存备份路径（用于后续清理）
+            let backup_path_opt = match &backup_result {
+                Ok(path) => {
+                    log::info!("备份成功: {}", path.display());
+                    Some(path.clone())
+                }
+                Err(e) => {
+                    log::warn!("备份失败（继续迁移）: {e}");
+                    None
+                }
+            };
+
+            // 2. 创建迁移服务
             let migration_service = MigrationService::new(
                 Arc::clone(&state.ctx.credential_store),
                 Arc::clone(&state.ctx.account_repository),
             );
 
-            // 执行迁移
+            // 3. 执行迁移
             match migration_service.migrate_if_needed().await {
                 Ok(MigrationResult::NotNeeded) => {
                     log::info!("凭证格式检查：无需迁移");
+                    // 删除备份文件（无需迁移）
+                    if let Some(backup_path) = &backup_path_opt {
+                        if let Err(e) = std::fs::remove_file(backup_path) {
+                            log::warn!("删除备份文件失败: {e}");
+                        } else {
+                            log::info!("已删除备份文件");
+                        }
+                    }
                 }
                 Ok(MigrationResult::Success {
                     migrated_count,
                     failed_accounts,
                 }) => {
-                    log::info!("凭证迁移成功：{} 个账户已迁移", migrated_count);
+                    log::info!("凭证迁移成功：{migrated_count} 个账户已迁移");
                     if !failed_accounts.is_empty() {
                         log::warn!(
                             "部分账户迁移失败 ({} 个): {:?}",
                             failed_accounts.len(),
                             failed_accounts
                         );
-                        // TODO: 将失败的账户标记为 Error 状态
+
+                        // 将失败的账户标记为 Error 状态
+                        for (account_id, error_msg) in &failed_accounts {
+                            if let Err(e) = state
+                                .account_metadata_service
+                                .update_status(
+                                    account_id,
+                                    dns_orchestrator_core::types::AccountStatus::Error,
+                                    Some(format!("凭证迁移失败: {error_msg}")),
+                                )
+                                .await
+                            {
+                                log::error!("更新账户 {account_id} 状态失败: {e}");
+                            }
+                        }
+                    }
+
+                    // 删除备份文件（迁移成功）
+                    if let Some(backup_path) = &backup_path_opt {
+                        if let Err(e) = std::fs::remove_file(backup_path) {
+                            log::warn!("删除备份文件失败: {e}");
+                        } else {
+                            log::info!("已删除备份文件（迁移成功）");
+                        }
                     }
                 }
                 Err(e) => {
-                    log::error!("凭证迁移失败: {}", e);
+                    log::error!("凭证迁移失败: {e}");
+                    // 保留备份文件供手动恢复
+                    if let Some(backup_path) = &backup_path_opt {
+                        log::error!(
+                            "迁移失败，备份文件保留在: {}，请手动检查",
+                            backup_path.display()
+                        );
+                    }
                     // 不中断启动，继续尝试恢复（可能会因为格式问题导致部分账户恢复失败）
                 }
             }
