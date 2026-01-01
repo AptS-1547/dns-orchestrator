@@ -277,16 +277,35 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
     }
 
     // 确定验证状态
+    // 注意：由于启用了 ResolverOpts.validate = true，hickory-resolver 会自动验证 DNSSEC
+    // 如果验证失败（bogus 签名），查询会返回 SERVFAIL 错误
+    // 因此，能成功查询到 DNSSEC 记录说明验证通过或未启用 DNSSEC
     if dnssec_enabled {
         if !dnskey_records.is_empty() && !ds_records.is_empty() {
+            // 有完整的 DNSSEC 记录，且查询成功（验证通过）
             validation_status = "secure".to_string();
+            log::debug!(
+                "DNSSEC validation for {}: Found DNSKEY ({}) and DS ({}) records, validation passed",
+                domain,
+                dnskey_records.len(),
+                ds_records.len()
+            );
         } else if !dnskey_records.is_empty() || !ds_records.is_empty() {
+            // 只有部分 DNSSEC 记录
             validation_status = "indeterminate".to_string();
+            log::debug!(
+                "DNSSEC validation for {}: Partial DNSSEC records (DNSKEY: {}, DS: {})",
+                domain,
+                dnskey_records.len(),
+                ds_records.len()
+            );
         } else {
             validation_status = "insecure".to_string();
+            log::debug!("DNSSEC validation for {}: No DNSSEC records found", domain);
         }
     } else {
         validation_status = "insecure".to_string();
+        log::debug!("DNSSEC validation for {}: DNSSEC not enabled", domain);
     }
 
     let response_time_ms = start_time.elapsed().as_millis() as u64;

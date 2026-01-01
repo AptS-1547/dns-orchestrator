@@ -131,11 +131,11 @@ export function DnssecCheck() {
             <div className="rounded-lg border bg-card p-4 text-card-foreground">
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-muted-foreground" />
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {t("toolbox.dnssec.dnssecEnabled")}
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-bold">
+              <div className="mt-2 font-bold text-2xl">
                 {result.dnssecEnabled ? (
                   <span className="text-green-600">{t("common.yes")}</span>
                 ) : (
@@ -147,7 +147,7 @@ export function DnssecCheck() {
             <div className="rounded-lg border bg-card p-4 text-card-foreground">
               <div className="flex items-center gap-2">
                 <Key className="h-5 w-5 text-muted-foreground" />
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {t("toolbox.dnssec.validationStatus")}
                 </div>
               </div>
@@ -157,11 +157,11 @@ export function DnssecCheck() {
             <div className="rounded-lg border bg-card p-4 text-card-foreground">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {t("toolbox.dnssec.responseTime")}
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-bold">{result.responseTimeMs}ms</div>
+              <div className="mt-2 font-bold text-2xl">{result.responseTimeMs}ms</div>
             </div>
           </div>
 
@@ -187,15 +187,18 @@ export function DnssecCheck() {
                           <Badge variant="outline">{record.keyType}</Badge>
                         </TableCell>
                         <TableCell>{record.flags}</TableCell>
-                        <TableCell>
-                          <div className="max-w-xs truncate" title={record.algorithmName}>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate" title={record.algorithmName}>
                             {record.algorithmName}
                           </div>
                         </TableCell>
                         <TableCell>{record.keyTag}</TableCell>
                         {!isMobile && (
-                          <TableCell>
-                            <CopyableText value={record.publicKey} className="max-w-xs" />
+                          <TableCell className="max-w-xs">
+                            <CopyableText
+                              value={record.publicKey}
+                              className="block truncate font-mono text-sm"
+                            />
                           </TableCell>
                         )}
                       </TableRow>
@@ -224,19 +227,22 @@ export function DnssecCheck() {
                     {result.dsRecords.map((record) => (
                       <TableRow key={record.keyTag}>
                         <TableCell>{record.keyTag}</TableCell>
-                        <TableCell>
-                          <div className="max-w-xs truncate" title={record.algorithmName}>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate" title={record.algorithmName}>
                             {record.algorithmName}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="max-w-xs truncate" title={record.digestTypeName}>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate" title={record.digestTypeName}>
                             {record.digestTypeName}
                           </div>
                         </TableCell>
                         {!isMobile && (
-                          <TableCell>
-                            <CopyableText value={record.digest} className="max-w-xs" />
+                          <TableCell className="max-w-xs">
+                            <CopyableText
+                              value={record.digest}
+                              className="block truncate font-mono text-sm"
+                            />
                           </TableCell>
                         )}
                       </TableRow>
@@ -270,13 +276,19 @@ export function DnssecCheck() {
                         <TableCell>
                           <Badge variant="outline">{record.typeCovered}</Badge>
                         </TableCell>
-                        <TableCell>
-                          <div className="max-w-xs truncate" title={record.algorithmName}>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate" title={record.algorithmName}>
                             {record.algorithmName}
                           </div>
                         </TableCell>
                         <TableCell>{record.keyTag}</TableCell>
-                        {!isMobile && <TableCell>{record.signerName}</TableCell>}
+                        {!isMobile && (
+                          <TableCell className="max-w-xs">
+                            <div className="truncate" title={record.signerName}>
+                              {record.signerName}
+                            </div>
+                          </TableCell>
+                        )}
                         {!isMobile && <TableCell>{record.signatureExpiration}</TableCell>}
                       </TableRow>
                     ))}
@@ -299,7 +311,7 @@ export function DnssecCheck() {
           )}
 
           {/* DNS 服务器信息 */}
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {t("toolbox.dnssec.nameserverUsed")}: {result.nameserver}
           </div>
         </div>
