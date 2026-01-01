@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use log::debug;
 use reqwest::{Client, Method};
+use url::Url;
 
 use crate::error::{CoreError, CoreResult};
 use crate::types::{
@@ -114,15 +115,18 @@ pub async fn http_header_check(
 
     // 构建原始请求报文
     let mut raw_request = format!("{} {} HTTP/1.1\r\n", method.as_str(), url);
-    raw_request.push_str(&format!(
-        "Host: {}\r\n",
-        url.split("://")
-            .nth(1)
-            .unwrap_or(&url)
-            .split('/')
-            .next()
-            .unwrap_or(&url)
-    ));
+
+    // 使用 url crate 解析 Host
+    if let Ok(parsed_url) = Url::parse(&url) {
+        if let Some(host) = parsed_url.host_str() {
+            let host_header = if let Some(port) = parsed_url.port() {
+                format!("{host}:{port}")
+            } else {
+                host.to_string()
+            };
+            raw_request.push_str(&format!("Host: {host_header}\r\n"));
+        }
+    }
 
     // 添加自定义请求头
     for header in &request.custom_headers {

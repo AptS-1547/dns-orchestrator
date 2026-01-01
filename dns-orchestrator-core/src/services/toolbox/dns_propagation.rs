@@ -11,6 +11,9 @@ use crate::types::{DnsPropagationResult, DnsPropagationServer, DnsPropagationSer
 
 use super::dns::dns_lookup;
 
+/// DNS 查询超时时间（秒）
+const QUERY_TIMEOUT_SECS: u64 = 5;
+
 /// 获取全球 DNS 服务器列表
 fn get_global_dns_servers() -> Vec<DnsPropagationServer> {
     vec![
@@ -155,7 +158,7 @@ pub async fn dns_propagation_check(
             async move {
                 let query_start = Instant::now();
                 let result = timeout(
-                    Duration::from_secs(5),
+                    Duration::from_secs(QUERY_TIMEOUT_SECS),
                     dns_lookup(&domain, &record_type, Some(&server.ip)),
                 )
                 .await;
@@ -180,8 +183,8 @@ pub async fn dns_propagation_check(
                         server,
                         status: "timeout".to_string(),
                         records: vec![],
-                        error: Some("查询超时（5秒）".to_string()),
-                        response_time_ms: 5000,
+                        error: Some(format!("Query timeout ({QUERY_TIMEOUT_SECS}s)")),
+                        response_time_ms: QUERY_TIMEOUT_SECS * 1000,
                     },
                 }
             }

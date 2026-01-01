@@ -473,6 +473,7 @@ dependencies = [
  "thiserror 2.0.17",
  "tokio",
  "tokio-rustls",
+ "url",
  "uuid",
  "webpki-roots",
  "whois-rust",
