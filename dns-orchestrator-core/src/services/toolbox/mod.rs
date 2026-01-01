@@ -3,13 +3,16 @@
 //! 提供各种 DNS 相关的工具函数，所有方法都是无状态的关联函数。
 
 mod dns;
+mod dns_propagation;
 mod http_headers;
 mod ip;
 mod ssl;
 mod whois;
 
 use crate::error::CoreResult;
-use crate::types::{DnsLookupResult, HttpHeaderCheckResult, IpLookupResult, WhoisResult};
+use crate::types::{
+    DnsLookupResult, DnsPropagationResult, HttpHeaderCheckResult, IpLookupResult, WhoisResult,
+};
 
 /// 嵌入 WHOIS 服务器配置
 const WHOIS_SERVERS: &str = include_str!("whois_servers.json");
@@ -51,5 +54,13 @@ impl ToolboxService {
         request: &crate::types::HttpHeaderCheckRequest,
     ) -> CoreResult<HttpHeaderCheckResult> {
         http_headers::http_header_check(request).await
+    }
+
+    /// DNS 传播检查
+    pub async fn dns_propagation_check(
+        domain: &str,
+        record_type: &str,
+    ) -> CoreResult<DnsPropagationResult> {
+        dns_propagation::dns_propagation_check(domain, record_type).await
     }
 }

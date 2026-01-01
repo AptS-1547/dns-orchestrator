@@ -135,7 +135,7 @@ export interface HttpHeaderCheckResult {
 /** 查询历史项 */
 export interface QueryHistoryItem {
   id: string
-  type: "whois" | "dns" | "ip" | "ssl" | "http"
+  type: "whois" | "dns" | "ip" | "ssl" | "http" | "dns-propagation"
   query: string
   recordType?: string
   timestamp: number
@@ -157,3 +157,30 @@ export const DNS_RECORD_TYPES = [
 ] as const
 
 export type DnsLookupType = (typeof DNS_RECORD_TYPES)[number]
+
+/** DNS 传播检查服务器信息 */
+export interface DnsPropagationServer {
+  name: string
+  ip: string
+  region: string
+  countryCode: string
+}
+
+/** 单个 DNS 服务器的查询结果 */
+export interface DnsPropagationServerResult {
+  server: DnsPropagationServer
+  status: "success" | "timeout" | "error"
+  records: DnsLookupRecord[]
+  error?: string
+  responseTimeMs: number
+}
+
+/** DNS 传播检查结果 */
+export interface DnsPropagationResult {
+  domain: string
+  recordType: string
+  results: DnsPropagationServerResult[]
+  totalTimeMs: number
+  consistencyPercentage: number
+  uniqueValues: string[]
+}

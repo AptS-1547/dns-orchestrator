@@ -17,7 +17,7 @@ import { useToolboxStore } from "@/stores"
 import type { QueryHistoryItem } from "@/types"
 
 interface HistoryChipsProps {
-  type: "whois" | "dns" | "ip" | "ssl" | "http"
+  type: "whois" | "dns" | "ip" | "ssl" | "http" | "dns-propagation"
   onSelect: (item: QueryHistoryItem) => void
   maxItems?: number
 }
@@ -60,7 +60,7 @@ function HistoryChipsComponent({ type, onSelect, maxItems = 5 }: HistoryChipsPro
           className="group inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs transition-colors hover:bg-muted/80"
           onClick={() => onSelect(item)}
         >
-          {item.type === "dns" && item.recordType && (
+          {(item.type === "dns" || item.type === "dns-propagation") && item.recordType && (
             <span className="font-medium text-primary">{item.recordType}</span>
           )}
           <span className="max-w-32 truncate">{item.query}</span>

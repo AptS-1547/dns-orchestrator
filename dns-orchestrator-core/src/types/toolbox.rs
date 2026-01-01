@@ -229,3 +229,51 @@ pub struct HttpHeaderCheckResult {
     /// 原始响应报文
     pub raw_response: String,
 }
+
+/// DNS 传播检查服务器信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationServer {
+    /// 服务器名称（如 "Google DNS"）
+    pub name: String,
+    /// 服务器 IP 地址
+    pub ip: String,
+    /// 地区（如 "美国（北美）"）
+    pub region: String,
+    /// 国家代码（如 "US"）
+    pub country_code: String,
+}
+
+/// 单个 DNS 服务器的查询结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationServerResult {
+    /// 服务器信息
+    pub server: DnsPropagationServer,
+    /// 查询状态: "success" | "timeout" | "error"
+    pub status: String,
+    /// 查询记录列表（成功时）
+    pub records: Vec<DnsLookupRecord>,
+    /// 错误信息（失败时）
+    pub error: Option<String>,
+    /// 查询耗时（毫秒）
+    pub response_time_ms: u64,
+}
+
+/// DNS 传播检查结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationResult {
+    /// 查询的域名
+    pub domain: String,
+    /// 查询的记录类型
+    pub record_type: String,
+    /// 各服务器查询结果
+    pub results: Vec<DnsPropagationServerResult>,
+    /// 总查询时间（毫秒）
+    pub total_time_ms: u64,
+    /// 传播一致性（0-100%）
+    pub consistency_percentage: f32,
+    /// 唯一值列表（用于检测一致性）
+    pub unique_values: Vec<String>,
+}

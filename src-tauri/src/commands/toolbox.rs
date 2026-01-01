@@ -1,9 +1,10 @@
 use dns_orchestrator_core::services::ToolboxService;
 
 use crate::types::{
-    ApiResponse, CertChainItem, DnsLookupRecord, DnsLookupResult, HttpHeader,
-    HttpHeaderCheckRequest, HttpHeaderCheckResult, HttpMethod, IpGeoInfo, IpLookupResult,
-    SecurityHeaderAnalysis, SslCertInfo, SslCheckResult, WhoisResult,
+    ApiResponse, CertChainItem, DnsLookupRecord, DnsLookupResult, DnsPropagationResult,
+    DnsPropagationServer, DnsPropagationServerResult, HttpHeader, HttpHeaderCheckRequest,
+    HttpHeaderCheckResult, HttpMethod, IpGeoInfo, IpLookupResult, SecurityHeaderAnalysis,
+    SslCertInfo, SslCheckResult, WhoisResult,
 };
 
 // 类型转换辅助函数
@@ -164,6 +165,56 @@ fn convert_http_header_check_result(
     }
 }
 
+fn convert_dns_propagation_server(
+    server: dns_orchestrator_core::types::DnsPropagationServer,
+) -> DnsPropagationServer {
+    DnsPropagationServer {
+        name: server.name,
+        ip: server.ip,
+        region: server.region,
+        country_code: server.country_code,
+    }
+}
+
+fn convert_dns_propagation_server_result(
+    result: dns_orchestrator_core::types::DnsPropagationServerResult,
+) -> DnsPropagationServerResult {
+    DnsPropagationServerResult {
+        server: convert_dns_propagation_server(result.server),
+        status: result.status,
+        records: result
+            .records
+            .into_iter()
+            .map(|r| DnsLookupRecord {
+                record_type: r.record_type,
+                name: r.name,
+                value: r.value,
+                ttl: r.ttl,
+                priority: r.priority,
+            })
+            .collect(),
+        error: result.error,
+        response_time_ms: result.response_time_ms,
+    }
+}
+
+fn convert_dns_propagation_result(
+    result: dns_orchestrator_core::types::DnsPropagationResult,
+) -> DnsPropagationResult {
+    DnsPropagationResult {
+        domain: result.domain,
+        record_type: result.record_type,
+        results: result
+            .results
+            .into_iter()
+            .map(convert_dns_propagation_server_result)
+            .collect(),
+        total_time_ms: result.total_time_ms,
+        consistency_percentage: result.consistency_percentage,
+        unique_values: result.unique_values,
+    }
+}
+
 /// WHOIS 查询
 #[tauri::command]
 pub async fn whois_lookup(domain: String) -> Result<ApiResponse<WhoisResult>, String> {
@@ -224,4 +275,17 @@ pub async fn http_header_check(
     Ok(ApiResponse::success(convert_http_header_check_result(
         result,
     )))
+}
+
+/// DNS 传播检查
+#[tauri::command]
+pub async fn dns_propagation_check(
+    domain: String,
+    record_type: String,
+) -> Result<ApiResponse<DnsPropagationResult>, String> {
+    let result = ToolboxService::dns_propagation_check(&domain, &record_type)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse::success(convert_dns_propagation_result(result)))
 }

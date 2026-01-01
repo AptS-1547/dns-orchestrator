@@ -260,6 +260,39 @@ pub struct HttpHeaderCheckResult {
     pub raw_response: String,
 }
 
+/// DNS 传播检查服务器信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationServer {
+    pub name: String,
+    pub ip: String,
+    pub region: String,
+    pub country_code: String,
+}
+
+/// 单个 DNS 服务器的查询结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationServerResult {
+    pub server: DnsPropagationServer,
+    pub status: String,
+    pub records: Vec<DnsLookupRecord>,
+    pub error: Option<String>,
+    pub response_time_ms: u64,
+}
+
+/// DNS 传播检查结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationResult {
+    pub domain: String,
+    pub record_type: String,
+    pub results: Vec<DnsPropagationServerResult>,
+    pub total_time_ms: u64,
+    pub consistency_percentage: f32,
+    pub unique_values: Vec<String>,
+}
+
 // ============ 批量操作相关类型 ============
 
 /// 批量删除 DNS 记录请求

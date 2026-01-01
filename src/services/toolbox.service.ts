@@ -1,10 +1,7 @@
-/**
- * 工具箱服务
- */
-
 import type {
   ApiResponse,
   DnsLookupResult,
+  DnsPropagationResult,
   HttpHeaderCheckRequest,
   HttpHeaderCheckResult,
   IpLookupResult,
@@ -36,6 +33,13 @@ class ToolboxService {
 
   httpHeaderCheck(request: HttpHeaderCheckRequest): Promise<ApiResponse<HttpHeaderCheckResult>> {
     return transport.invoke("http_header_check", { request })
+  }
+
+  dnsPropagationCheck(
+    domain: string,
+    recordType: string
+  ): Promise<ApiResponse<DnsPropagationResult>> {
+    return transport.invoke("dns_propagation_check", { domain, recordType })
   }
 }
 
