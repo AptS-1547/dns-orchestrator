@@ -1,12 +1,22 @@
-import { FileText, Globe, Lock, MapPin, Wrench } from "lucide-react"
+import { FileText, Globe, Lock, MapPin, Network, Radar, Shield, Wrench } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { PageHeader } from "@/components/ui/page-header"
 import { PageLayout } from "@/components/ui/page-layout"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { DnsLookup } from "./DnsLookup"
+import { DnsPropagation } from "./DnsPropagation"
+import { DnssecCheck } from "./DnssecCheck"
+import { HttpHeaderCheck } from "./HttpHeaderCheck"
 import { IpLookup } from "./IpLookup"
 import { SslCheck } from "./SslCheck"
 import { WhoisLookup } from "./WhoisLookup"
@@ -15,11 +25,15 @@ const TABS = [
   { id: "dns", icon: Globe, label: "DNS" },
   { id: "whois", icon: FileText, label: "WHOIS" },
   { id: "ssl", icon: Lock, label: "SSL" },
+  { id: "http", icon: Network, label: "HTTP" },
   { id: "ip", icon: MapPin, label: "IP" },
+  { id: "dns-propagation", icon: Radar, label: "DNS Propagation" },
+  { id: "dnssec", icon: Shield, label: "DNSSEC" },
 ] as const
 
 export function ToolboxPage() {
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = useState("dns")
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
   const tabsRef = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -40,6 +54,55 @@ export function ToolboxPage() {
     }
   }, [activeTab])
 
+  // 工具渲染函数
+  const renderToolContent = (id: string) => {
+    switch (id) {
+      case "dns":
+        return <DnsLookup />
+      case "whois":
+        return <WhoisLookup />
+      case "ssl":
+        return <SslCheck />
+      case "http":
+        return <HttpHeaderCheck />
+      case "ip":
+        return <IpLookup />
+      case "dns-propagation":
+        return <DnsPropagation />
+      case "dnssec":
+        return <DnssecCheck />
+      default:
+        return null
+    }
+  }
+
+  // 移动端: Accordion 导航
+  if (isMobile) {
+    return (
+      <PageLayout>
+        <PageHeader title={t("toolbox.title")} icon={<Wrench className="h-5 w-5" />} />
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="mx-auto max-w-4xl p-4">
+            <Accordion type="single" value={activeTab} onValueChange={setActiveTab} collapsible>
+              {TABS.map(({ id, icon: Icon, label }) => (
+                <AccordionItem key={id} value={id}>
+                  <AccordionTrigger className="px-4">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      <span>{label}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 pt-4">{renderToolContent(id)}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </ScrollArea>
+      </PageLayout>
+    )
+  }
+
+  // 桌面端: Tabs 导航
   return (
     <PageLayout>
       <PageHeader title={t("toolbox.title")} icon={<Wrench className="h-5 w-5" />} />
@@ -87,8 +150,17 @@ export function ToolboxPage() {
             <TabsContent value="ssl" className="fade-in-0 mt-0 animate-in duration-200">
               <SslCheck />
             </TabsContent>
+            <TabsContent value="http" className="fade-in-0 mt-0 animate-in duration-200">
+              <HttpHeaderCheck />
+            </TabsContent>
             <TabsContent value="ip" className="fade-in-0 mt-0 animate-in duration-200">
               <IpLookup />
+            </TabsContent>
+            <TabsContent value="dns-propagation" className="fade-in-0 mt-0 animate-in duration-200">
+              <DnsPropagation />
+            </TabsContent>
+            <TabsContent value="dnssec" className="fade-in-0 mt-0 animate-in duration-200">
+              <DnssecCheck />
             </TabsContent>
           </div>
         </ScrollArea>

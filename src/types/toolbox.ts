@@ -92,10 +92,50 @@ export interface SslCheckResult {
   error?: string
 }
 
+/** HTTP 请求方法 */
+export type HttpMethod = "GET" | "HEAD" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS"
+
+/** HTTP 请求头 */
+export interface HttpHeader {
+  name: string
+  value: string
+}
+
+/** HTTP 头检查请求 */
+export interface HttpHeaderCheckRequest {
+  url: string
+  method: HttpMethod
+  customHeaders: HttpHeader[]
+  body?: string
+  contentType?: string
+}
+
+/** 安全头分析结果 */
+export interface SecurityHeaderAnalysis {
+  name: string
+  present: boolean
+  value?: string
+  status: "good" | "warning" | "missing"
+  recommendation?: string
+}
+
+/** HTTP 头检查结果 */
+export interface HttpHeaderCheckResult {
+  url: string
+  statusCode: number
+  statusText: string
+  responseTimeMs: number
+  headers: HttpHeader[]
+  securityAnalysis: SecurityHeaderAnalysis[]
+  contentLength?: number
+  rawRequest: string
+  rawResponse: string
+}
+
 /** 查询历史项 */
 export interface QueryHistoryItem {
   id: string
-  type: "whois" | "dns" | "ip" | "ssl"
+  type: "whois" | "dns" | "ip" | "ssl" | "http" | "dns-propagation" | "dnssec"
   query: string
   recordType?: string
   timestamp: number
@@ -117,3 +157,78 @@ export const DNS_RECORD_TYPES = [
 ] as const
 
 export type DnsLookupType = (typeof DNS_RECORD_TYPES)[number]
+
+/** DNS 传播检查服务器信息 */
+export interface DnsPropagationServer {
+  name: string
+  ip: string
+  region: string
+  countryCode: string
+}
+
+/** 单个 DNS 服务器的查询结果 */
+export interface DnsPropagationServerResult {
+  server: DnsPropagationServer
+  status: "success" | "timeout" | "error"
+  records: DnsLookupRecord[]
+  error?: string
+  responseTimeMs: number
+}
+
+/** DNS 传播检查结果 */
+export interface DnsPropagationResult {
+  domain: string
+  recordType: string
+  results: DnsPropagationServerResult[]
+  totalTimeMs: number
+  consistencyPercentage: number
+  uniqueValues: string[]
+}
+
+/** DNSSEC DNSKEY 记录 */
+export interface DnskeyRecord {
+  flags: number
+  protocol: number
+  algorithm: number
+  algorithmName: string
+  publicKey: string
+  keyTag: number
+  keyType: string
+}
+
+/** DNSSEC DS 记录 */
+export interface DsRecord {
+  keyTag: number
+  algorithm: number
+  algorithmName: string
+  digestType: number
+  digestTypeName: string
+  digest: string
+}
+
+/** DNSSEC RRSIG 记录 */
+export interface RrsigRecord {
+  typeCovered: string
+  algorithm: number
+  algorithmName: string
+  labels: number
+  originalTtl: number
+  signatureExpiration: string
+  signatureInception: string
+  keyTag: number
+  signerName: string
+  signature: string
+}
+
+/** DNSSEC 验证结果 */
+export interface DnssecResult {
+  domain: string
+  dnssecEnabled: boolean
+  dnskeyRecords: DnskeyRecord[]
+  dsRecords: DsRecord[]
+  rrsigRecords: RrsigRecord[]
+  validationStatus: "secure" | "insecure" | "bogus" | "indeterminate"
+  nameserver: string
+  responseTimeMs: number
+  error?: string
+}

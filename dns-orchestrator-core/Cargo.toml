@@ -7,10 +7,10 @@ description = "Core business logic for DNS Orchestrator"
 authors = ["AptS-1547 <apts-1547@esaps.net>"]
 
 [features]
-default = ["native-tls"]
+default = ["rustls"]
 # TLS 后端选择（二选一）
-native-tls = ["dep:native-tls-crate", "dep:x509-parser", "reqwest/native-tls"]
-rustls = ["dep:rustls", "dep:webpki-roots", "dep:x509-parser", "reqwest/rustls-tls"]
+# native-tls = ["dep:native-tls-crate", "dep:x509-parser", "reqwest/native-tls"]  # 已弃用，统一使用 rustls
+rustls = ["dep:rustls", "dep:tokio-rustls", "dep:rustls-pki-types", "dep:webpki-roots", "dep:x509-parser", "reqwest/rustls-tls"]
 
 [dependencies]
 # DNS Provider 抽象库
@@ -36,6 +36,7 @@ aes-gcm = "0.10"
 pbkdf2 = { version = "0.12", features = ["simple"] }
 sha2 = "0.10"
 base64 = "0.22"
+hex = "0.4"
 rand = "0.9"
 
 # Toolbox: WHOIS
@@ -43,7 +44,7 @@ whois-rust = { version = "1.6", features = ["tokio"] }
 regex = "1"
 
 # Toolbox: DNS 查询
-hickory-resolver = "0.25"
+hickory-resolver = { version = "0.25", features = ["dnssec-ring"] }
 
 # Toolbox: IP 查询
 reqwest = { version = "0.12", default-features = false, features = ["json"] }
@@ -51,8 +52,11 @@ reqwest = { version = "0.12", default-features = false, features = ["json"] }
 # SSL 检查 (feature-gated)
 native-tls-crate = { package = "native-tls", version = "0.2", optional = true }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"], optional = true }
+tokio-rustls = { version = "0.26", optional = true }
+rustls-pki-types = { version = "1", optional = true }
 webpki-roots = { version = "1", optional = true }
 x509-parser = { version = "0.18", optional = true }
+url = "2.5.7"
 
 # Clippy 配置
 [lints.rust]

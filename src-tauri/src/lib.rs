@@ -205,6 +205,9 @@ pub fn run() {
         toolbox::dns_lookup,
         toolbox::ip_lookup,
         toolbox::ssl_check,
+        toolbox::http_header_check,
+        toolbox::dns_propagation_check,
+        toolbox::dnssec_check,
     ]);
 
     #[cfg(target_os = "android")]
@@ -234,6 +237,9 @@ pub fn run() {
         toolbox::dns_lookup,
         toolbox::ip_lookup,
         toolbox::ssl_check,
+        toolbox::http_header_check,
+        toolbox::dns_propagation_check,
+        toolbox::dnssec_check,
         // Android updater commands
         updater::check_android_update,
         updater::download_apk,

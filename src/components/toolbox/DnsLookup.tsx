@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { DNS_SERVERS } from "@/constants"
+import { useEnterKeyHandler } from "@/hooks/useEnterKeyHandler"
 import type { DnsLookupResult, DnsLookupType } from "@/types"
 import { DNS_RECORD_TYPES } from "@/types"
 import { HistoryChips } from "./HistoryChips"
@@ -64,11 +65,7 @@ export function DnsLookup() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleLookup()
-    }
-  }
+  const handleKeyDown = useEnterKeyHandler(handleLookup)
 
   const records = result?.records ?? []
 
@@ -169,7 +166,11 @@ export function DnsLookup() {
       {records.length > 0 && (
         <div className="space-y-2 sm:hidden">
           {records.map((record, index) => (
-            <CopyableText key={index} value={record.value} className="block">
+            <CopyableText
+              key={`${record.recordType}-${record.name}-${record.value}-${index}`}
+              value={record.value}
+              className="block"
+            >
               <div className="rounded-lg border bg-card p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="rounded bg-primary/10 px-2 py-0.5 font-medium text-primary text-xs">
@@ -207,7 +208,7 @@ export function DnsLookup() {
             </TableHeader>
             <TableBody>
               {records.map((record, index) => (
-                <TableRow key={index}>
+                <TableRow key={`${record.recordType}-${record.name}-${record.value}-${index}`}>
                   <TableCell>
                     <span className="rounded bg-primary/10 px-2 py-0.5 font-medium text-primary text-xs">
                       {record.recordType}

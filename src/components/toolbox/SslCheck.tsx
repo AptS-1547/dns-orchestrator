@@ -12,7 +12,7 @@ import {
   Unlock,
   XCircle,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { NETWORK } from "@/constants"
+import { useEnterKeyHandler } from "@/hooks/useEnterKeyHandler"
 import type { SslCheckResult } from "@/types"
 import { HistoryChips } from "./HistoryChips"
 import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
@@ -98,7 +99,7 @@ export function SslCheck() {
 
   const { isLoading, result, execute } = useToolboxQuery<SslCheckResult>()
 
-  const handleCheck = () => {
+  const handleLookup = () => {
     const trimmed = domain.trim()
     if (!trimmed) {
       toast.error(t("toolbox.enterDomain"))
@@ -120,11 +121,7 @@ export function SslCheck() {
     })
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleCheck()
-    }
-  }
+  const handleKeyDown = useEnterKeyHandler(handleLookup)
 
   const handleHistorySelect = (item: { query: string }) => {
     const parts = item.query.split(":")
@@ -137,7 +134,8 @@ export function SslCheck() {
     }
   }
 
-  const statusInfo = getStatusInfo(result, t)
+  // 使用 useMemo 缓存状态信息计算
+  const statusInfo = useMemo(() => getStatusInfo(result, t), [result, t])
   const cert = result?.certInfo
 
   return (
@@ -165,7 +163,7 @@ export function SslCheck() {
             />
           </div>
         </div>
-        <Button onClick={handleCheck} disabled={isLoading} className="w-full sm:w-auto">
+        <Button onClick={handleLookup} disabled={isLoading} className="w-full sm:w-auto">
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -280,9 +278,9 @@ export function SslCheck() {
                   title={`${t("toolbox.ssl.san")} (${cert.san.length})`}
                 >
                   <div className="flex flex-wrap gap-2">
-                    {cert.san.map((name, index) => (
+                    {cert.san.map((name) => (
                       <CopyableText
-                        key={index}
+                        key={name}
                         value={name}
                         className="rounded-full bg-primary/10 px-3 py-1 font-mono text-primary text-xs hover:bg-primary/20"
                       >
@@ -312,7 +310,10 @@ export function SslCheck() {
                       <div className="border-t p-4">
                         <div className="space-y-3">
                           {cert.certificateChain.map((chainCert, index) => (
-                            <div key={index} className="rounded border p-3 text-sm">
+                            <div
+                              key={`cert-${index}-${chainCert.subject}`}
+                              className="rounded border p-3 text-sm"
+                            >
                               <div className="mb-1 flex items-center gap-2">
                                 <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground text-xs">
                                   {index + 1}

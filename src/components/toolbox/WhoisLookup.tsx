@@ -75,8 +75,8 @@ export function WhoisLookup() {
             <div className="text-sm">
               <span className="text-muted-foreground">{t("toolbox.whois.nameServers")}:</span>
               <div className="mt-1 flex flex-wrap gap-1">
-                {result.nameServers.map((ns, i) => (
-                  <span key={i} className="rounded bg-muted px-2 py-0.5 font-mono text-xs">
+                {result.nameServers.map((ns) => (
+                  <span key={ns} className="rounded bg-muted px-2 py-0.5 font-mono text-xs">
                     {ns}
                   </span>
                 ))}
@@ -88,8 +88,8 @@ export function WhoisLookup() {
             <div className="text-sm">
               <span className="text-muted-foreground">{t("toolbox.whois.status")}:</span>
               <div className="mt-1 flex flex-wrap gap-1">
-                {result.status.map((s, i) => (
-                  <span key={i} className="rounded bg-muted px-2 py-0.5 text-xs">
+                {result.status.map((s) => (
+                  <span key={s} className="rounded bg-muted px-2 py-0.5 text-xs">
                     {s}
                   </span>
                 ))}
@@ -113,7 +113,7 @@ export function WhoisLookup() {
                 {t("toolbox.whois.rawData")}
               </Button>
               {showRaw && (
-                <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-all rounded bg-muted p-3 font-mono text-xs sm:max-h-64">
+                <pre className="mt-2 max-h-[300px] overflow-y-auto whitespace-pre-wrap break-all rounded bg-muted p-3 font-mono text-xs">
                   {result.raw}
                 </pre>
               )}

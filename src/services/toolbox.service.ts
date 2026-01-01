@@ -1,10 +1,10 @@
-/**
- * 工具箱服务
- */
-
 import type {
   ApiResponse,
   DnsLookupResult,
+  DnsPropagationResult,
+  DnssecResult,
+  HttpHeaderCheckRequest,
+  HttpHeaderCheckResult,
   IpLookupResult,
   SslCheckResult,
   WhoisResult,
@@ -30,6 +30,21 @@ class ToolboxService {
 
   sslCheck(domain: string, port?: number): Promise<ApiResponse<SslCheckResult>> {
     return transport.invoke("ssl_check", { domain, port })
+  }
+
+  httpHeaderCheck(request: HttpHeaderCheckRequest): Promise<ApiResponse<HttpHeaderCheckResult>> {
+    return transport.invoke("http_header_check", { request })
+  }
+
+  dnsPropagationCheck(
+    domain: string,
+    recordType: string
+  ): Promise<ApiResponse<DnsPropagationResult>> {
+    return transport.invoke("dns_propagation_check", { domain, recordType })
+  }
+
+  dnssecCheck(domain: string, nameserver: string | null): Promise<ApiResponse<DnssecResult>> {
+    return transport.invoke("dnssec_check", { domain, nameserver })
   }
 }
 

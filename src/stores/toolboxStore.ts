@@ -9,6 +9,7 @@ interface ToolboxState {
   addHistory: (item: Omit<QueryHistoryItem, "id" | "timestamp">) => void
   removeHistory: (id: string) => void
   clearHistory: () => void
+  clearHistoryByType: (type: QueryHistoryItem["type"]) => void
 }
 
 export const useToolboxStore = create<ToolboxState>()(
@@ -57,6 +58,11 @@ export const useToolboxStore = create<ToolboxState>()(
         })),
 
       clearHistory: () => set({ history: [] }),
+
+      clearHistoryByType: (type) =>
+        set((state) => ({
+          history: state.history.filter((h) => h.type !== type),
+        })),
     }),
     {
       name: "toolbox-history",

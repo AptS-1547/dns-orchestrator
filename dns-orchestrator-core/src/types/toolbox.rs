@@ -151,3 +151,217 @@ pub struct CertChainItem {
     /// 是否为 CA 证书
     pub is_ca: bool,
 }
+
+/// HTTP 请求方法
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HttpMethod {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    PATCH,
+    OPTIONS,
+}
+
+/// HTTP 请求头
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeader {
+    /// 请求头名称
+    pub name: String,
+    /// 请求头值
+    pub value: String,
+}
+
+/// HTTP 头检查请求
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeaderCheckRequest {
+    /// 目标 URL
+    pub url: String,
+    /// HTTP 方法
+    pub method: HttpMethod,
+    /// 自定义请求头列表
+    pub custom_headers: Vec<HttpHeader>,
+    /// 请求体（仅 POST/PUT/PATCH）
+    pub body: Option<String>,
+    /// 请求体内容类型
+    pub content_type: Option<String>,
+}
+
+/// 安全头分析结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SecurityHeaderAnalysis {
+    /// 安全头名称
+    pub name: String,
+    /// 是否存在
+    pub present: bool,
+    /// 头值（如果存在）
+    pub value: Option<String>,
+    /// 状态: "good" | "warning" | "missing"
+    pub status: String,
+    /// 建议
+    pub recommendation: Option<String>,
+}
+
+/// HTTP 头检查结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeaderCheckResult {
+    /// 请求的 URL
+    pub url: String,
+    /// HTTP 状态码
+    pub status_code: u16,
+    /// 状态文本
+    pub status_text: String,
+    /// 响应时间（毫秒）
+    pub response_time_ms: u64,
+    /// 所有响应头
+    pub headers: Vec<HttpHeader>,
+    /// 安全头分析
+    pub security_analysis: Vec<SecurityHeaderAnalysis>,
+    /// Content-Length
+    pub content_length: Option<u64>,
+    /// 原始请求报文
+    pub raw_request: String,
+    /// 原始响应报文
+    pub raw_response: String,
+}
+
+/// DNS 传播检查服务器信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationServer {
+    /// 服务器名称（如 "Google DNS"）
+    pub name: String,
+    /// 服务器 IP 地址
+    pub ip: String,
+    /// 地区（如 "美国（北美）"）
+    pub region: String,
+    /// 国家代码（如 "US"）
+    pub country_code: String,
+}
+
+/// 单个 DNS 服务器的查询结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationServerResult {
+    /// 服务器信息
+    pub server: DnsPropagationServer,
+    /// 查询状态: "success" | "timeout" | "error"
+    pub status: String,
+    /// 查询记录列表（成功时）
+    pub records: Vec<DnsLookupRecord>,
+    /// 错误信息（失败时）
+    pub error: Option<String>,
+    /// 查询耗时（毫秒）
+    pub response_time_ms: u64,
+}
+
+/// DNS 传播检查结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnsPropagationResult {
+    /// 查询的域名
+    pub domain: String,
+    /// 查询的记录类型
+    pub record_type: String,
+    /// 各服务器查询结果
+    pub results: Vec<DnsPropagationServerResult>,
+    /// 总查询时间（毫秒）
+    pub total_time_ms: u64,
+    /// 传播一致性（0-100%）
+    pub consistency_percentage: f32,
+    /// 唯一值列表（用于检测一致性）
+    pub unique_values: Vec<String>,
+}
+
+/// DNSSEC DNSKEY 记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnskeyRecord {
+    /// 标志位（256=ZSK, 257=KSK）
+    pub flags: u16,
+    /// 协议（始终为 3）
+    pub protocol: u8,
+    /// 算法编号
+    pub algorithm: u8,
+    /// 算法名称
+    pub algorithm_name: String,
+    /// 公钥（Base64 编码）
+    pub public_key: String,
+    /// 密钥标签
+    pub key_tag: u16,
+    /// 密钥类型: "ZSK" | "KSK"
+    pub key_type: String,
+}
+
+/// DNSSEC DS 记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DsRecord {
+    /// 密钥标签
+    pub key_tag: u16,
+    /// 算法编号
+    pub algorithm: u8,
+    /// 算法名称
+    pub algorithm_name: String,
+    /// 摘要类型（1=SHA-1, 2=SHA-256, 4=SHA-384）
+    pub digest_type: u8,
+    /// 摘要类型名称
+    pub digest_type_name: String,
+    /// 摘要（十六进制）
+    pub digest: String,
+}
+
+/// DNSSEC RRSIG 记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RrsigRecord {
+    /// 覆盖的记录类型
+    pub type_covered: String,
+    /// 算法编号
+    pub algorithm: u8,
+    /// 算法名称
+    pub algorithm_name: String,
+    /// 标签数
+    pub labels: u8,
+    /// 原始 TTL
+    pub original_ttl: u32,
+    /// 签名过期时间
+    pub signature_expiration: String,
+    /// 签名生成时间
+    pub signature_inception: String,
+    /// 密钥标签
+    pub key_tag: u16,
+    /// 签名者名称
+    pub signer_name: String,
+    /// 签名数据（Base64）
+    pub signature: String,
+}
+
+/// DNSSEC 验证结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnssecResult {
+    /// 查询的域名
+    pub domain: String,
+    /// DNSSEC 是否启用
+    pub dnssec_enabled: bool,
+    /// DNSKEY 记录列表
+    pub dnskey_records: Vec<DnskeyRecord>,
+    /// DS 记录列表
+    pub ds_records: Vec<DsRecord>,
+    /// RRSIG 记录列表
+    pub rrsig_records: Vec<RrsigRecord>,
+    /// 验证状态: "secure" | "insecure" | "bogus" | "indeterminate"
+    pub validation_status: String,
+    /// 使用的 DNS 服务器
+    pub nameserver: String,
+    /// 查询耗时（毫秒）
+    pub response_time_ms: u64,
+    /// 错误信息（查询失败时）
+    pub error: Option<String>,
+}

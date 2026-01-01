@@ -1,6 +1,5 @@
-import type { ReactNode } from "react"
-import { useTranslation } from "react-i18next"
-import { toast } from "sonner"
+import { memo, type ReactNode } from "react"
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
 
 interface CopyableTextProps {
   /** 要复制的值 */
@@ -15,12 +14,11 @@ interface CopyableTextProps {
  * 可复制文本组件
  * 点击后复制到剪贴板并显示成功提示
  */
-export function CopyableText({ value, children, className = "" }: CopyableTextProps) {
-  const { t } = useTranslation()
+function CopyableTextComponent({ value, children, className = "" }: CopyableTextProps) {
+  const copyToClipboard = useCopyToClipboard()
 
   const handleClick = () => {
-    navigator.clipboard.writeText(value)
-    toast.success(t("common.copied"))
+    copyToClipboard(value)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -41,3 +39,5 @@ export function CopyableText({ value, children, className = "" }: CopyableTextPr
     </span>
   )
 }
+
+export const CopyableText = memo(CopyableTextComponent)

@@ -19,6 +19,14 @@ pub use dns_orchestrator_provider::{
     UpdateDnsRecordRequest,
 };
 
+// 工具箱类型
+pub use dns_orchestrator_core::types::{
+    BatchDeleteRequest, CertChainItem, DnsLookupRecord, DnsLookupResult, DnsPropagationResult,
+    DnsPropagationServer, DnsPropagationServerResult, DnskeyRecord, DnssecResult, DsRecord,
+    HttpHeader, HttpHeaderCheckRequest, HttpHeaderCheckResult, HttpMethod, IpGeoInfo,
+    IpLookupResult, RrsigRecord, SecurityHeaderAnalysis, SslCertInfo, SslCheckResult, WhoisResult,
+};
+
 // ============ 应用层 Provider 相关类型 ============
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,127 +99,7 @@ impl<T> ApiResponse<T> {
     }
 }
 
-// ============ 工具箱相关类型 ============
-
-/// WHOIS 查询结果
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WhoisResult {
-    pub domain: String,
-    pub registrar: Option<String>,
-    pub creation_date: Option<String>,
-    pub expiration_date: Option<String>,
-    pub updated_date: Option<String>,
-    pub name_servers: Vec<String>,
-    pub status: Vec<String>,
-    pub raw: String,
-}
-
-/// DNS 查询记录结果
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DnsLookupRecord {
-    pub record_type: String,
-    pub name: String,
-    pub value: String,
-    pub ttl: u32,
-    pub priority: Option<u16>,
-}
-
-/// DNS 查询结果（包含 nameserver 信息）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DnsLookupResult {
-    /// 使用的 DNS 服务器
-    pub nameserver: String,
-    /// 查询记录列表
-    pub records: Vec<DnsLookupRecord>,
-}
-
-/// IP 地理位置信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IpGeoInfo {
-    pub ip: String,
-    /// IP 版本: "IPv4" 或 "IPv6"
-    pub ip_version: String,
-    pub country: Option<String>,
-    pub country_code: Option<String>,
-    pub region: Option<String>,
-    pub city: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub timezone: Option<String>,
-    pub isp: Option<String>,
-    pub org: Option<String>,
-    pub asn: Option<String>,
-    pub as_name: Option<String>,
-}
-
-/// IP 查询结果（支持域名解析多个 IP）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct IpLookupResult {
-    /// 查询的原始输入（IP 或域名）
-    pub query: String,
-    /// 是否为域名查询
-    pub is_domain: bool,
-    /// IP 地理位置结果列表
-    pub results: Vec<IpGeoInfo>,
-}
-
-/// SSL 证书信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SslCertInfo {
-    pub domain: String,
-    pub issuer: String,
-    pub subject: String,
-    pub valid_from: String,
-    pub valid_to: String,
-    pub days_remaining: i64,
-    pub is_expired: bool,
-    pub is_valid: bool,
-    pub san: Vec<String>,
-    pub serial_number: String,
-    pub signature_algorithm: String,
-    pub certificate_chain: Vec<CertChainItem>,
-}
-
-/// SSL 检查结果（包含连接状态）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SslCheckResult {
-    /// 查询的域名
-    pub domain: String,
-    /// 检查的端口
-    pub port: u16,
-    /// 连接状态: "https" | "http" | "failed"
-    pub connection_status: String,
-    /// 证书信息（仅当 HTTPS 连接成功时存在）
-    pub cert_info: Option<SslCertInfo>,
-    /// 错误信息（连接失败时）
-    pub error: Option<String>,
-}
-
-/// 证书链项
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CertChainItem {
-    pub subject: String,
-    pub issuer: String,
-    pub is_ca: bool,
-}
-
 // ============ 批量操作相关类型 ============
-
-/// 批量删除 DNS 记录请求
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BatchDeleteRequest {
-    pub domain_id: String,
-    pub record_ids: Vec<String>,
-}
 
 /// 批量删除结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
