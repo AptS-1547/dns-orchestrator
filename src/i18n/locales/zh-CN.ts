@@ -392,6 +392,9 @@ export default {
       rawMessages: "原始报文",
       rawRequest: "原始请求",
       rawResponse: "原始响应",
+      copyHeader: "复制",
+      showLess: "收起",
+      showFullValue: "展开完整值",
       status: {
         good: "良好",
         warning: "建议",

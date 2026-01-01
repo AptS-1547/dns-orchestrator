@@ -1,25 +1,8 @@
-import {
-  AlertCircle,
-  Copy,
-  Info,
-  Loader2,
-  Plus,
-  Send,
-  Shield,
-  Trash2,
-  FileCode,
-} from "lucide-react"
-import { useState, useCallback } from "react"
+import { Copy, FileCode, Info, Loader2, Plus, Send, Shield, Trash2 } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
-
-import { toolboxService } from "@/services/toolbox.service"
-import type {
-  HttpHeader,
-  HttpHeaderCheckRequest,
-  HttpHeaderCheckResult,
-  HttpMethod,
-  SecurityHeaderAnalysis,
-} from "@/types"
+import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -32,8 +15,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
+import { toolboxService } from "@/services/toolbox.service"
+import type {
+  HttpHeader,
+  HttpHeaderCheckRequest,
+  HttpHeaderCheckResult,
+  HttpMethod,
+  SecurityHeaderAnalysis,
+} from "@/types"
 import { HeaderItem } from "./HeaderItem"
+import { useToolboxQuery } from "./hooks/useToolboxQuery"
 
 const HTTP_METHODS: HttpMethod[] = ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
 
@@ -47,10 +38,8 @@ export function HttpHeaderCheck() {
   const [body, setBody] = useState("")
   const [contentType, setContentType] = useState("application/json")
 
-  // Result state
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<HttpHeaderCheckResult | null>(null)
-  const [error, setError] = useState("")
+  // Query Hook
+  const { isLoading, result, execute } = useToolboxQuery<HttpHeaderCheckResult>()
 
   // UI state
   const [expandedHeaders, setExpandedHeaders] = useState<Set<number>>(new Set())
@@ -71,35 +60,19 @@ export function HttpHeaderCheck() {
 
   const handleCheck = async () => {
     if (!url) {
-      setError(t("toolbox.httpHeaderCheck.urlRequired"))
+      toast.error(t("toolbox.httpHeaderCheck.urlRequired"))
       return
     }
 
-    setLoading(true)
-    setError("")
-    setResult(null)
-
-    try {
-      const request: HttpHeaderCheckRequest = {
-        url,
-        method,
-        customHeaders: customHeaders.filter((h) => h.name && h.value),
-        body: ["POST", "PUT", "PATCH"].includes(method) && body ? body : undefined,
-        contentType: ["POST", "PUT", "PATCH"].includes(method) && body ? contentType : undefined,
-      }
-
-      const response = await toolboxService.httpHeaderCheck(request)
-
-      if (response.success && response.data) {
-        setResult(response.data)
-      } else {
-        setError(t("common.unknownError"))
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setLoading(false)
+    const request: HttpHeaderCheckRequest = {
+      url,
+      method,
+      customHeaders: customHeaders.filter((h) => h.name && h.value),
+      body: ["POST", "PUT", "PATCH"].includes(method) && body ? body : undefined,
+      contentType: ["POST", "PUT", "PATCH"].includes(method) && body ? contentType : undefined,
     }
+
+    await execute(() => toolboxService.httpHeaderCheck(request), { type: "http", query: url })
   }
 
   const copyToClipboard = (text: string) => {
@@ -227,8 +200,8 @@ export function HttpHeaderCheck() {
             </div>
           )}
 
-          <Button onClick={handleCheck} disabled={loading || !url} className="w-full">
-            {loading ? (
+          <Button onClick={handleCheck} disabled={isLoading || !url} className="w-full">
+            {isLoading ? (
               <>
                 <Loader2 className="size-4 mr-2 animate-spin" />
                 {t("common.loading")}
@@ -240,13 +213,6 @@ export function HttpHeaderCheck() {
               </>
             )}
           </Button>
-
-          {error && (
-            <div className="flex items-start gap-2 p-3 bg-destructive/10 text-destructive rounded-md">
-              <AlertCircle className="size-5 mt-0.5 shrink-0" />
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
         </CardContent>
       </Card>
 

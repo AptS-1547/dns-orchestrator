@@ -399,6 +399,9 @@ export default {
       rawMessages: "Raw Messages",
       rawRequest: "Raw Request",
       rawResponse: "Raw Response",
+      copyHeader: "Copy",
+      showLess: "Show less",
+      showFullValue: "Show full value",
       status: {
         good: "Good",
         warning: "Warning",

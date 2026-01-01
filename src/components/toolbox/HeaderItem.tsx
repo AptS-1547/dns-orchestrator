@@ -1,5 +1,6 @@
-import { memo } from "react"
 import { ChevronDown, ChevronUp, Copy } from "lucide-react"
+import { memo } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { HttpHeader } from "@/types"
@@ -8,11 +9,12 @@ interface HeaderItemProps {
   header: HttpHeader
   index: number
   isExpanded: boolean
-  onToggle: (index: number, isOpen: boolean) => void
-  onCopy: (header: HttpHeader) => void
+  onToggle: (isOpen: boolean) => void
+  onCopy: () => void
 }
 
 function HeaderItemComponent({ header, isExpanded, onToggle, onCopy }: HeaderItemProps) {
+  const { t } = useTranslation()
   const isLongValue = header.value.length > 80
 
   return (
@@ -22,7 +24,7 @@ function HeaderItemComponent({ header, isExpanded, onToggle, onCopy }: HeaderIte
         <code className="text-sm font-semibold font-mono">{header.name}</code>
         <Button variant="ghost" size="sm" onClick={onCopy} className="h-7">
           <Copy className="size-3.5 mr-1" />
-          <span className="text-xs">Copy</span>
+          <span className="text-xs">{t("toolbox.httpHeaderCheck.copyHeader")}</span>
         </Button>
       </div>
 
@@ -39,12 +41,12 @@ function HeaderItemComponent({ header, isExpanded, onToggle, onCopy }: HeaderIte
               {isExpanded ? (
                 <>
                   <ChevronUp className="size-3.5 mr-1 transition-transform duration-200" />
-                  Show less
+                  {t("toolbox.httpHeaderCheck.showLess")}
                 </>
               ) : (
                 <>
                   <ChevronDown className="size-3.5 mr-1 transition-transform duration-200" />
-                  Show full value
+                  {t("toolbox.httpHeaderCheck.showFullValue")}
                 </>
               )}
             </Button>
