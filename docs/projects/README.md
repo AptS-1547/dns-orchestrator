@@ -27,7 +27,29 @@ DNS Orchestrator 的内部项目跟踪和规划。
 - Traceroute
 - 批量 DNS 查询
 
-### 2. [CredentialStore Trait 重构](./credentialstore-refactor/)
+### 2. [域名元数据系统](./domain-metadata/)
+
+**状态**: 🔄 进行中
+**优先级**: 中
+**Issue**: [#31](https://github.com/AptS-1547/dns-orchestrator/issues/31)
+
+为域名添加用户自定义元数据功能（收藏、标签、备注等）。
+
+**Phase 1（进行中）**:
+- 基础收藏功能
+- 后端持久化（tauri-plugin-store）
+- 星标按钮 UI
+
+**Phase 2（计划中）**:
+- 标签系统
+- 标签筛选和管理
+
+**Phase 3（计划中）**:
+- 颜色标记
+- 备注编辑
+- 元数据编辑面板
+
+### 3. [CredentialStore Trait 重构](./credentialstore-refactor/)
 
 **状态**: ✅ 已完成（v1.7.0）
 **Issue**: [#28](https://github.com/AptS-1547/dns-orchestrator/issues/28)
