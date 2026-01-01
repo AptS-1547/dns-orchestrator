@@ -2,9 +2,9 @@ use dns_orchestrator_core::services::ToolboxService;
 
 use crate::types::{
     ApiResponse, CertChainItem, DnsLookupRecord, DnsLookupResult, DnsPropagationResult,
-    DnsPropagationServer, DnsPropagationServerResult, HttpHeader, HttpHeaderCheckRequest,
-    HttpHeaderCheckResult, HttpMethod, IpGeoInfo, IpLookupResult, SecurityHeaderAnalysis,
-    SslCertInfo, SslCheckResult, WhoisResult,
+    DnsPropagationServer, DnsPropagationServerResult, DnskeyRecord, DnssecResult, DsRecord,
+    HttpHeader, HttpHeaderCheckRequest, HttpHeaderCheckResult, HttpMethod, IpGeoInfo,
+    IpLookupResult, RrsigRecord, SecurityHeaderAnalysis, SslCertInfo, SslCheckResult, WhoisResult,
 };
 
 // 类型转换辅助函数
@@ -215,6 +215,58 @@ fn convert_dns_propagation_result(
     }
 }
 
+fn convert_dnssec_result(result: dns_orchestrator_core::types::DnssecResult) -> DnssecResult {
+    DnssecResult {
+        domain: result.domain,
+        dnssec_enabled: result.dnssec_enabled,
+        dnskey_records: result
+            .dnskey_records
+            .into_iter()
+            .map(|r| DnskeyRecord {
+                flags: r.flags,
+                protocol: r.protocol,
+                algorithm: r.algorithm,
+                algorithm_name: r.algorithm_name,
+                public_key: r.public_key,
+                key_tag: r.key_tag,
+                key_type: r.key_type,
+            })
+            .collect(),
+        ds_records: result
+            .ds_records
+            .into_iter()
+            .map(|r| DsRecord {
+                key_tag: r.key_tag,
+                algorithm: r.algorithm,
+                algorithm_name: r.algorithm_name,
+                digest_type: r.digest_type,
+                digest_type_name: r.digest_type_name,
+                digest: r.digest,
+            })
+            .collect(),
+        rrsig_records: result
+            .rrsig_records
+            .into_iter()
+            .map(|r| RrsigRecord {
+                type_covered: r.type_covered,
+                algorithm: r.algorithm,
+                algorithm_name: r.algorithm_name,
+                labels: r.labels,
+                original_ttl: r.original_ttl,
+                signature_expiration: r.signature_expiration,
+                signature_inception: r.signature_inception,
+                key_tag: r.key_tag,
+                signer_name: r.signer_name,
+                signature: r.signature,
+            })
+            .collect(),
+        validation_status: result.validation_status,
+        nameserver: result.nameserver,
+        response_time_ms: result.response_time_ms,
+        error: result.error,
+    }
+}
+
 /// WHOIS 查询
 #[tauri::command]
 pub async fn whois_lookup(domain: String) -> Result<ApiResponse<WhoisResult>, String> {
@@ -288,4 +340,17 @@ pub async fn dns_propagation_check(
         .map_err(|e| e.to_string())?;
 
     Ok(ApiResponse::success(convert_dns_propagation_result(result)))
+}
+
+/// DNSSEC 验证
+#[tauri::command]
+pub async fn dnssec_check(
+    domain: String,
+    nameserver: Option<String>,
+) -> Result<ApiResponse<DnssecResult>, String> {
+    let result = ToolboxService::dnssec_check(&domain, nameserver.as_deref())
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse::success(convert_dnssec_result(result)))
 }

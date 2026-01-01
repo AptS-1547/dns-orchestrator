@@ -4,6 +4,7 @@
 
 mod dns;
 mod dns_propagation;
+mod dnssec;
 mod http_headers;
 mod ip;
 mod ssl;
@@ -11,7 +12,8 @@ mod whois;
 
 use crate::error::CoreResult;
 use crate::types::{
-    DnsLookupResult, DnsPropagationResult, HttpHeaderCheckResult, IpLookupResult, WhoisResult,
+    DnsLookupResult, DnsPropagationResult, DnssecResult, HttpHeaderCheckResult, IpLookupResult,
+    WhoisResult,
 };
 
 /// 嵌入 WHOIS 服务器配置
@@ -62,5 +64,10 @@ impl ToolboxService {
         record_type: &str,
     ) -> CoreResult<DnsPropagationResult> {
         dns_propagation::dns_propagation_check(domain, record_type).await
+    }
+
+    /// DNSSEC 验证
+    pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<DnssecResult> {
+        dnssec::dnssec_check(domain, nameserver).await
     }
 }

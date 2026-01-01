@@ -293,6 +293,62 @@ pub struct DnsPropagationResult {
     pub unique_values: Vec<String>,
 }
 
+/// DNSSEC DNSKEY 记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnskeyRecord {
+    pub flags: u16,
+    pub protocol: u8,
+    pub algorithm: u8,
+    pub algorithm_name: String,
+    pub public_key: String,
+    pub key_tag: u16,
+    pub key_type: String,
+}
+
+/// DNSSEC DS 记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DsRecord {
+    pub key_tag: u16,
+    pub algorithm: u8,
+    pub algorithm_name: String,
+    pub digest_type: u8,
+    pub digest_type_name: String,
+    pub digest: String,
+}
+
+/// DNSSEC RRSIG 记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RrsigRecord {
+    pub type_covered: String,
+    pub algorithm: u8,
+    pub algorithm_name: String,
+    pub labels: u8,
+    pub original_ttl: u32,
+    pub signature_expiration: String,
+    pub signature_inception: String,
+    pub key_tag: u16,
+    pub signer_name: String,
+    pub signature: String,
+}
+
+/// DNSSEC 验证结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DnssecResult {
+    pub domain: String,
+    pub dnssec_enabled: bool,
+    pub dnskey_records: Vec<DnskeyRecord>,
+    pub ds_records: Vec<DsRecord>,
+    pub rrsig_records: Vec<RrsigRecord>,
+    pub validation_status: String,
+    pub nameserver: String,
+    pub response_time_ms: u64,
+    pub error: Option<String>,
+}
+
 // ============ 批量操作相关类型 ============
 
 /// 批量删除 DNS 记录请求

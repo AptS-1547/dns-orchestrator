@@ -135,7 +135,7 @@ export interface HttpHeaderCheckResult {
 /** 查询历史项 */
 export interface QueryHistoryItem {
   id: string
-  type: "whois" | "dns" | "ip" | "ssl" | "http" | "dns-propagation"
+  type: "whois" | "dns" | "ip" | "ssl" | "http" | "dns-propagation" | "dnssec"
   query: string
   recordType?: string
   timestamp: number
@@ -183,4 +183,52 @@ export interface DnsPropagationResult {
   totalTimeMs: number
   consistencyPercentage: number
   uniqueValues: string[]
+}
+
+/** DNSSEC DNSKEY 记录 */
+export interface DnskeyRecord {
+  flags: number
+  protocol: number
+  algorithm: number
+  algorithmName: string
+  publicKey: string
+  keyTag: number
+  keyType: string
+}
+
+/** DNSSEC DS 记录 */
+export interface DsRecord {
+  keyTag: number
+  algorithm: number
+  algorithmName: string
+  digestType: number
+  digestTypeName: string
+  digest: string
+}
+
+/** DNSSEC RRSIG 记录 */
+export interface RrsigRecord {
+  typeCovered: string
+  algorithm: number
+  algorithmName: string
+  labels: number
+  originalTtl: number
+  signatureExpiration: string
+  signatureInception: string
+  keyTag: number
+  signerName: string
+  signature: string
+}
+
+/** DNSSEC 验证结果 */
+export interface DnssecResult {
+  domain: string
+  dnssecEnabled: boolean
+  dnskeyRecords: DnskeyRecord[]
+  dsRecords: DsRecord[]
+  rrsigRecords: RrsigRecord[]
+  validationStatus: "secure" | "insecure" | "bogus" | "indeterminate"
+  nameserver: string
+  responseTimeMs: number
+  error?: string
 }

@@ -15,9 +15,9 @@ pub use export::{
 pub use response::{ApiResponse, BatchDeleteFailure, BatchDeleteRequest, BatchDeleteResult};
 pub use toolbox::{
     CertChainItem, DnsLookupRecord, DnsLookupResult, DnsPropagationResult, DnsPropagationServer,
-    DnsPropagationServerResult, HttpHeader, HttpHeaderCheckRequest, HttpHeaderCheckResult,
-    HttpMethod, IpGeoInfo, IpLookupResult, SecurityHeaderAnalysis, SslCertInfo, SslCheckResult,
-    WhoisResult,
+    DnsPropagationServerResult, DnskeyRecord, DnssecResult, DsRecord, HttpHeader,
+    HttpHeaderCheckRequest, HttpHeaderCheckResult, HttpMethod, IpGeoInfo, IpLookupResult,
+    RrsigRecord, SecurityHeaderAnalysis, SslCertInfo, SslCheckResult, WhoisResult,
 };
 
 // Re-export provider 库的公共类型

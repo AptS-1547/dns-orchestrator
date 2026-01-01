@@ -36,6 +36,7 @@ aes-gcm = "0.10"
 pbkdf2 = { version = "0.12", features = ["simple"] }
 sha2 = "0.10"
 base64 = "0.22"
+hex = "0.4"
 rand = "0.9"
 
 # Toolbox: WHOIS
@@ -43,7 +44,7 @@ whois-rust = { version = "1.6", features = ["tokio"] }
 regex = "1"
 
 # Toolbox: DNS 查询
-hickory-resolver = "0.25"
+hickory-resolver = { version = "0.25", features = ["dnssec-ring"] }
 
 # Toolbox: IP 查询
 reqwest = { version = "0.12", default-features = false, features = ["json"] }

@@ -1,4 +1,4 @@
-import { FileText, Globe, Lock, MapPin, Network, Radar, Wrench } from "lucide-react"
+import { FileText, Globe, Lock, MapPin, Network, Radar, Shield, Wrench } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
@@ -15,6 +15,7 @@ import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { DnsLookup } from "./DnsLookup"
 import { DnsPropagation } from "./DnsPropagation"
+import { DnssecCheck } from "./DnssecCheck"
 import { HttpHeaderCheck } from "./HttpHeaderCheck"
 import { IpLookup } from "./IpLookup"
 import { SslCheck } from "./SslCheck"
@@ -27,6 +28,7 @@ const TABS = [
   { id: "http", icon: Network, label: "HTTP" },
   { id: "ip", icon: MapPin, label: "IP" },
   { id: "dns-propagation", icon: Radar, label: "DNS Propagation" },
+  { id: "dnssec", icon: Shield, label: "DNSSEC" },
 ] as const
 
 export function ToolboxPage() {
@@ -67,6 +69,8 @@ export function ToolboxPage() {
         return <IpLookup />
       case "dns-propagation":
         return <DnsPropagation />
+      case "dnssec":
+        return <DnssecCheck />
       default:
         return null
     }
@@ -154,6 +158,9 @@ export function ToolboxPage() {
             </TabsContent>
             <TabsContent value="dns-propagation" className="fade-in-0 mt-0 animate-in duration-200">
               <DnsPropagation />
+            </TabsContent>
+            <TabsContent value="dnssec" className="fade-in-0 mt-0 animate-in duration-200">
+              <DnssecCheck />
             </TabsContent>
           </div>
         </ScrollArea>

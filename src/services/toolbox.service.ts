@@ -2,6 +2,7 @@ import type {
   ApiResponse,
   DnsLookupResult,
   DnsPropagationResult,
+  DnssecResult,
   HttpHeaderCheckRequest,
   HttpHeaderCheckResult,
   IpLookupResult,
@@ -40,6 +41,10 @@ class ToolboxService {
     recordType: string
   ): Promise<ApiResponse<DnsPropagationResult>> {
     return transport.invoke("dns_propagation_check", { domain, recordType })
+  }
+
+  dnssecCheck(domain: string, nameserver: string | null): Promise<ApiResponse<DnssecResult>> {
+    return transport.invoke("dnssec_check", { domain, nameserver })
   }
 }
 

@@ -11,7 +11,9 @@ import type {
   CreateAccountRequest,
   CreateDnsRecordRequest,
   DnsLookupResult,
+  DnsPropagationResult,
   DnsRecord,
+  DnssecResult,
   Domain,
   ExportAccountsRequest,
   ExportAccountsResponse,
@@ -129,6 +131,14 @@ export interface CommandMap {
   http_header_check: {
     args: { request: HttpHeaderCheckRequest }
     result: ApiResponse<HttpHeaderCheckResult>
+  }
+  dns_propagation_check: {
+    args: { domain: string; recordType: string }
+    result: ApiResponse<DnsPropagationResult>
+  }
+  dnssec_check: {
+    args: { domain: string; nameserver: string | null }
+    result: ApiResponse<DnssecResult>
   }
 }
 
