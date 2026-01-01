@@ -1,5 +1,5 @@
 import { Loader2, Search } from "lucide-react"
-import type { ReactNode } from "react"
+import { memo, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,7 @@ interface QueryInputProps {
  * 查询输入区组件
  * 包含：输入框 + 额外输入 + 查询按钮 + 历史记录
  */
-export function QueryInput({
+function QueryInputComponent({
   value,
   onChange,
   onSubmit,
@@ -72,3 +72,5 @@ export function QueryInput({
     </>
   )
 }
+
+export const QueryInput = memo(QueryInputComponent)

@@ -1,5 +1,5 @@
 import { Copy, FileCode, Info, Loader2, Plus, Send, Shield, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
 import { toolboxService } from "@/services/toolbox.service"
 import type {
   HttpHeader,
@@ -24,9 +25,30 @@ import type {
   SecurityHeaderAnalysis,
 } from "@/types"
 import { HeaderItem } from "./HeaderItem"
+import { HistoryChips } from "./HistoryChips"
 import { useToolboxQuery } from "./hooks/useToolboxQuery"
 
 const HTTP_METHODS: HttpMethod[] = ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+
+interface CustomHeaderWithId extends HttpHeader {
+  id: string
+}
+
+/** 获取安全头状态徽章样式 */
+function getStatusBadgeVariant(
+  status: SecurityHeaderAnalysis["status"]
+): "default" | "secondary" | "destructive" {
+  switch (status) {
+    case "good":
+      return "default"
+    case "warning":
+      return "secondary"
+    case "missing":
+      return "destructive"
+    default:
+      return "default"
+  }
+}
 
 export function HttpHeaderCheck() {
   const { t } = useTranslation()
@@ -34,7 +56,7 @@ export function HttpHeaderCheck() {
   // Form state
   const [url, setUrl] = useState("")
   const [method, setMethod] = useState<HttpMethod>("GET")
-  const [customHeaders, setCustomHeaders] = useState<HttpHeader[]>([])
+  const [customHeaders, setCustomHeaders] = useState<CustomHeaderWithId[]>([])
   const [body, setBody] = useState("")
   const [contentType, setContentType] = useState("application/json")
 
@@ -44,21 +66,29 @@ export function HttpHeaderCheck() {
   // UI state
   const [expandedHeaders, setExpandedHeaders] = useState<Set<number>>(new Set())
 
-  const handleAddHeader = () => {
-    setCustomHeaders([...customHeaders, { name: "", value: "" }])
-  }
+  // Copy hook
+  const copyToClipboard = useCopyToClipboard()
 
-  const handleRemoveHeader = (index: number) => {
-    setCustomHeaders(customHeaders.filter((_, i) => i !== index))
-  }
+  const handleAddHeader = useCallback(() => {
+    setCustomHeaders((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        name: "",
+        value: "",
+      },
+    ])
+  }, [])
 
-  const handleHeaderChange = (index: number, field: "name" | "value", value: string) => {
-    const newHeaders = [...customHeaders]
-    newHeaders[index][field] = value
-    setCustomHeaders(newHeaders)
-  }
+  const handleRemoveHeader = useCallback((id: string) => {
+    setCustomHeaders((prev) => prev.filter((h) => h.id !== id))
+  }, [])
 
-  const handleCheck = async () => {
+  const handleHeaderChange = useCallback((id: string, field: "name" | "value", value: string) => {
+    setCustomHeaders((prev) => prev.map((h) => (h.id === id ? { ...h, [field]: value } : h)))
+  }, [])
+
+  const handleQuery = useCallback(async () => {
     if (!url) {
       toast.error(t("toolbox.httpHeaderCheck.urlRequired"))
       return
@@ -73,26 +103,7 @@ export function HttpHeaderCheck() {
     }
 
     await execute(() => toolboxService.httpHeaderCheck(request), { type: "http", query: url })
-  }
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-  }
-
-  const getStatusBadgeVariant = (
-    status: SecurityHeaderAnalysis["status"]
-  ): "default" | "secondary" | "destructive" => {
-    switch (status) {
-      case "good":
-        return "default"
-      case "warning":
-        return "secondary"
-      case "missing":
-        return "destructive"
-      default:
-        return "default"
-    }
-  }
+  }, [url, method, customHeaders, body, contentType, execute, t])
 
   return (
     <div className="space-y-6">
@@ -113,7 +124,7 @@ export function HttpHeaderCheck() {
                 placeholder="https://example.com"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCheck()}
+                onKeyDown={(e) => e.key === "Enter" && handleQuery()}
               />
             </div>
             <div>
@@ -133,6 +144,9 @@ export function HttpHeaderCheck() {
             </div>
           </div>
 
+          {/* 历史记录 */}
+          <HistoryChips type="http" onSelect={(item) => setUrl(item.query)} />
+
           {/* 自定义请求头 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -144,26 +158,26 @@ export function HttpHeaderCheck() {
             </div>
             {customHeaders.length > 0 && (
               <div className="space-y-2">
-                {customHeaders.map((header, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                {customHeaders.map((header) => (
+                  <div key={header.id} className="grid grid-cols-1 md:grid-cols-12 gap-2">
                     <Input
                       className="md:col-span-5"
                       placeholder={t("toolbox.httpHeaderCheck.headerName")}
                       value={header.name}
-                      onChange={(e) => handleHeaderChange(index, "name", e.target.value)}
+                      onChange={(e) => handleHeaderChange(header.id, "name", e.target.value)}
                     />
                     <Input
                       className="md:col-span-6"
                       placeholder={t("toolbox.httpHeaderCheck.headerValue")}
                       value={header.value}
-                      onChange={(e) => handleHeaderChange(index, "value", e.target.value)}
+                      onChange={(e) => handleHeaderChange(header.id, "value", e.target.value)}
                     />
                     <Button
                       className="md:col-span-1"
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleRemoveHeader(index)}
+                      onClick={() => handleRemoveHeader(header.id)}
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -200,7 +214,7 @@ export function HttpHeaderCheck() {
             </div>
           )}
 
-          <Button onClick={handleCheck} disabled={isLoading || !url} className="w-full">
+          <Button onClick={handleQuery} disabled={isLoading || !url} className="w-full">
             {isLoading ? (
               <>
                 <Loader2 className="size-4 mr-2 animate-spin" />
@@ -268,9 +282,9 @@ export function HttpHeaderCheck() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {result.securityAnalysis.map((analysis, index) => (
+                {result.securityAnalysis.map((analysis) => (
                   <div
-                    key={index}
+                    key={analysis.name}
                     className="flex items-start justify-between p-3 border rounded-md"
                   >
                     <div className="flex-1 space-y-1">

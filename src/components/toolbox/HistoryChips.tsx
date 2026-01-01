@@ -1,5 +1,18 @@
 import { X } from "lucide-react"
+import { memo, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { useToolboxStore } from "@/stores"
 import type { QueryHistoryItem } from "@/types"
 
@@ -9,12 +22,30 @@ interface HistoryChipsProps {
   maxItems?: number
 }
 
-export function HistoryChips({ type, onSelect, maxItems = 5 }: HistoryChipsProps) {
+function HistoryChipsComponent({ type, onSelect, maxItems = 5 }: HistoryChipsProps) {
   const { t } = useTranslation()
-  const { history, removeHistory, clearHistory } = useToolboxStore()
+  const { history, removeHistory, clearHistoryByType } = useToolboxStore()
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
 
-  // 过滤并限制数量
-  const filteredHistory = history.filter((item) => item.type === type).slice(0, maxItems)
+  // 过滤并限制数量 - 使用 useMemo 缓存
+  const filteredHistory = useMemo(
+    () => history.filter((item) => item.type === type).slice(0, maxItems),
+    [history, type, maxItems]
+  )
+
+  // 删除单条历史记录
+  const handleRemove = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    removeHistory(id)
+    toast.success(t("toolbox.historyRemoved"))
+  }
+
+  // 清空当前类型的所有历史记录
+  const handleConfirmClearAll = () => {
+    clearHistoryByType(type)
+    toast.success(t("toolbox.historyCleared"))
+    setIsAlertOpen(false)
+  }
 
   if (filteredHistory.length === 0) {
     return null
@@ -35,24 +66,39 @@ export function HistoryChips({ type, onSelect, maxItems = 5 }: HistoryChipsProps
           <span className="max-w-32 truncate">{item.query}</span>
           <span
             className="opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-            onClick={(e) => {
-              e.stopPropagation()
-              removeHistory(item.id)
-            }}
+            onClick={(e) => handleRemove(item.id, e)}
           >
             <X className="h-3 w-3" />
           </span>
         </button>
       ))}
       {history.filter((item) => item.type === type).length > maxItems && (
-        <button
-          className="px-2 py-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
-          onClick={() => clearHistory()}
-          title={t("toolbox.clearHistory")}
-        >
-          {t("toolbox.clearHistory")}
-        </button>
+        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+          <AlertDialogTrigger asChild>
+            <button
+              type="button"
+              className="px-2 py-1 text-muted-foreground text-xs transition-colors hover:text-foreground"
+              title={t("toolbox.clearHistory")}
+            >
+              {t("toolbox.clearHistory")}
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("toolbox.clearHistory")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("toolbox.confirmClearHistory")}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmClearAll}>
+                {t("common.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   )
 }
+
+export const HistoryChips = memo(HistoryChipsComponent)

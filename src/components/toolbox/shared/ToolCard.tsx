@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { memo, type ReactNode } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface ToolCardProps {
@@ -12,7 +12,7 @@ interface ToolCardProps {
  * 工具卡片容器组件
  * 统一工具箱各工具的卡片布局
  */
-export function ToolCard({ title, children }: ToolCardProps) {
+function ToolCardComponent({ title, children }: ToolCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -22,3 +22,5 @@ export function ToolCard({ title, children }: ToolCardProps) {
     </Card>
   )
 }
+
+export const ToolCard = memo(ToolCardComponent)
