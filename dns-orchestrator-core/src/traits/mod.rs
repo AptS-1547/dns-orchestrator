@@ -5,5 +5,5 @@ mod credential_store;
 mod provider_registry;
 
 pub use account_repository::AccountRepository;
-pub use credential_store::{CredentialStore, CredentialsMap};
+pub use credential_store::{CredentialStore, CredentialsMap, LegacyCredentialsMap};
 pub use provider_registry::{InMemoryProviderRegistry, ProviderRegistry};

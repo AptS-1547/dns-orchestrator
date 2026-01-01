@@ -37,11 +37,14 @@ impl AccountLifecycleService {
     ///
     /// 完整流程：验证凭证 -> 保存凭证 -> 注册 Provider -> 保存元数据
     /// 如果保存元数据失败，会自动清理已保存的凭证和已注册的 Provider
+    ///
+    /// # v1.7.0 变更
+    /// `request.credentials` 已经是 `ProviderCredentials` 类型，无需调用 `from_map()` 转换
     pub async fn create_account(&self, request: CreateAccountRequest) -> CoreResult<Account> {
-        // 1. 验证凭证并创建 provider
+        // 1. 验证凭证
         let provider = self
             .credential_service
-            .validate_and_create_provider(&request.provider, &request.credentials)
+            .validate_and_create_provider(&request.credentials)
             .await?;
 
         // 2. 生成账号 ID
@@ -95,6 +98,9 @@ impl AccountLifecycleService {
     ///
     /// 支持更新账户名称和/或凭证
     /// 如果更新凭证，会重新验证并重新注册 Provider
+    ///
+    /// # v1.7.0 变更
+    /// `request.credentials` 已经是 `Option<ProviderCredentials>` 类型，无需调用 `from_map()` 转换
     pub async fn update_account(&self, request: UpdateAccountRequest) -> CoreResult<Account> {
         // 1. 获取现有账户
         let mut account = self
@@ -105,10 +111,10 @@ impl AccountLifecycleService {
 
         // 2. 如果提供了新凭证，验证并更新
         if let Some(ref new_credentials) = request.credentials {
-            // 2.1 验证新凭证并创建新 provider
+            // 2.1 验证凭证
             let new_provider = self
                 .credential_service
-                .validate_and_create_provider(&account.provider, new_credentials)
+                .validate_and_create_provider(new_credentials)
                 .await?;
 
             // 2.2 更新凭证存储

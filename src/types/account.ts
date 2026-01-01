@@ -12,18 +12,50 @@ export interface Account {
   error?: string
 }
 
+// ============ Provider 凭证类型（v1.7.0 类型安全重构）============
+
+/** Provider 凭证类型（与 Rust 端对应）*/
+export type ProviderCredentials =
+  | {
+      provider: "cloudflare"
+      credentials: {
+        api_token: string
+      }
+    }
+  | {
+      provider: "aliyun"
+      credentials: {
+        access_key_id: string
+        access_key_secret: string
+      }
+    }
+  | {
+      provider: "dnspod"
+      credentials: {
+        secret_id: string
+        secret_key: string
+      }
+    }
+  | {
+      provider: "huaweicloud"
+      credentials: {
+        access_key_id: string
+        secret_access_key: string
+      }
+    }
+
 /** 创建账号请求 */
 export interface CreateAccountRequest {
   name: string
   provider: string
-  credentials: Record<string, string>
+  credentials: ProviderCredentials
 }
 
 /** 更新账号请求 */
 export interface UpdateAccountRequest {
   id: string
   name?: string
-  credentials?: Record<string, string>
+  credentials?: ProviderCredentials
 }
 
 // ============ 导入导出相关类型 ============

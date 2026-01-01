@@ -70,6 +70,14 @@ pub enum CoreError {
     #[error("Network error: {0}")]
     NetworkError(String),
 
+    /// 需要迁移数据格式（v1.7.0 凭证格式升级）
+    #[error("Credential data migration required")]
+    MigrationRequired,
+
+    /// 迁移失败
+    #[error("Migration failed: {0}")]
+    MigrationFailed(String),
+
     /// Provider 错误（从库转换）
     #[error("{0}")]
     Provider(#[from] ProviderError),

@@ -15,8 +15,8 @@ use tauri_plugin_log::{Target, TargetKind};
 use adapters::{TauriAccountRepository, TauriCredentialStore};
 use dns_orchestrator_core::services::{
     AccountBootstrapService, AccountLifecycleService, AccountMetadataService,
-    CredentialManagementService, DnsService, DomainService, ImportExportService,
-    ProviderMetadataService, ServiceContext,
+    CredentialManagementService, DnsService, DomainService, ImportExportService, MigrationResult,
+    MigrationService, ProviderMetadataService, ServiceContext,
 };
 use dns_orchestrator_core::traits::InMemoryProviderRegistry;
 
@@ -152,6 +152,43 @@ pub fn run() {
         // 创建 AppState（需要 AppHandle）
         let state = AppState::new(app.handle().clone());
         app.manage(state);
+
+        // 执行凭证迁移（v1.7.0 - 阻塞操作，确保迁移完成后再恢复账户）
+        let app_handle = app.handle().clone();
+        tauri::async_runtime::block_on(async move {
+            let state = app_handle.state::<AppState>();
+
+            // 创建迁移服务
+            let migration_service = MigrationService::new(
+                Arc::clone(&state.ctx.credential_store),
+                Arc::clone(&state.ctx.account_repository),
+            );
+
+            // 执行迁移
+            match migration_service.migrate_if_needed().await {
+                Ok(MigrationResult::NotNeeded) => {
+                    log::info!("凭证格式检查：无需迁移");
+                }
+                Ok(MigrationResult::Success {
+                    migrated_count,
+                    failed_accounts,
+                }) => {
+                    log::info!("凭证迁移成功：{} 个账户已迁移", migrated_count);
+                    if !failed_accounts.is_empty() {
+                        log::warn!(
+                            "部分账户迁移失败 ({} 个): {:?}",
+                            failed_accounts.len(),
+                            failed_accounts
+                        );
+                        // TODO: 将失败的账户标记为 Error 状态
+                    }
+                }
+                Err(e) => {
+                    log::error!("凭证迁移失败: {}", e);
+                    // 不中断启动，继续尝试恢复（可能会因为格式问题导致部分账户恢复失败）
+                }
+            }
+        });
 
         // 后台恢复账户，不阻塞启动
         let app_handle = app.handle().clone();

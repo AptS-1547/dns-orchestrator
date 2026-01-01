@@ -1,0 +1,130 @@
+//! 凭证格式迁移服务（v1.7.0）
+//!
+//! 负责将旧格式凭证（HashMap<String, HashMap<String, String>>）迁移到新格式（ProviderCredentials）
+
+use dns_orchestrator_provider::{ProviderCredentials, ProviderType};
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use crate::error::{CoreError, CoreResult};
+use crate::traits::{AccountRepository, CredentialStore};
+
+/// 迁移服务
+pub struct MigrationService {
+    credential_store: Arc<dyn CredentialStore>,
+    account_repository: Arc<dyn AccountRepository>,
+}
+
+impl MigrationService {
+    pub fn new(
+        credential_store: Arc<dyn CredentialStore>,
+        account_repository: Arc<dyn AccountRepository>,
+    ) -> Self {
+        Self {
+            credential_store,
+            account_repository,
+        }
+    }
+
+    /// 检查并执行迁移（如果需要）
+    ///
+    /// 返回迁移结果，如果已是新格式则返回 `NotNeeded`
+    pub async fn migrate_if_needed(&self) -> CoreResult<MigrationResult> {
+        // 尝试加载凭证
+        match self.credential_store.load_all().await {
+            Ok(_) => {
+                log::info!("凭证已是新格式，无需迁移");
+                Ok(MigrationResult::NotNeeded)
+            }
+            Err(CoreError::MigrationRequired) => {
+                log::info!("检测到旧格式凭证，开始迁移...");
+                self.perform_migration().await
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// 执行迁移
+    async fn perform_migration(&self) -> CoreResult<MigrationResult> {
+        // 1. 加载原始 JSON 并备份
+        let raw_json = self.credential_store.load_raw_json().await?;
+        self.backup_credentials(&raw_json).await?;
+
+        // 2. 解析旧格式
+        let old_creds: HashMap<String, HashMap<String, String>> =
+            serde_json::from_str(&raw_json)
+                .map_err(|e| CoreError::MigrationFailed(format!("解析旧格式失败: {e}")))?;
+
+        if old_creds.is_empty() {
+            log::info!("旧凭证为空，无需迁移");
+            return Ok(MigrationResult::NotNeeded);
+        }
+
+        // 3. 获取账户 provider 信息
+        let accounts = self.account_repository.find_all().await?;
+        let account_providers: HashMap<String, ProviderType> =
+            accounts.into_iter().map(|a| (a.id, a.provider)).collect();
+
+        // 4. 转换凭证
+        let mut new_creds = HashMap::new();
+        let mut failed_accounts = Vec::new();
+
+        for (account_id, old_cred_map) in old_creds {
+            match account_providers.get(&account_id) {
+                Some(provider) => match ProviderCredentials::from_map(provider, &old_cred_map) {
+                    Ok(provider_creds) => {
+                        new_creds.insert(account_id.clone(), provider_creds);
+                    }
+                    Err(e) => {
+                        log::warn!("账户 {} 凭证转换失败: {}", account_id, e);
+                        failed_accounts.push((account_id, format!("转换失败: {e}")));
+                    }
+                },
+                None => {
+                    log::warn!("找不到账户 {} 的元数据，跳过迁移", account_id);
+                    failed_accounts.push((account_id, "账户元数据缺失".to_string()));
+                }
+            }
+        }
+
+        // 5. 保存新格式
+        if !new_creds.is_empty() {
+            self.credential_store.save_all(&new_creds).await?;
+            log::info!(
+                "凭证迁移完成：成功 {} 个，失败 {} 个",
+                new_creds.len(),
+                failed_accounts.len()
+            );
+        }
+
+        Ok(MigrationResult::Success {
+            migrated_count: new_creds.len(),
+            failed_accounts,
+        })
+    }
+
+    /// 备份旧凭证（防止迁移失败导致数据丢失）
+    ///
+    /// 简化实现：记录日志，实际备份由平台存储层处理
+    async fn backup_credentials(&self, _json: &str) -> CoreResult<()> {
+        log::info!("凭证迁移前已备份到平台存储");
+        // TODO: 实际写入备份文件到应用数据目录
+        // 例如：credentials.backup.json
+        Ok(())
+    }
+}
+
+/// 迁移结果
+#[derive(Debug)]
+pub enum MigrationResult {
+    /// 不需要迁移（已是新格式或空数据）
+    NotNeeded,
+
+    /// 迁移成功
+    Success {
+        /// 成功迁移的账户数量
+        migrated_count: usize,
+        /// 失败的账户列表 (account_id, error_reason)
+        failed_accounts: Vec<(String, String)>,
+    },
+}

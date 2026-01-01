@@ -119,13 +119,16 @@ impl ImportExportService {
         // 2. 加载凭证并构建导出数据
         let mut exported_accounts = Vec::new();
         for account in selected_accounts {
-            let credentials = match self.ctx.credential_store.load(&account.id).await {
-                Ok(creds) => creds,
-                Err(e) => {
-                    log::warn!("Failed to load credentials for {}: {}", account.id, e);
+            let credentials = match self.ctx.credential_store.get(&account.id).await? {
+                Some(creds) => creds,
+                None => {
+                    log::warn!("No credentials found for account: {}", account.id);
                     continue;
                 }
             };
+
+            // 转换 ProviderCredentials 为 HashMap
+            let credentials_map = credentials.to_map();
 
             exported_accounts.push(ExportedAccount {
                 id: uuid::Uuid::new_v4().to_string(), // 生成新 ID，避免导入时冲突
@@ -133,7 +136,7 @@ impl ImportExportService {
                 provider: account.provider.clone(),
                 created_at: account.created_at,
                 updated_at: account.updated_at,
-                credentials,
+                credentials: credentials_map,
             });
         }
 
@@ -265,7 +268,7 @@ impl ImportExportService {
                         continue;
                     }
                 };
-            let provider = match create_provider(credentials) {
+            let provider = match create_provider(credentials.clone()) {
                 Ok(p) => p,
                 Err(e) => {
                     failures.push(ImportFailure {
@@ -283,7 +286,7 @@ impl ImportExportService {
             if let Err(e) = self
                 .ctx
                 .credential_store
-                .save(&account_id, &exported.credentials)
+                .set(&account_id, &credentials)
                 .await
             {
                 failures.push(ImportFailure {
@@ -313,7 +316,7 @@ impl ImportExportService {
             // 2.6 保存到仓库，失败时 cleanup
             if let Err(e) = self.ctx.account_repository.save(&account).await {
                 // Cleanup: 删除凭证和注销 provider
-                let _ = self.ctx.credential_store.delete(&account_id).await;
+                let _ = self.ctx.credential_store.remove(&account_id).await;
                 self.ctx.provider_registry.unregister(&account_id).await;
 
                 failures.push(ImportFailure {

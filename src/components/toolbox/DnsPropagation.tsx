@@ -23,7 +23,7 @@ import {
 import { useEnterKeyHandler } from "@/hooks/useEnterKeyHandler"
 import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
-import type { DnsPropagationResult, DnsLookupType } from "@/types"
+import type { DnsLookupType, DnsPropagationResult } from "@/types"
 import { DNS_RECORD_TYPES } from "@/types"
 import { HistoryChips } from "./HistoryChips"
 import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"

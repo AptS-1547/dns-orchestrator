@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 // ============ Re-export 库类型 ============
 
@@ -13,6 +12,8 @@ pub use dns_orchestrator_provider::{
     DomainStatus,
     // 分页类型
     PaginatedResponse,
+    // Provider 凭证类型（v1.7.0 类型安全重构）
+    ProviderCredentials,
     // Provider 元数据类型
     ProviderMetadata,
     ProviderType,
@@ -51,20 +52,22 @@ pub struct Account {
     pub error: Option<String>,
 }
 
+/// 创建账户请求（v1.7.0 类型安全重构）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAccountRequest {
     pub name: String,
     pub provider: ProviderType,
-    pub credentials: HashMap<String, String>,
+    pub credentials: ProviderCredentials,
 }
 
+/// 更新账户请求（v1.7.0 类型安全重构）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateAccountRequest {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub credentials: Option<HashMap<String, String>>,
+    pub credentials: Option<ProviderCredentials>,
 }
 
 // ============ 应用层 Domain（包含 account_id）============

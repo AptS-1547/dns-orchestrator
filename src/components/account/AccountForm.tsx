@@ -20,8 +20,55 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useAccountStore } from "@/stores"
-import type { Account } from "@/types"
+import type { Account, ProviderCredentials } from "@/types"
 import { ProviderIcon } from "./ProviderIcon"
+
+/**
+ * 构建结构化的 Provider 凭证对象（v1.7.0 类型安全重构）
+ * @param provider Provider 类型
+ * @param credentialsMap 凭证键值对（使用驼峰命名，与 ProviderMetadata 一致）
+ * @returns 结构化的 ProviderCredentials 对象
+ */
+function buildProviderCredentials(
+  provider: string,
+  credentialsMap: Record<string, string>
+): ProviderCredentials {
+  switch (provider) {
+    case "cloudflare":
+      return {
+        provider: "cloudflare",
+        credentials: {
+          api_token: credentialsMap.apiToken,
+        },
+      }
+    case "aliyun":
+      return {
+        provider: "aliyun",
+        credentials: {
+          access_key_id: credentialsMap.accessKeyId,
+          access_key_secret: credentialsMap.accessKeySecret,
+        },
+      }
+    case "dnspod":
+      return {
+        provider: "dnspod",
+        credentials: {
+          secret_id: credentialsMap.secretId,
+          secret_key: credentialsMap.secretKey,
+        },
+      }
+    case "huaweicloud":
+      return {
+        provider: "huaweicloud",
+        credentials: {
+          access_key_id: credentialsMap.accessKeyId,
+          secret_access_key: credentialsMap.secretAccessKey,
+        },
+      }
+    default:
+      throw new Error(`Unknown provider: ${provider}`)
+  }
+}
 
 interface AccountFormProps {
   open: boolean
@@ -96,37 +143,52 @@ export function AccountForm({ open, onOpenChange, account }: AccountFormProps) {
     setShowPasswords((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
+  /**
+   * 处理创建账户
+   */
+  const handleCreate = async () => {
+    if (!providerInfo) return
+
+    const providerCredentials = buildProviderCredentials(provider, credentials)
+    const result = await createAccount({
+      name: name || `${providerInfo.name} 账号`,
+      provider,
+      credentials: providerCredentials,
+    })
+
+    if (result) {
+      setName("")
+      setCredentials({})
+      setShowPasswords({})
+      onOpenChange(false)
+    }
+  }
+
+  /**
+   * 处理更新账户
+   */
+  const handleUpdate = async () => {
+    if (!account) return
+
+    const hasCredentials = Object.values(credentials).some((v) => v.trim())
+    const result = await updateAccount({
+      id: account.id,
+      name: name || undefined,
+      credentials: hasCredentials ? buildProviderCredentials(provider, credentials) : undefined,
+    })
+
+    if (result) {
+      onOpenChange(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!providerInfo) return
-
     if (isEditing) {
-      // 编辑模式
-      const hasCredentials = Object.values(credentials).some((v) => v.trim())
-      const result = await updateAccount({
-        id: account.id,
-        name: name || undefined,
-        credentials: hasCredentials ? credentials : undefined,
-      })
-
-      if (result) {
-        onOpenChange(false)
-      }
+      await handleUpdate()
     } else {
-      // 创建模式
-      const result = await createAccount({
-        name: name || `${providerInfo.name} 账号`,
-        provider,
-        credentials,
-      })
-
-      if (result) {
-        setName("")
-        setCredentials({})
-        setShowPasswords({})
-        onOpenChange(false)
-      }
+      await handleCreate()
     }
   }
 
