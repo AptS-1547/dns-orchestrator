@@ -1,0 +1,143 @@
+//! 域名元数据类型定义
+
+use serde::{Deserialize, Serialize};
+
+/// 域名元数据键（复合主键）
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainMetadataKey {
+    pub account_id: String,
+    pub domain_id: String,
+}
+
+impl DomainMetadataKey {
+    /// 创建新的元数据键
+    #[must_use]
+    pub fn new(account_id: String, domain_id: String) -> Self {
+        Self {
+            account_id,
+            domain_id,
+        }
+    }
+
+    /// 生成存储用的字符串键（格式: account_id::domain_id）
+    #[must_use]
+    pub fn to_storage_key(&self) -> String {
+        format!("{}::{}", self.account_id, self.domain_id)
+    }
+
+    /// 从存储键解析
+    #[must_use]
+    pub fn from_storage_key(key: &str) -> Option<Self> {
+        let parts: Vec<&str> = key.split("::").collect();
+        if parts.len() != 2 {
+            return None;
+        }
+        Some(Self {
+            account_id: parts[0].to_string(),
+            domain_id: parts[1].to_string(),
+        })
+    }
+}
+
+/// 域名元数据
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainMetadata {
+    /// 是否收藏
+    #[serde(default)]
+    pub is_favorite: bool,
+
+    /// 标签列表（Phase 2 实现）
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+
+    /// 颜色标记（可选，HEX 格式如 "#FF5733"，Phase 3 实现）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+
+    /// 备注（可选，Phase 3 实现）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+
+    /// 最后修改时间（Unix 时间戳，毫秒）
+    pub updated_at: i64,
+}
+
+impl Default for DomainMetadata {
+    fn default() -> Self {
+        Self {
+            is_favorite: false,
+            tags: Vec::new(),
+            color: None,
+            note: None,
+            updated_at: chrono::Utc::now().timestamp_millis(),
+        }
+    }
+}
+
+impl DomainMetadata {
+    /// 创建新的元数据（全部字段）
+    #[must_use]
+    pub fn new(
+        is_favorite: bool,
+        tags: Vec<String>,
+        color: Option<String>,
+        note: Option<String>,
+    ) -> Self {
+        Self {
+            is_favorite,
+            tags,
+            color,
+            note,
+            updated_at: chrono::Utc::now().timestamp_millis(),
+        }
+    }
+
+    /// 刷新更新时间
+    pub fn touch(&mut self) {
+        self.updated_at = chrono::Utc::now().timestamp_millis();
+    }
+
+    /// 是否为空元数据（所有字段都是默认值）
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        !self.is_favorite && self.tags.is_empty() && self.color.is_none() && self.note.is_none()
+    }
+}
+
+/// 域名元数据更新请求（支持部分更新）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainMetadataUpdate {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_favorite: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<Option<String>>, // Option<Option<T>> 允许清空字段
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<Option<String>>,
+}
+
+impl DomainMetadataUpdate {
+    /// 应用更新到现有元数据
+    pub fn apply_to(&self, metadata: &mut DomainMetadata) {
+        if let Some(is_favorite) = self.is_favorite {
+            metadata.is_favorite = is_favorite;
+        }
+        if let Some(ref tags) = self.tags {
+            metadata.tags = tags.clone();
+        }
+        if let Some(ref color) = self.color {
+            metadata.color = color.clone();
+        }
+        if let Some(ref note) = self.note {
+            metadata.note = note.clone();
+        }
+        metadata.touch();
+    }
+}

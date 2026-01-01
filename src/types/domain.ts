@@ -1,3 +1,5 @@
+import type { DomainMetadata } from "./domain-metadata"
+
 /** 域名状态 */
 export type DomainStatus = "active" | "paused" | "pending" | "error" | "unknown"
 
@@ -10,4 +12,5 @@ export interface Domain {
   status: DomainStatus
   recordCount?: number
   createdAt?: string
+  metadata?: DomainMetadata
 }

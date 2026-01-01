@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import { useShallow } from "zustand/react/shallow"
 import { getProviderName, ProviderIcon } from "@/components/account/ProviderIcon"
+import { DomainFavoriteButton } from "@/components/domain/DomainFavoriteButton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -148,10 +149,15 @@ export function DomainSelectorPage() {
         type="button"
         onClick={() => handleSelectDomain(accountId, domain.id)}
         className={cn(
-          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
+          "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors",
           "hover:bg-accent hover:text-accent-foreground"
         )}
       >
+        <DomainFavoriteButton
+          accountId={accountId}
+          domainId={domain.id}
+          isFavorite={domain.metadata?.isFavorite ?? false}
+        />
         <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
         <span className="flex-1 truncate">{domain.name}</span>
         <Badge variant={config.variant} className="shrink-0">

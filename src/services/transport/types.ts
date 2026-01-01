@@ -15,6 +15,7 @@ import type {
   DnsRecord,
   DnssecResult,
   Domain,
+  DomainMetadata,
   ExportAccountsRequest,
   ExportAccountsResponse,
   HttpHeaderCheckRequest,
@@ -80,6 +81,20 @@ export interface CommandMap {
   get_domain: {
     args: { accountId: string; domainId: string }
     result: ApiResponse<Domain>
+  }
+
+  // Domain metadata commands
+  get_domain_metadata: {
+    args: { accountId: string; domainId: string }
+    result: ApiResponse<DomainMetadata>
+  }
+  toggle_domain_favorite: {
+    args: { accountId: string; domainId: string }
+    result: ApiResponse<boolean>
+  }
+  list_account_favorite_domain_keys: {
+    args: { accountId: string }
+    result: ApiResponse<string[]>
   }
 
   // DNS commands

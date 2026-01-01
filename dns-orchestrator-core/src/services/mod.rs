@@ -5,6 +5,7 @@ mod account_lifecycle_service;
 mod account_metadata_service;
 mod credential_management_service;
 mod dns_service;
+mod domain_metadata_service;
 mod domain_service;
 mod import_export_service;
 mod migration_service;
@@ -16,6 +17,7 @@ pub use account_lifecycle_service::AccountLifecycleService;
 pub use account_metadata_service::AccountMetadataService;
 pub use credential_management_service::CredentialManagementService;
 pub use dns_service::DnsService;
+pub use domain_metadata_service::DomainMetadataService;
 pub use domain_service::DomainService;
 pub use import_export_service::ImportExportService;
 pub use migration_service::{MigrationResult, MigrationService};
@@ -27,7 +29,9 @@ use std::sync::Arc;
 use dns_orchestrator_provider::DnsProvider;
 
 use crate::error::{CoreError, CoreResult};
-use crate::traits::{AccountRepository, CredentialStore, ProviderRegistry};
+use crate::traits::{
+    AccountRepository, CredentialStore, DomainMetadataRepository, ProviderRegistry,
+};
 use crate::types::AccountStatus;
 
 /// 服务上下文 - 持有所有依赖
@@ -40,6 +44,8 @@ pub struct ServiceContext {
     pub account_repository: Arc<dyn AccountRepository>,
     /// Provider 注册表
     pub provider_registry: Arc<dyn ProviderRegistry>,
+    /// 域名元数据仓库
+    pub domain_metadata_repository: Arc<dyn DomainMetadataRepository>,
 }
 
 impl ServiceContext {
@@ -49,11 +55,13 @@ impl ServiceContext {
         credential_store: Arc<dyn CredentialStore>,
         account_repository: Arc<dyn AccountRepository>,
         provider_registry: Arc<dyn ProviderRegistry>,
+        domain_metadata_repository: Arc<dyn DomainMetadataRepository>,
     ) -> Self {
         Self {
             credential_store,
             account_repository,
             provider_registry,
+            domain_metadata_repository,
         }
     }
 

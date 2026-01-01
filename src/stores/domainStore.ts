@@ -2,7 +2,7 @@ import { create } from "zustand"
 import { PAGINATION, STORAGE_KEYS, TIMING } from "@/constants"
 import { extractErrorMessage, getErrorMessage, isCredentialError } from "@/lib/error"
 import { logger } from "@/lib/logger"
-import { domainService } from "@/services"
+import { domainMetadataService, domainService } from "@/services"
 import type { Domain } from "@/types"
 import { useAccountStore } from "./accountStore"
 
@@ -11,6 +11,16 @@ interface AccountDomainCache {
   lastUpdated: number
   page: number
   hasMore: boolean
+}
+
+// 收藏域名数据结构
+export interface FavoriteDomain {
+  accountId: string
+  domainId: string
+  domainName: string
+  accountName: string
+  provider: string
+  favoritedAt: number
 }
 
 // 从 localStorage 读取初始缓存数据
@@ -93,6 +103,10 @@ interface DomainState {
   // UI 状态方法
   toggleExpandedAccount: (accountId: string) => void
   setScrollPosition: (position: number) => void
+
+  // 元数据操作
+  toggleFavorite: (accountId: string, domainId: string) => Promise<void>
+  getFavoriteDomains: () => FavoriteDomain[]
 
   // 便捷 getters
   getDomainsForAccount: (accountId: string) => Domain[]
@@ -349,5 +363,78 @@ export const useDomainStore = create<DomainState>((set, get) => ({
   // 检查账户是否展开
   isAccountExpanded: (accountId) => {
     return get().expandedAccounts.has(accountId)
+  },
+
+  // 切换收藏状态
+  toggleFavorite: async (accountId, domainId) => {
+    const response = await domainMetadataService.toggleFavorite(accountId, domainId)
+
+    if (!response.success || response.data === undefined) {
+      logger.error("Failed to toggle favorite:", response.error)
+      return
+    }
+
+    const newFavoriteState = response.data
+
+    // 更新本地缓存
+    set((state) => {
+      const cache = state.domainsByAccount[accountId]
+      if (!cache) return {}
+
+      const domains = cache.domains.map((d) => {
+        if (d.id === domainId) {
+          return {
+            ...d,
+            metadata: {
+              isFavorite: newFavoriteState,
+              tags: d.metadata?.tags ?? [],
+              updatedAt: Date.now(),
+            },
+          }
+        }
+        return d
+      })
+
+      return {
+        domainsByAccount: {
+          ...state.domainsByAccount,
+          [accountId]: { ...cache, domains },
+        },
+      }
+    })
+
+    // 保存到 localStorage
+    get().saveToStorage()
+  },
+
+  // 获取所有收藏域名（按收藏时间倒序）
+  getFavoriteDomains: () => {
+    const { domainsByAccount } = get()
+    const { accounts } = useAccountStore.getState()
+
+    const favorites: FavoriteDomain[] = []
+
+    // 遍历所有账户的域名缓存
+    Object.entries(domainsByAccount).forEach(([accountId, cache]) => {
+      const account = accounts.find((a) => a.id === accountId)
+      if (!(account && cache?.domains)) return
+
+      // 过滤收藏域名
+      cache.domains.forEach((domain) => {
+        if (domain.metadata?.isFavorite) {
+          favorites.push({
+            accountId,
+            domainId: domain.id,
+            domainName: domain.name,
+            accountName: account.name,
+            provider: domain.provider,
+            favoritedAt: domain.metadata.updatedAt,
+          })
+        }
+      })
+    })
+
+    // 按收藏时间倒序排序（最新收藏在前）
+    return favorites.sort((a, b) => b.favoritedAt - a.favoritedAt)
   },
 }))

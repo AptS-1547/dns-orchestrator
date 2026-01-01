@@ -8,15 +8,16 @@ use std::sync::Arc;
 
 #[cfg(target_os = "android")]
 use commands::updater;
-use commands::{account, dns, domain, toolbox};
+use commands::{account, dns, domain, domain_metadata, toolbox};
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
-use adapters::{TauriAccountRepository, TauriCredentialStore};
+use adapters::{TauriAccountRepository, TauriCredentialStore, TauriDomainMetadataRepository};
 use dns_orchestrator_core::services::{
     AccountBootstrapService, AccountLifecycleService, AccountMetadataService,
-    CredentialManagementService, DnsService, DomainService, ImportExportService, MigrationResult,
-    MigrationService, ProviderMetadataService, ServiceContext,
+    CredentialManagementService, DnsService, DomainMetadataService, DomainService,
+    ImportExportService, MigrationResult, MigrationService, ProviderMetadataService,
+    ServiceContext,
 };
 use dns_orchestrator_core::traits::InMemoryProviderRegistry;
 
@@ -38,6 +39,8 @@ pub struct AppState {
     pub import_export_service: ImportExportService,
     /// 域名服务
     pub domain_service: DomainService,
+    /// 域名元数据服务
+    pub domain_metadata_service: Arc<DomainMetadataService>,
     /// DNS 服务
     pub dns_service: DnsService,
     /// 账户恢复是否完成
@@ -53,14 +56,16 @@ impl AppState {
         #[cfg(target_os = "android")]
         let credential_store = Arc::new(TauriCredentialStore::new(app_handle.clone()));
 
-        let account_repository = Arc::new(TauriAccountRepository::new(app_handle));
+        let account_repository = Arc::new(TauriAccountRepository::new(app_handle.clone()));
         let provider_registry = Arc::new(InMemoryProviderRegistry::new());
+        let domain_metadata_repository = Arc::new(TauriDomainMetadataRepository::new(app_handle));
 
         // 创建服务上下文
         let ctx = Arc::new(ServiceContext::new(
             credential_store.clone(),
             account_repository.clone(),
             provider_registry.clone(),
+            domain_metadata_repository.clone(),
         ));
 
         // 创建细粒度账户服务
@@ -82,6 +87,8 @@ impl AppState {
         // 创建其他服务
         let import_export_service = ImportExportService::new(Arc::clone(&ctx));
         let domain_service = DomainService::new(Arc::clone(&ctx));
+        let domain_metadata_service =
+            Arc::new(DomainMetadataService::new(domain_metadata_repository));
         let dns_service = DnsService::new(Arc::clone(&ctx));
 
         Self {
@@ -93,6 +100,7 @@ impl AppState {
             provider_metadata_service,
             import_export_service,
             domain_service,
+            domain_metadata_service,
             dns_service,
             restore_completed: AtomicBool::new(false),
         }
@@ -311,6 +319,10 @@ pub fn run() {
         // Domain commands
         domain::list_domains,
         domain::get_domain,
+        // Domain metadata commands
+        domain_metadata::get_domain_metadata,
+        domain_metadata::toggle_domain_favorite,
+        domain_metadata::list_account_favorite_domain_keys,
         // DNS commands
         dns::list_dns_records,
         dns::create_dns_record,
@@ -343,6 +355,10 @@ pub fn run() {
         // Domain commands
         domain::list_domains,
         domain::get_domain,
+        // Domain metadata commands
+        domain_metadata::get_domain_metadata,
+        domain_metadata::toggle_domain_favorite,
+        domain_metadata::list_account_favorite_domain_keys,
         // DNS commands
         dns::list_dns_records,
         dns::create_dns_record,

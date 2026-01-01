@@ -49,7 +49,7 @@ export function SectionCard({
         </CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className={cn("px-2 sm:px-6", contentClassName)}>{children}</CardContent>
+      <CardContent className={cn("px-2 sm:px-4", contentClassName)}>{children}</CardContent>
     </Card>
   )
 }

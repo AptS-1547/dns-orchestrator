@@ -1,6 +1,7 @@
 export * from "./account"
 export * from "./dns"
 export * from "./domain"
+export * from "./domain-metadata"
 export * from "./provider"
 export * from "./toolbox"
 

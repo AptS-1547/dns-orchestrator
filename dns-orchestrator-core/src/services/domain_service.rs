@@ -5,8 +5,8 @@ use std::sync::Arc;
 use dns_orchestrator_provider::ProviderError;
 
 use crate::error::{CoreError, CoreResult};
-use crate::services::ServiceContext;
-use crate::types::{AppDomain, PaginatedResponse, PaginationParams};
+use crate::services::{DomainMetadataService, ServiceContext};
+use crate::types::{AppDomain, DomainMetadataKey, PaginatedResponse, PaginationParams};
 
 /// 域名管理服务
 pub struct DomainService {
@@ -36,11 +36,30 @@ impl DomainService {
 
         match provider.list_domains(&params).await {
             Ok(lib_response) => {
-                let domains: Vec<AppDomain> = lib_response
+                let mut domains: Vec<AppDomain> = lib_response
                     .items
                     .into_iter()
                     .map(|d| AppDomain::from_provider(d, account_id.to_string()))
                     .collect();
+
+                // 批量加载元数据并合并
+                let keys: Vec<(String, String)> = domains
+                    .iter()
+                    .map(|d| (d.account_id.clone(), d.id.clone()))
+                    .collect();
+
+                let metadata_service =
+                    DomainMetadataService::new(Arc::clone(&self.ctx.domain_metadata_repository));
+
+                if let Ok(metadata_map) = metadata_service.get_metadata_batch(keys).await {
+                    for domain in &mut domains {
+                        let key =
+                            DomainMetadataKey::new(domain.account_id.clone(), domain.id.clone());
+                        if let Some(metadata) = metadata_map.get(&key) {
+                            domain.metadata = Some(metadata.clone());
+                        }
+                    }
+                }
 
                 Ok(PaginatedResponse::new(
                     domains,

@@ -1,5 +1,5 @@
 export { useAccountStore } from "./accountStore"
 export { useDnsStore } from "./dnsStore"
-export { useDomainStore } from "./domainStore"
+export { type FavoriteDomain, useDomainStore } from "./domainStore"
 export { initTheme, useSettingsStore } from "./settingsStore"
 export { useToolboxStore } from "./toolboxStore"

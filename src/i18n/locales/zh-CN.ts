@@ -206,6 +206,8 @@ export default {
     totalDomains: "域名总数",
     recentDomains: "最近访问",
     recentDomainsDesc: "快速访问最近操作的域名",
+    favoriteDomains: "收藏域名",
+    favoriteDomainsDesc: "你收藏的常用域名",
     quickActions: "快捷操作",
     quickActionsDesc: "常用功能入口",
     manageDomains: "管理 DNS 记录",

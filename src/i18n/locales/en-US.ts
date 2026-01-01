@@ -211,6 +211,8 @@ export default {
     totalDomains: "Total Domains",
     recentDomains: "Recent Domains",
     recentDomainsDesc: "Quickly access recently visited domains",
+    favoriteDomains: "Favorite Domains",
+    favoriteDomainsDesc: "Your bookmarked domains",
     quickActions: "Quick Actions",
     quickActionsDesc: "Common feature shortcuts",
     manageDomains: "Manage DNS records",
