@@ -210,8 +210,8 @@ export function DnsPropagation() {
       {/* 移动端: 卡片列表 */}
       {result && isMobile && (
         <div className="space-y-2">
-          {result.results.map((serverResult, index) => (
-            <div key={index} className="rounded-lg border bg-card p-3">
+          {result.results.map((serverResult) => (
+            <div key={serverResult.server.ip} className="rounded-lg border bg-card p-3">
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {getStatusIcon(serverResult.status)}
@@ -229,7 +229,11 @@ export function DnsPropagation() {
               {serverResult.status === "success" && serverResult.records.length > 0 && (
                 <div className="space-y-1">
                   {serverResult.records.map((record, idx) => (
-                    <CopyableText key={idx} value={record.value} className="block">
+                    <CopyableText
+                      key={`${serverResult.server.ip}-${record.recordType}-${idx}`}
+                      value={record.value}
+                      className="block"
+                    >
                       <div className="break-all font-mono text-sm">{record.value}</div>
                     </CopyableText>
                   ))}
@@ -259,8 +263,8 @@ export function DnsPropagation() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {result.results.map((serverResult, index) => (
-                <TableRow key={index}>
+              {result.results.map((serverResult) => (
+                <TableRow key={serverResult.server.ip}>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       {getStatusIcon(serverResult.status)}
@@ -275,7 +279,11 @@ export function DnsPropagation() {
                     {serverResult.status === "success" && serverResult.records.length > 0 ? (
                       <div className="space-y-1">
                         {serverResult.records.map((record, idx) => (
-                          <CopyableText key={idx} value={record.value} className="block truncate">
+                          <CopyableText
+                            key={`${serverResult.server.ip}-${record.recordType}-${idx}`}
+                            value={record.value}
+                            className="block truncate"
+                          >
                             {record.value}
                           </CopyableText>
                         ))}

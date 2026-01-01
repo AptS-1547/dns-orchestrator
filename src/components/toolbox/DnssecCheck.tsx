@@ -181,8 +181,8 @@ export function DnssecCheck() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {result.dnskeyRecords.map((record, index) => (
-                      <TableRow key={index}>
+                    {result.dnskeyRecords.map((record) => (
+                      <TableRow key={record.keyTag}>
                         <TableCell>
                           <Badge variant="outline">{record.keyType}</Badge>
                         </TableCell>
@@ -221,8 +221,8 @@ export function DnssecCheck() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {result.dsRecords.map((record, index) => (
-                      <TableRow key={index}>
+                    {result.dsRecords.map((record) => (
+                      <TableRow key={record.keyTag}>
                         <TableCell>{record.keyTag}</TableCell>
                         <TableCell>
                           <div className="max-w-xs truncate" title={record.algorithmName}>
@@ -265,8 +265,8 @@ export function DnssecCheck() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {result.rrsigRecords.map((record, index) => (
-                      <TableRow key={index}>
+                    {result.rrsigRecords.map((record, idx) => (
+                      <TableRow key={`${record.typeCovered}-${record.keyTag}-${idx}`}>
                         <TableCell>
                           <Badge variant="outline">{record.typeCovered}</Badge>
                         </TableCell>

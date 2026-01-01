@@ -91,8 +91,8 @@ fn get_global_dns_servers() -> Vec<DnsPropagationServer> {
             country_code: "EU".to_string(),
         },
         DnsPropagationServer {
-            name: "Cloudflare (澳洲)".to_string(),
-            ip: "1.1.1.1".to_string(),
+            name: "Telstra Corporation Ltd".to_string(),
+            ip: "139.130.4.4".to_string(),
             region: "澳大利亚（大洋洲）".to_string(),
             country_code: "AU".to_string(),
         },

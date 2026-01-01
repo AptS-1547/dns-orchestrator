@@ -46,6 +46,47 @@ fn get_digest_type_name(digest_type: u8) -> String {
     }
 }
 
+/// 从 RRSIG/SIG 记录提取签名信息
+fn extract_signature_record(
+    type_covered: RecordType,
+    algorithm: u8,
+    labels: u8,
+    original_ttl: u32,
+    sig_expiration: u32,
+    sig_inception: u32,
+    key_tag: u16,
+    signer_name: &str,
+    signature_bytes: &[u8],
+) -> RrsigRecord {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+    use chrono::{DateTime, Utc};
+
+    // 格式化时间戳
+    let expiration = DateTime::<Utc>::from_timestamp(i64::from(sig_expiration), 0)
+        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+        .unwrap_or_else(|| format!("Invalid ({})", sig_expiration));
+
+    let inception = DateTime::<Utc>::from_timestamp(i64::from(sig_inception), 0)
+        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+        .unwrap_or_else(|| format!("Invalid ({})", sig_inception));
+
+    // Base64 编码签名
+    let signature_b64 = STANDARD.encode(signature_bytes);
+
+    RrsigRecord {
+        type_covered: format!("{:?}", type_covered),
+        algorithm,
+        algorithm_name: get_algorithm_name(algorithm),
+        labels,
+        original_ttl,
+        signature_expiration: expiration,
+        signature_inception: inception,
+        key_tag,
+        signer_name: signer_name.to_string(),
+        signature: signature_b64,
+    }
+}
+
 /// DNSSEC 验证
 pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<DnssecResult> {
     let start_time = Instant::now();
@@ -66,15 +107,10 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
     }
 
     // 根据 nameserver 参数决定使用自定义还是系统默认
-    let (resolver, used_nameserver) = if let Some(ns) = nameserver {
-        if ns.is_empty() {
-            let system_dns = get_system_dns();
-            let provider = TokioConnectionProvider::default();
-            let resolver = TokioResolver::builder_with_config(ResolverConfig::default(), provider)
-                .with_options(ResolverOpts::default())
-                .build();
-            (resolver, system_dns)
-        } else {
+    let effective_ns = nameserver.filter(|s| !s.is_empty());
+
+    let (resolver, used_nameserver) = match effective_ns {
+        Some(ns) => {
             let ns_ip: IpAddr = ns.parse().map_err(|_| {
                 CoreError::ValidationError(format!("Invalid DNS server address: {ns}"))
             })?;
@@ -85,18 +121,23 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
                 NameServerConfigGroup::from_ips_clear(&[ns_ip], 53, true),
             );
             let provider = TokioConnectionProvider::default();
+            let mut opts = ResolverOpts::default();
+            opts.validate = true; // 启用 DNSSEC 验证
             let resolver = TokioResolver::builder_with_config(config, provider)
-                .with_options(ResolverOpts::default())
+                .with_options(opts)
                 .build();
             (resolver, ns.to_string())
         }
-    } else {
-        let system_dns = get_system_dns();
-        let provider = TokioConnectionProvider::default();
-        let resolver = TokioResolver::builder_with_config(ResolverConfig::default(), provider)
-            .with_options(ResolverOpts::default())
-            .build();
-        (resolver, system_dns)
+        None => {
+            let system_dns = get_system_dns();
+            let provider = TokioConnectionProvider::default();
+            let mut opts = ResolverOpts::default();
+            opts.validate = true; // 启用 DNSSEC 验证
+            let resolver = TokioResolver::builder_with_config(ResolverConfig::default(), provider)
+                .with_options(opts)
+                .build();
+            (resolver, system_dns)
+        }
     };
 
     let mut dnskey_records = Vec::new();
@@ -200,87 +241,32 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
 
                 match record.data() {
                     RData::DNSSEC(DNSSECRData::RRSIG(rrsig)) => {
-                        // Extract fields
-                        let type_covered = format!("{:?}", rrsig.type_covered());
-                        let algorithm: u8 = rrsig.algorithm().into();
-                        let labels = rrsig.num_labels();
-                        let original_ttl = rrsig.original_ttl();
-
-                        // Convert timestamps (SerialNumber wraps u32 Unix timestamp)
-                        let expiration_ts = rrsig.sig_expiration().get();
-                        let inception_ts = rrsig.sig_inception().get();
-
-                        // Format timestamps to human-readable format
-                        use chrono::{DateTime, Utc};
-                        let expiration =
-                            DateTime::<Utc>::from_timestamp(i64::from(expiration_ts), 0)
-                                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
-                                .unwrap_or_else(|| format!("Invalid ({})", expiration_ts));
-
-                        let inception = DateTime::<Utc>::from_timestamp(i64::from(inception_ts), 0)
-                            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
-                            .unwrap_or_else(|| format!("Invalid ({})", inception_ts));
-
-                        let key_tag = rrsig.key_tag();
-                        let signer_name = rrsig.signer_name().to_string();
-
-                        // Base64 encode signature
-                        let signature_bytes = rrsig.sig();
-                        use base64::{engine::general_purpose::STANDARD, Engine};
-                        let signature_b64 = STANDARD.encode(signature_bytes);
-
-                        rrsig_records.push(RrsigRecord {
-                            type_covered,
-                            algorithm,
-                            algorithm_name: get_algorithm_name(algorithm),
-                            labels,
-                            original_ttl,
-                            signature_expiration: expiration,
-                            signature_inception: inception,
-                            key_tag,
-                            signer_name,
-                            signature: signature_b64,
-                        });
+                        let sig_record = extract_signature_record(
+                            rrsig.type_covered(),
+                            rrsig.algorithm().into(),
+                            rrsig.num_labels(),
+                            rrsig.original_ttl(),
+                            rrsig.sig_expiration().get(),
+                            rrsig.sig_inception().get(),
+                            rrsig.key_tag(),
+                            &rrsig.signer_name().to_string(),
+                            rrsig.sig(),
+                        );
+                        rrsig_records.push(sig_record);
                     }
                     RData::DNSSEC(DNSSECRData::SIG(sig)) => {
-                        // SIG is similar to RRSIG, process the same way
-                        let type_covered = format!("{:?}", sig.type_covered());
-                        let algorithm: u8 = sig.algorithm().into();
-                        let labels = sig.num_labels();
-                        let original_ttl = sig.original_ttl();
-
-                        let expiration_ts = sig.sig_expiration().get();
-                        let inception_ts = sig.sig_inception().get();
-
-                        use chrono::{DateTime, Utc};
-                        let expiration =
-                            DateTime::<Utc>::from_timestamp(i64::from(expiration_ts), 0)
-                                .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
-                                .unwrap_or_else(|| format!("Invalid ({})", expiration_ts));
-
-                        let inception = DateTime::<Utc>::from_timestamp(i64::from(inception_ts), 0)
-                            .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
-                            .unwrap_or_else(|| format!("Invalid ({})", inception_ts));
-
-                        let key_tag = sig.key_tag();
-                        let signer_name = sig.signer_name().to_string();
-
-                        let signature_bytes = sig.sig();
-                        use base64::{engine::general_purpose::STANDARD, Engine};
-                        let signature_b64 = STANDARD.encode(signature_bytes);
-
-                        rrsig_records.push(RrsigRecord {
-                            type_covered,
-                            algorithm,
-                            algorithm_name: get_algorithm_name(algorithm),
-                            labels,
-                            original_ttl,
-                            signature_expiration: expiration,
-                            signature_inception: inception,
-                            key_tag,
-                            signer_name,
-                            signature: signature_b64,
-                        });
+                        let sig_record = extract_signature_record(
+                            sig.type_covered(),
+                            sig.algorithm().into(),
+                            sig.num_labels(),
+                            sig.original_ttl(),
+                            sig.sig_expiration().get(),
+                            sig.sig_inception().get(),
+                            sig.key_tag(),
+                            &sig.signer_name().to_string(),
+                            sig.sig(),
+                        );
+                        rrsig_records.push(sig_record);
                     }
                     _ => {
                         log::warn!("Unexpected RData type in RRSIG query: {:?}", record.data());
