@@ -1,0 +1,417 @@
+import {
+  AlertCircle,
+  Copy,
+  Info,
+  Loader2,
+  Plus,
+  Send,
+  Shield,
+  Trash2,
+  FileCode,
+} from "lucide-react"
+import { useState, useCallback } from "react"
+import { useTranslation } from "react-i18next"
+
+import { toolboxService } from "@/services/toolbox.service"
+import type {
+  HttpHeader,
+  HttpHeaderCheckRequest,
+  HttpHeaderCheckResult,
+  HttpMethod,
+  SecurityHeaderAnalysis,
+} from "@/types"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { HeaderItem } from "./HeaderItem"
+
+const HTTP_METHODS: HttpMethod[] = ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+
+export function HttpHeaderCheck() {
+  const { t } = useTranslation()
+
+  // Form state
+  const [url, setUrl] = useState("")
+  const [method, setMethod] = useState<HttpMethod>("GET")
+  const [customHeaders, setCustomHeaders] = useState<HttpHeader[]>([])
+  const [body, setBody] = useState("")
+  const [contentType, setContentType] = useState("application/json")
+
+  // Result state
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<HttpHeaderCheckResult | null>(null)
+  const [error, setError] = useState("")
+
+  // UI state
+  const [expandedHeaders, setExpandedHeaders] = useState<Set<number>>(new Set())
+
+  const handleAddHeader = () => {
+    setCustomHeaders([...customHeaders, { name: "", value: "" }])
+  }
+
+  const handleRemoveHeader = (index: number) => {
+    setCustomHeaders(customHeaders.filter((_, i) => i !== index))
+  }
+
+  const handleHeaderChange = (index: number, field: "name" | "value", value: string) => {
+    const newHeaders = [...customHeaders]
+    newHeaders[index][field] = value
+    setCustomHeaders(newHeaders)
+  }
+
+  const handleCheck = async () => {
+    if (!url) {
+      setError(t("toolbox.httpHeaderCheck.urlRequired"))
+      return
+    }
+
+    setLoading(true)
+    setError("")
+    setResult(null)
+
+    try {
+      const request: HttpHeaderCheckRequest = {
+        url,
+        method,
+        customHeaders: customHeaders.filter((h) => h.name && h.value),
+        body: ["POST", "PUT", "PATCH"].includes(method) && body ? body : undefined,
+        contentType: ["POST", "PUT", "PATCH"].includes(method) && body ? contentType : undefined,
+      }
+
+      const response = await toolboxService.httpHeaderCheck(request)
+
+      if (response.success && response.data) {
+        setResult(response.data)
+      } else {
+        setError(t("common.unknownError"))
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+  }
+
+  const getStatusBadgeVariant = (
+    status: SecurityHeaderAnalysis["status"]
+  ): "default" | "secondary" | "destructive" => {
+    switch (status) {
+      case "good":
+        return "default"
+      case "warning":
+        return "secondary"
+      case "missing":
+        return "destructive"
+      default:
+        return "default"
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 查询表单 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("toolbox.httpHeaderCheck.title")}</CardTitle>
+          <CardDescription>{t("toolbox.httpHeaderCheck.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* URL 和 Method */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="md:col-span-4">
+              <Label htmlFor="url">{t("toolbox.httpHeaderCheck.url")}</Label>
+              <Input
+                id="url"
+                type="url"
+                placeholder="https://example.com"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCheck()}
+              />
+            </div>
+            <div>
+              <Label htmlFor="method">{t("toolbox.httpHeaderCheck.method")}</Label>
+              <Select value={method} onValueChange={(v) => setMethod(v as HttpMethod)}>
+                <SelectTrigger id="method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HTTP_METHODS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* 自定义请求头 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>{t("toolbox.httpHeaderCheck.customHeaders")}</Label>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddHeader}>
+                <Plus className="size-4 mr-1" />
+                {t("toolbox.httpHeaderCheck.addHeader")}
+              </Button>
+            </div>
+            {customHeaders.length > 0 && (
+              <div className="space-y-2">
+                {customHeaders.map((header, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                    <Input
+                      className="md:col-span-5"
+                      placeholder={t("toolbox.httpHeaderCheck.headerName")}
+                      value={header.name}
+                      onChange={(e) => handleHeaderChange(index, "name", e.target.value)}
+                    />
+                    <Input
+                      className="md:col-span-6"
+                      placeholder={t("toolbox.httpHeaderCheck.headerValue")}
+                      value={header.value}
+                      onChange={(e) => handleHeaderChange(index, "value", e.target.value)}
+                    />
+                    <Button
+                      className="md:col-span-1"
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveHeader(index)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 请求体（仅 POST/PUT/PATCH） */}
+          {["POST", "PUT", "PATCH"].includes(method) && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="contentType">{t("toolbox.httpHeaderCheck.contentType")}</Label>
+                  <Input
+                    id="contentType"
+                    value={contentType}
+                    onChange={(e) => setContentType(e.target.value)}
+                    placeholder="application/json"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="body">{t("toolbox.httpHeaderCheck.requestBody")}</Label>
+                <Textarea
+                  id="body"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder={t("toolbox.httpHeaderCheck.requestBodyPlaceholder")}
+                  className="font-mono text-sm min-h-[100px]"
+                />
+              </div>
+            </div>
+          )}
+
+          <Button onClick={handleCheck} disabled={loading || !url} className="w-full">
+            {loading ? (
+              <>
+                <Loader2 className="size-4 mr-2 animate-spin" />
+                {t("common.loading")}
+              </>
+            ) : (
+              <>
+                <Send className="size-4 mr-2" />
+                {t("toolbox.httpHeaderCheck.check")}
+              </>
+            )}
+          </Button>
+
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-destructive/10 text-destructive rounded-md">
+              <AlertCircle className="size-5 mt-0.5 shrink-0" />
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 查询结果 */}
+      {result && (
+        <div className="space-y-4">
+          {/* 响应状态 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {t("toolbox.httpHeaderCheck.responseStatus")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <div className="text-sm text-muted-foreground">
+                    {t("toolbox.httpHeaderCheck.statusCode")}
+                  </div>
+                  <div className="text-2xl font-bold">
+                    <Badge variant={result.statusCode < 400 ? "default" : "destructive"}>
+                      {result.statusCode} {result.statusText}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">
+                    {t("toolbox.httpHeaderCheck.responseTime")}
+                  </div>
+                  <div className="text-2xl font-bold">{result.responseTimeMs} ms</div>
+                </div>
+                {result.contentLength !== undefined && (
+                  <div>
+                    <div className="text-sm text-muted-foreground">Content-Length</div>
+                    <div className="text-2xl font-bold">
+                      {(result.contentLength / 1024).toFixed(2)} KB
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 安全头分析 */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="size-5" />
+                <CardTitle className="text-lg">
+                  {t("toolbox.httpHeaderCheck.securityAnalysis")}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {result.securityAnalysis.map((analysis, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start justify-between p-3 border rounded-md"
+                  >
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <code className="text-sm font-mono">{analysis.name}</code>
+                        <Badge variant={getStatusBadgeVariant(analysis.status)}>
+                          {t(`toolbox.httpHeaderCheck.status.${analysis.status}`)}
+                        </Badge>
+                      </div>
+                      {analysis.recommendation && (
+                        <div className="flex items-start gap-2 mt-2 text-sm text-amber-600 dark:text-amber-400">
+                          <Info className="size-4 mt-0.5 shrink-0" />
+                          <span>{analysis.recommendation}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 所有响应头 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {t("toolbox.httpHeaderCheck.allHeaders")} ({result.headers.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {result.headers.map((header, index) => (
+                  <HeaderItem
+                    key={`header-${header.name}-${index}`}
+                    header={header}
+                    index={index}
+                    isExpanded={expandedHeaders.has(index)}
+                    onToggle={(isOpen) => {
+                      const newSet = new Set(expandedHeaders)
+                      if (isOpen) {
+                        newSet.add(index)
+                      } else {
+                        newSet.delete(index)
+                      }
+                      setExpandedHeaders(newSet)
+                    }}
+                    onCopy={() => copyToClipboard(`${header.name}: ${header.value}`)}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 原始报文 */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileCode className="size-5" />
+                <CardTitle className="text-lg">
+                  {t("toolbox.httpHeaderCheck.rawMessages")}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* 原始请求 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-semibold">
+                    {t("toolbox.httpHeaderCheck.rawRequest")}
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(result.rawRequest)}
+                  >
+                    <Copy className="size-4 mr-1" />
+                    {t("common.copy")}
+                  </Button>
+                </div>
+                <pre className="p-3 bg-muted rounded-md text-xs font-mono max-w-full overflow-x-auto whitespace-pre-wrap break-all">
+                  {result.rawRequest}
+                </pre>
+              </div>
+
+              {/* 原始响应 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-semibold">
+                    {t("toolbox.httpHeaderCheck.rawResponse")}
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(result.rawResponse)}
+                  >
+                    <Copy className="size-4 mr-1" />
+                    {t("common.copy")}
+                  </Button>
+                </div>
+                <pre className="p-3 bg-muted rounded-md text-xs font-mono max-w-full overflow-x-auto whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto">
+                  {result.rawResponse}
+                </pre>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}

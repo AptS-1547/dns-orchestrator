@@ -1,4 +1,4 @@
-import { FileText, Globe, Lock, MapPin, Wrench } from "lucide-react"
+import { FileText, Globe, Lock, MapPin, Network, Wrench } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { PageHeader } from "@/components/ui/page-header"
@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { DnsLookup } from "./DnsLookup"
+import { HttpHeaderCheck } from "./HttpHeaderCheck"
 import { IpLookup } from "./IpLookup"
 import { SslCheck } from "./SslCheck"
 import { WhoisLookup } from "./WhoisLookup"
@@ -15,6 +16,7 @@ const TABS = [
   { id: "dns", icon: Globe, label: "DNS" },
   { id: "whois", icon: FileText, label: "WHOIS" },
   { id: "ssl", icon: Lock, label: "SSL" },
+  { id: "http", icon: Network, label: "HTTP" },
   { id: "ip", icon: MapPin, label: "IP" },
 ] as const
 
@@ -86,6 +88,9 @@ export function ToolboxPage() {
             </TabsContent>
             <TabsContent value="ssl" className="fade-in-0 mt-0 animate-in duration-200">
               <SslCheck />
+            </TabsContent>
+            <TabsContent value="http" className="fade-in-0 mt-0 animate-in duration-200">
+              <HttpHeaderCheck />
             </TabsContent>
             <TabsContent value="ip" className="fade-in-0 mt-0 animate-in duration-200">
               <IpLookup />

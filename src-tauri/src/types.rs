@@ -203,6 +203,63 @@ pub struct CertChainItem {
     pub is_ca: bool,
 }
 
+/// HTTP 请求方法
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HttpMethod {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    PATCH,
+    OPTIONS,
+}
+
+/// HTTP 请求头
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeader {
+    pub name: String,
+    pub value: String,
+}
+
+/// HTTP 头检查请求
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeaderCheckRequest {
+    pub url: String,
+    pub method: HttpMethod,
+    pub custom_headers: Vec<HttpHeader>,
+    pub body: Option<String>,
+    pub content_type: Option<String>,
+}
+
+/// 安全头分析结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SecurityHeaderAnalysis {
+    pub name: String,
+    pub present: bool,
+    pub value: Option<String>,
+    pub status: String,
+    pub recommendation: Option<String>,
+}
+
+/// HTTP 头检查结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeaderCheckResult {
+    pub url: String,
+    pub status_code: u16,
+    pub status_text: String,
+    pub response_time_ms: u64,
+    pub headers: Vec<HttpHeader>,
+    pub security_analysis: Vec<SecurityHeaderAnalysis>,
+    pub content_length: Option<u64>,
+    pub raw_request: String,
+    pub raw_response: String,
+}
+
 // ============ 批量操作相关类型 ============
 
 /// 批量删除 DNS 记录请求

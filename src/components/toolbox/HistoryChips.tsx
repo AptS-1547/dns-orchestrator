@@ -4,7 +4,7 @@ import { useToolboxStore } from "@/stores"
 import type { QueryHistoryItem } from "@/types"
 
 interface HistoryChipsProps {
-  type: "whois" | "dns" | "ip" | "ssl"
+  type: "whois" | "dns" | "ip" | "ssl" | "http"
   onSelect: (item: QueryHistoryItem) => void
   maxItems?: number
 }

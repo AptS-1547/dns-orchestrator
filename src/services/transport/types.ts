@@ -15,6 +15,8 @@ import type {
   Domain,
   ExportAccountsRequest,
   ExportAccountsResponse,
+  HttpHeaderCheckRequest,
+  HttpHeaderCheckResult,
   ImportAccountsRequest,
   ImportPreview,
   ImportResult,
@@ -123,6 +125,10 @@ export interface CommandMap {
   ssl_check: {
     args: { domain: string; port?: number }
     result: ApiResponse<SslCheckResult>
+  }
+  http_header_check: {
+    args: { request: HttpHeaderCheckRequest }
+    result: ApiResponse<HttpHeaderCheckResult>
   }
 }
 

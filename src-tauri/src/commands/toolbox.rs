@@ -1,8 +1,9 @@
 use dns_orchestrator_core::services::ToolboxService;
 
 use crate::types::{
-    ApiResponse, CertChainItem, DnsLookupRecord, DnsLookupResult, IpGeoInfo, IpLookupResult,
-    SslCertInfo, SslCheckResult, WhoisResult,
+    ApiResponse, CertChainItem, DnsLookupRecord, DnsLookupResult, HttpHeader,
+    HttpHeaderCheckRequest, HttpHeaderCheckResult, HttpMethod, IpGeoInfo, IpLookupResult,
+    SecurityHeaderAnalysis, SslCertInfo, SslCheckResult, WhoisResult,
 };
 
 // 类型转换辅助函数
@@ -99,6 +100,70 @@ fn convert_ssl_check_result(
     }
 }
 
+fn convert_http_method(method: HttpMethod) -> dns_orchestrator_core::types::HttpMethod {
+    match method {
+        HttpMethod::GET => dns_orchestrator_core::types::HttpMethod::GET,
+        HttpMethod::HEAD => dns_orchestrator_core::types::HttpMethod::HEAD,
+        HttpMethod::POST => dns_orchestrator_core::types::HttpMethod::POST,
+        HttpMethod::PUT => dns_orchestrator_core::types::HttpMethod::PUT,
+        HttpMethod::DELETE => dns_orchestrator_core::types::HttpMethod::DELETE,
+        HttpMethod::PATCH => dns_orchestrator_core::types::HttpMethod::PATCH,
+        HttpMethod::OPTIONS => dns_orchestrator_core::types::HttpMethod::OPTIONS,
+    }
+}
+
+fn convert_http_header_check_request(
+    request: HttpHeaderCheckRequest,
+) -> dns_orchestrator_core::types::HttpHeaderCheckRequest {
+    dns_orchestrator_core::types::HttpHeaderCheckRequest {
+        url: request.url,
+        method: convert_http_method(request.method),
+        custom_headers: request
+            .custom_headers
+            .into_iter()
+            .map(|h| dns_orchestrator_core::types::HttpHeader {
+                name: h.name,
+                value: h.value,
+            })
+            .collect(),
+        body: request.body,
+        content_type: request.content_type,
+    }
+}
+
+fn convert_http_header_check_result(
+    result: dns_orchestrator_core::types::HttpHeaderCheckResult,
+) -> HttpHeaderCheckResult {
+    HttpHeaderCheckResult {
+        url: result.url,
+        status_code: result.status_code,
+        status_text: result.status_text,
+        response_time_ms: result.response_time_ms,
+        headers: result
+            .headers
+            .into_iter()
+            .map(|h| HttpHeader {
+                name: h.name,
+                value: h.value,
+            })
+            .collect(),
+        security_analysis: result
+            .security_analysis
+            .into_iter()
+            .map(|s| SecurityHeaderAnalysis {
+                name: s.name,
+                present: s.present,
+                value: s.value,
+                status: s.status,
+                recommendation: s.recommendation,
+            })
+            .collect(),
+        content_length: result.content_length,
+        raw_request: result.raw_request,
+        raw_response: result.raw_response,
+    }
+}
+
 /// WHOIS 查询
 #[tauri::command]
 pub async fn whois_lookup(domain: String) -> Result<ApiResponse<WhoisResult>, String> {
@@ -144,4 +209,19 @@ pub async fn ssl_check(
         .map_err(|e| e.to_string())?;
 
     Ok(ApiResponse::success(convert_ssl_check_result(result)))
+}
+
+/// HTTP 头检查
+#[tauri::command]
+pub async fn http_header_check(
+    request: HttpHeaderCheckRequest,
+) -> Result<ApiResponse<HttpHeaderCheckResult>, String> {
+    let core_request = convert_http_header_check_request(request);
+    let result = ToolboxService::http_header_check(&core_request)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(ApiResponse::success(convert_http_header_check_result(
+        result,
+    )))
 }

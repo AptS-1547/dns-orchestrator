@@ -113,7 +113,7 @@ export function WhoisLookup() {
                 {t("toolbox.whois.rawData")}
               </Button>
               {showRaw && (
-                <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-all rounded bg-muted p-3 font-mono text-xs sm:max-h-64">
+                <pre className="mt-2 max-h-[300px] overflow-y-auto whitespace-pre-wrap break-all rounded bg-muted p-3 font-mono text-xs">
                   {result.raw}
                 </pre>
               )}

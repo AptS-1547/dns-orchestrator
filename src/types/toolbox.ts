@@ -92,10 +92,50 @@ export interface SslCheckResult {
   error?: string
 }
 
+/** HTTP 请求方法 */
+export type HttpMethod = "GET" | "HEAD" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS"
+
+/** HTTP 请求头 */
+export interface HttpHeader {
+  name: string
+  value: string
+}
+
+/** HTTP 头检查请求 */
+export interface HttpHeaderCheckRequest {
+  url: string
+  method: HttpMethod
+  customHeaders: HttpHeader[]
+  body?: string
+  contentType?: string
+}
+
+/** 安全头分析结果 */
+export interface SecurityHeaderAnalysis {
+  name: string
+  present: boolean
+  value?: string
+  status: "good" | "warning" | "missing"
+  recommendation?: string
+}
+
+/** HTTP 头检查结果 */
+export interface HttpHeaderCheckResult {
+  url: string
+  statusCode: number
+  statusText: string
+  responseTimeMs: number
+  headers: HttpHeader[]
+  securityAnalysis: SecurityHeaderAnalysis[]
+  contentLength?: number
+  rawRequest: string
+  rawResponse: string
+}
+
 /** 查询历史项 */
 export interface QueryHistoryItem {
   id: string
-  type: "whois" | "dns" | "ip" | "ssl"
+  type: "whois" | "dns" | "ip" | "ssl" | "http"
   query: string
   recordType?: string
   timestamp: number

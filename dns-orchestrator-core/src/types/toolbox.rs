@@ -151,3 +151,81 @@ pub struct CertChainItem {
     /// 是否为 CA 证书
     pub is_ca: bool,
 }
+
+/// HTTP 请求方法
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HttpMethod {
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    PATCH,
+    OPTIONS,
+}
+
+/// HTTP 请求头
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeader {
+    /// 请求头名称
+    pub name: String,
+    /// 请求头值
+    pub value: String,
+}
+
+/// HTTP 头检查请求
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeaderCheckRequest {
+    /// 目标 URL
+    pub url: String,
+    /// HTTP 方法
+    pub method: HttpMethod,
+    /// 自定义请求头列表
+    pub custom_headers: Vec<HttpHeader>,
+    /// 请求体（仅 POST/PUT/PATCH）
+    pub body: Option<String>,
+    /// 请求体内容类型
+    pub content_type: Option<String>,
+}
+
+/// 安全头分析结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SecurityHeaderAnalysis {
+    /// 安全头名称
+    pub name: String,
+    /// 是否存在
+    pub present: bool,
+    /// 头值（如果存在）
+    pub value: Option<String>,
+    /// 状态: "good" | "warning" | "missing"
+    pub status: String,
+    /// 建议
+    pub recommendation: Option<String>,
+}
+
+/// HTTP 头检查结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpHeaderCheckResult {
+    /// 请求的 URL
+    pub url: String,
+    /// HTTP 状态码
+    pub status_code: u16,
+    /// 状态文本
+    pub status_text: String,
+    /// 响应时间（毫秒）
+    pub response_time_ms: u64,
+    /// 所有响应头
+    pub headers: Vec<HttpHeader>,
+    /// 安全头分析
+    pub security_analysis: Vec<SecurityHeaderAnalysis>,
+    /// Content-Length
+    pub content_length: Option<u64>,
+    /// 原始请求报文
+    pub raw_request: String,
+    /// 原始响应报文
+    pub raw_response: String,
+}

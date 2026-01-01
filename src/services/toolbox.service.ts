@@ -5,6 +5,8 @@
 import type {
   ApiResponse,
   DnsLookupResult,
+  HttpHeaderCheckRequest,
+  HttpHeaderCheckResult,
   IpLookupResult,
   SslCheckResult,
   WhoisResult,
@@ -30,6 +32,10 @@ class ToolboxService {
 
   sslCheck(domain: string, port?: number): Promise<ApiResponse<SslCheckResult>> {
     return transport.invoke("ssl_check", { domain, port })
+  }
+
+  httpHeaderCheck(request: HttpHeaderCheckRequest): Promise<ApiResponse<HttpHeaderCheckResult>> {
+    return transport.invoke("http_header_check", { request })
   }
 }
 
