@@ -235,17 +235,20 @@ export function DomainSelectorPage() {
             />
           )}
           <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="truncate">{domain.name}</span>
-            <DomainTagList
-              tags={domain.metadata?.tags ?? []}
-              onClickTag={(tag) => {
-                const { setSelectedTags, selectedTags } = useDomainStore.getState()
-                const newTags = new Set(selectedTags)
-                newTags.add(tag)
-                setSelectedTags(Array.from(newTags))
-              }}
-            />
+          <div className="flex min-w-0 flex-1 items-center">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="min-w-[120px] shrink-0 truncate">{domain.name}</span>
+              <DomainTagList
+                className="shrink"
+                tags={domain.metadata?.tags ?? []}
+                onClickTag={(tag) => {
+                  const { setSelectedTags, selectedTags } = useDomainStore.getState()
+                  const newTags = new Set(selectedTags)
+                  newTags.add(tag)
+                  setSelectedTags(Array.from(newTags))
+                }}
+              />
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <Badge variant={config.variant}>{t(config.labelKey)}</Badge>
