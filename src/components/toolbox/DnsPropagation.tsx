@@ -152,10 +152,10 @@ export function DnsPropagation() {
           {/* 一致性 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{t("toolbox.dnsPropagation.consistency")}</span>
+              <span className="font-medium text-sm">{t("toolbox.dnsPropagation.consistency")}</span>
               <span
                 className={cn(
-                  "text-2xl font-bold",
+                  "font-bold text-2xl",
                   getConsistencyColor(result.consistencyPercentage)
                 )}
               >
@@ -171,25 +171,25 @@ export function DnsPropagation() {
               <div className="text-muted-foreground text-xs">
                 {t("toolbox.dnsPropagation.total")}
               </div>
-              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="font-bold text-2xl">{stats.total}</div>
             </div>
             <div className="space-y-1">
               <div className="text-muted-foreground text-xs">
                 {t("toolbox.dnsPropagation.successful")}
               </div>
-              <div className="text-2xl font-bold text-green-600">{stats.successful}</div>
+              <div className="font-bold text-2xl text-green-600">{stats.successful}</div>
             </div>
             <div className="space-y-1">
               <div className="text-muted-foreground text-xs">
                 {t("toolbox.dnsPropagation.timeout")}
               </div>
-              <div className="text-2xl font-bold text-yellow-600">{stats.timeout}</div>
+              <div className="font-bold text-2xl text-yellow-600">{stats.timeout}</div>
             </div>
             <div className="space-y-1">
               <div className="text-muted-foreground text-xs">
                 {t("toolbox.dnsPropagation.failed")}
               </div>
-              <div className="text-2xl font-bold text-red-600">{stats.error}</div>
+              <div className="font-bold text-2xl text-red-600">{stats.error}</div>
             </div>
           </div>
 
@@ -197,11 +197,11 @@ export function DnsPropagation() {
           <div className="flex flex-wrap gap-4 text-muted-foreground text-sm">
             <div>
               {t("toolbox.dnsPropagation.uniqueValues")}:{" "}
-              <span className="font-mono font-medium">{result.uniqueValues.length}</span>
+              <span className="font-medium font-mono">{result.uniqueValues.length}</span>
             </div>
             <div>
               {t("toolbox.dnsPropagation.totalTime")}:{" "}
-              <span className="font-mono font-medium">{result.totalTimeMs} ms</span>
+              <span className="font-medium font-mono">{result.totalTimeMs} ms</span>
             </div>
           </div>
         </div>

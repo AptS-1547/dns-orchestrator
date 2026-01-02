@@ -150,7 +150,7 @@ export function DomainTagEditor({
                     variant="ghost"
                     size="sm"
                     onClick={() => setTags([])}
-                    className="h-auto p-1 text-xs text-muted-foreground hover:text-destructive"
+                    className="h-auto p-1 text-muted-foreground text-xs hover:text-destructive"
                   >
                     {t("common.clearAll")}
                   </Button>
@@ -158,7 +158,7 @@ export function DomainTagEditor({
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => (
                     <Badge key={tag} variant="secondary" className="group relative pr-6">
-                      <span className="text-xs max-w-[100px] truncate inline-block align-bottom">
+                      <span className="inline-block max-w-[100px] truncate align-bottom text-xs">
                         {tag}
                       </span>
                       <Button

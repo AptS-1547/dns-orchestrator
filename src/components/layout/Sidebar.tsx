@@ -15,8 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { TIMING } from "@/constants"
 import { cn } from "@/lib/utils"
 import { useSettingsStore } from "@/stores"
-
-type NavItem = "main" | "domains" | "favorites" | "toolbox" | "settings" | "accounts"
+import type { NavItem } from "@/types"
 
 interface SidebarProps {
   currentView: NavItem

@@ -267,7 +267,7 @@ export function AccountForm({ open, onOpenChange, account }: AccountFormProps) {
               <Label htmlFor={field.key}>
                 {field.label}
                 {isEditing && (
-                  <span className="text-muted-foreground ml-1 font-normal">
+                  <span className="ml-1 font-normal text-muted-foreground">
                     ({t("account.leaveEmptyToKeep")})
                   </span>
                 )}

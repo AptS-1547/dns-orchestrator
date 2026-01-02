@@ -7,7 +7,7 @@ import { getProviderName, ProviderIcon } from "@/components/account/ProviderIcon
 import { DomainFavoriteButton } from "@/components/domain/DomainFavoriteButton"
 import { DomainTagEditor } from "@/components/domain/DomainTagEditor"
 import { DomainTagList } from "@/components/domain/DomainTagList"
-import { TagFilter } from "@/components/domain/TagFilter"
+import { SelectedTagsList, TagFilterButton } from "@/components/domain/TagFilter"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -91,7 +91,7 @@ export function DomainSelectorPage() {
     }
     // 只在挂载时执行，scrollPosition 是从 store 读取的初始值
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [scrollPosition])
 
   // 监听滚动事件，保存滚动位置
   useEffect(() => {
@@ -321,16 +321,24 @@ export function DomainSelectorPage() {
 
       {/* 搜索栏 */}
       <div className="border-b px-4 py-3 sm:px-6">
-        <div className="relative">
-          <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("domains.searchPlaceholder")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        <div className="space-y-3">
+          {/* 第一行：搜索框 + 筛选按钮 */}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={t("domains.searchPlaceholder")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <TagFilterButton />
+          </div>
+
+          {/* 第二行：已选标签（仅在有标签时显示）*/}
+          <SelectedTagsList />
         </div>
-        <TagFilter />
       </div>
 
       {/* 账户域名列表 */}

@@ -138,7 +138,7 @@ export function FavoriteDomainsPage() {
       {/* 搜索栏 */}
       <div className="border-b px-4 py-3 sm:px-6">
         <div className="relative">
-          <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t("favorites.searchPlaceholder")}
             value={searchQuery}
@@ -175,7 +175,6 @@ export function FavoriteDomainsPage() {
                       accountId={fav.accountId}
                       domainId={fav.domainId}
                       isFavorite={fav.currentlyFavorited}
-                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
                   <div className="min-w-0">

@@ -197,10 +197,10 @@ export const useDomainStore = create<DomainState>((set, get) => ({
                 domainsByAccount: {
                   ...state.domainsByAccount,
                   [account.id]: {
-                    domains: response.data!.items,
+                    domains: response.data?.items ?? [],
                     lastUpdated: Date.now(),
-                    page: response.data!.page,
-                    hasMore: response.data!.hasMore,
+                    page: response.data?.page ?? 1,
+                    hasMore: response.data?.hasMore ?? false,
                   },
                 },
               }))
@@ -235,10 +235,10 @@ export const useDomainStore = create<DomainState>((set, get) => ({
           domainsByAccount: {
             ...state.domainsByAccount,
             [accountId]: {
-              domains: response.data!.items,
+              domains: response.data?.items ?? [],
               lastUpdated: Date.now(),
-              page: response.data!.page,
-              hasMore: response.data!.hasMore,
+              page: response.data?.page ?? 1,
+              hasMore: response.data?.hasMore ?? false,
             },
           },
         }))
@@ -282,10 +282,10 @@ export const useDomainStore = create<DomainState>((set, get) => ({
           domainsByAccount: {
             ...state.domainsByAccount,
             [accountId]: {
-              domains: [...cache.domains, ...response.data!.items],
+              domains: [...cache.domains, ...(response.data?.items ?? [])],
               lastUpdated: Date.now(),
-              page: response.data!.page,
-              hasMore: response.data!.hasMore,
+              page: response.data?.page ?? nextPage,
+              hasMore: response.data?.hasMore ?? false,
             },
           },
         }))

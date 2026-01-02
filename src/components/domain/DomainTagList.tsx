@@ -39,7 +39,7 @@ export function DomainTagList({
               variant={onClickTag ? "outline" : "secondary"}
               className={cn(
                 "group relative transition-all",
-                onClickTag && "cursor-pointer hover:bg-accent hover:border-primary/50",
+                onClickTag && "cursor-pointer hover:border-primary/50 hover:bg-accent",
                 editable && "pr-6"
               )}
               onClick={(e) => {
@@ -47,7 +47,7 @@ export function DomainTagList({
                 onClickTag?.(tag)
               }}
             >
-              <span className="text-xs max-w-[120px] sm:max-w-[150px] truncate inline-block align-bottom">
+              <span className="inline-block max-w-[120px] truncate align-bottom text-xs sm:max-w-[150px]">
                 {tag}
               </span>
               {editable && onRemoveTag && (
