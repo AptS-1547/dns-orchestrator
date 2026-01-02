@@ -12,8 +12,14 @@ import { useSettingsStore } from "@/stores/settingsStore"
  */
 export function FeaturesTab() {
   const { t } = useTranslation()
-  const { paginationMode, showRecordHints, setPaginationMode, setShowRecordHints } =
-    useSettingsStore()
+  const {
+    paginationMode,
+    showRecordHints,
+    operationNotifications,
+    setPaginationMode,
+    setShowRecordHints,
+    setOperationNotifications,
+  } = useSettingsStore()
 
   // 分页模式选项配置
   const paginationOptions = [
@@ -44,7 +50,13 @@ export function FeaturesTab() {
               </Label>
             }
             description={t("settings.operationNotificationsDesc")}
-            control={<Switch id="notifications" defaultChecked />}
+            control={
+              <Switch
+                id="notifications"
+                checked={operationNotifications}
+                onCheckedChange={setOperationNotifications}
+              />
+            }
           />
         </SettingItem>
       </SettingSection>
