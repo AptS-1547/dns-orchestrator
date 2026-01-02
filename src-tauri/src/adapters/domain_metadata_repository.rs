@@ -19,7 +19,7 @@ const METADATA_KEY: &str = "metadata";
 /// Tauri 域名元数据仓库实现
 pub struct TauriDomainMetadataRepository {
     app_handle: AppHandle,
-    /// 内存缓存（key: storage_key, value: metadata）
+    /// 内存缓存（key: `storage_key`, value: metadata）
     cache: Arc<RwLock<Option<HashMap<String, DomainMetadata>>>>,
 }
 
@@ -184,7 +184,7 @@ impl DomainMetadataRepository for TauriDomainMetadataRepository {
 
         cache_data.retain(|storage_key, _| {
             DomainMetadataKey::from_storage_key(storage_key)
-                .map_or(false, |key| key.account_id != account_id)
+                .is_some_and(|key| key.account_id != account_id)
         });
 
         self.save_to_store(cache_data)?;

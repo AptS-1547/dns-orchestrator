@@ -5,7 +5,10 @@ use std::sync::Arc;
 
 use crate::error::CoreResult;
 use crate::traits::DomainMetadataRepository;
-use crate::types::{DomainMetadata, DomainMetadataKey, DomainMetadataUpdate};
+use crate::types::{
+    BatchTagFailure, BatchTagRequest, BatchTagResult, DomainMetadata, DomainMetadataKey,
+    DomainMetadataUpdate,
+};
 
 /// 域名元数据管理服务
 pub struct DomainMetadataService {
@@ -216,5 +219,219 @@ impl DomainMetadataService {
     /// 获取所有使用过的标签（用于自动补全，可选功能）
     pub async fn list_all_tags(&self) -> CoreResult<Vec<String>> {
         self.repository.list_all_tags().await
+    }
+
+    // ===== 批量标签操作方法 =====
+
+    /// 批量添加标签（为多个域名添加相同标签）
+    pub async fn batch_add_tags(
+        &self,
+        requests: Vec<BatchTagRequest>,
+    ) -> CoreResult<BatchTagResult> {
+        let mut success_count = 0;
+        let mut failures = Vec::new();
+
+        for req in requests {
+            match self
+                .add_tags_internal(&req.account_id, &req.domain_id, req.tags)
+                .await
+            {
+                Ok(_) => success_count += 1,
+                Err(e) => failures.push(BatchTagFailure {
+                    account_id: req.account_id,
+                    domain_id: req.domain_id,
+                    reason: e.to_string(),
+                }),
+            }
+        }
+
+        Ok(BatchTagResult {
+            success_count,
+            failed_count: failures.len(),
+            failures,
+        })
+    }
+
+    /// 批量移除标签（从多个域名移除相同标签）
+    pub async fn batch_remove_tags(
+        &self,
+        requests: Vec<BatchTagRequest>,
+    ) -> CoreResult<BatchTagResult> {
+        let mut success_count = 0;
+        let mut failures = Vec::new();
+
+        for req in requests {
+            match self
+                .remove_tags_internal(&req.account_id, &req.domain_id, req.tags)
+                .await
+            {
+                Ok(_) => success_count += 1,
+                Err(e) => failures.push(BatchTagFailure {
+                    account_id: req.account_id,
+                    domain_id: req.domain_id,
+                    reason: e.to_string(),
+                }),
+            }
+        }
+
+        Ok(BatchTagResult {
+            success_count,
+            failed_count: failures.len(),
+            failures,
+        })
+    }
+
+    /// 批量替换标签（清空原有标签后设置新标签）
+    pub async fn batch_set_tags(
+        &self,
+        requests: Vec<BatchTagRequest>,
+    ) -> CoreResult<BatchTagResult> {
+        let mut success_count = 0;
+        let mut failures = Vec::new();
+
+        for req in requests {
+            match self
+                .set_tags_internal(&req.account_id, &req.domain_id, req.tags)
+                .await
+            {
+                Ok(_) => success_count += 1,
+                Err(e) => failures.push(BatchTagFailure {
+                    account_id: req.account_id,
+                    domain_id: req.domain_id,
+                    reason: e.to_string(),
+                }),
+            }
+        }
+
+        Ok(BatchTagResult {
+            success_count,
+            failed_count: failures.len(),
+            failures,
+        })
+    }
+
+    // ===== 内部辅助方法 =====
+
+    /// 内部方法：为单个域名添加多个标签（优化：减少重复 save 调用）
+    async fn add_tags_internal(
+        &self,
+        account_id: &str,
+        domain_id: &str,
+        tags_to_add: Vec<String>,
+    ) -> CoreResult<Vec<String>> {
+        use crate::error::CoreError;
+
+        // 验证每个标签
+        for tag in &tags_to_add {
+            let trimmed = tag.trim();
+            if trimmed.is_empty() {
+                return Err(CoreError::ValidationError(
+                    "Tag cannot be empty".to_string(),
+                ));
+            }
+            if trimmed.len() > 50 {
+                return Err(CoreError::ValidationError(
+                    "Tag length cannot exceed 50 characters".to_string(),
+                ));
+            }
+        }
+
+        let mut metadata = self.get_metadata(account_id, domain_id).await?;
+
+        // 合并标签并去重
+        let mut all_tags: Vec<String> = metadata.tags.clone();
+        for tag in tags_to_add {
+            let trimmed = tag.trim().to_string();
+            if !trimmed.is_empty() && !all_tags.contains(&trimmed) {
+                all_tags.push(trimmed);
+            }
+        }
+
+        // 检查标签数量限制
+        if all_tags.len() > 10 {
+            return Err(CoreError::ValidationError(
+                "Cannot exceed 10 tags".to_string(),
+            ));
+        }
+
+        all_tags.sort();
+        all_tags.dedup();
+
+        metadata.tags = all_tags.clone();
+        metadata.touch();
+
+        self.save_metadata(account_id, domain_id, metadata).await?;
+        Ok(all_tags)
+    }
+
+    /// 内部方法：为单个域名移除多个标签
+    async fn remove_tags_internal(
+        &self,
+        account_id: &str,
+        domain_id: &str,
+        tags_to_remove: Vec<String>,
+    ) -> CoreResult<Vec<String>> {
+        let mut metadata = self.get_metadata(account_id, domain_id).await?;
+
+        // 移除指定的标签（不存在也不报错，静默处理）
+        let tags_to_remove_set: std::collections::HashSet<String> = tags_to_remove
+            .into_iter()
+            .map(|t| t.trim().to_string())
+            .collect();
+
+        metadata.tags.retain(|t| !tags_to_remove_set.contains(t));
+        metadata.touch();
+
+        let tags = metadata.tags.clone();
+        self.save_metadata(account_id, domain_id, metadata).await?;
+        Ok(tags)
+    }
+
+    /// 内部方法：为单个域名替换全部标签
+    async fn set_tags_internal(
+        &self,
+        account_id: &str,
+        domain_id: &str,
+        tags: Vec<String>,
+    ) -> CoreResult<Vec<String>> {
+        use crate::error::CoreError;
+
+        // 验证每个标签
+        for tag in &tags {
+            let trimmed = tag.trim();
+            if trimmed.is_empty() {
+                return Err(CoreError::ValidationError(
+                    "Tag cannot be empty".to_string(),
+                ));
+            }
+            if trimmed.len() > 50 {
+                return Err(CoreError::ValidationError(
+                    "Tag length cannot exceed 50 characters".to_string(),
+                ));
+            }
+        }
+
+        if tags.len() > 10 {
+            return Err(CoreError::ValidationError(
+                "Cannot have more than 10 tags".to_string(),
+            ));
+        }
+
+        let mut metadata = self.get_metadata(account_id, domain_id).await?;
+
+        // 清理、去重、排序
+        let mut cleaned_tags: Vec<String> = tags
+            .into_iter()
+            .map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty())
+            .collect();
+        cleaned_tags.sort();
+        cleaned_tags.dedup();
+
+        metadata.tags = cleaned_tags.clone();
+        metadata.touch();
+
+        self.save_metadata(account_id, domain_id, metadata).await?;
+        Ok(cleaned_tags)
     }
 }

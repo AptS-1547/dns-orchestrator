@@ -20,7 +20,7 @@ impl DomainMetadataKey {
         }
     }
 
-    /// 生成存储用的字符串键（格式: account_id::domain_id）
+    /// 生成存储用的字符串键（格式: `account_id::domain_id`）
     #[must_use]
     pub fn to_storage_key(&self) -> String {
         format!("{}::{}", self.account_id, self.domain_id)
@@ -151,4 +151,31 @@ impl DomainMetadataUpdate {
         }
         metadata.touch();
     }
+}
+
+/// 批量标签操作请求
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchTagRequest {
+    pub account_id: String,
+    pub domain_id: String,
+    pub tags: Vec<String>,
+}
+
+/// 批量标签操作结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchTagResult {
+    pub success_count: usize,
+    pub failed_count: usize,
+    pub failures: Vec<BatchTagFailure>,
+}
+
+/// 批量标签操作失败详情
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchTagFailure {
+    pub account_id: String,
+    pub domain_id: String,
+    pub reason: String,
 }

@@ -53,17 +53,17 @@ export function DnsRecordPage() {
     }
   }, [accountId, domainId, navigate])
 
-  // 参数缺失时不渲染
-  if (!(accountId && domainId)) {
-    return null
-  }
-
-  // 获取当前账户对应的提供商功能
+  // 获取当前账户对应的提供商功能（必须在早期 return 之前调用）
   const providerFeatures = useMemo(() => {
     if (!selectedAccount) return null
     const provider = providers.find((p) => p.id === selectedAccount.provider)
     return provider?.features ?? null
   }, [selectedAccount, providers])
+
+  // 参数缺失时不渲染
+  if (!(accountId && domainId)) {
+    return null
+  }
 
   return (
     <PageLayout>

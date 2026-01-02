@@ -27,3 +27,30 @@ export interface DomainMetadataUpdate {
   /** null 表示清空字段 */
   note?: string | null
 }
+
+/**
+ * 批量标签操作请求
+ */
+export interface BatchTagRequest {
+  accountId: string
+  domainId: string
+  tags: string[]
+}
+
+/**
+ * 批量标签操作结果
+ */
+export interface BatchTagResult {
+  successCount: number
+  failedCount: number
+  failures: BatchTagFailure[]
+}
+
+/**
+ * 批量标签操作失败详情
+ */
+export interface BatchTagFailure {
+  accountId: string
+  domainId: string
+  reason: string
+}

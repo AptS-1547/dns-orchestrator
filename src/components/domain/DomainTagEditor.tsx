@@ -54,9 +54,9 @@ export function DomainTagEditor({
     const trimmed = inputValue.trim()
     if (!trimmed) return
 
-    // 支持逗号分隔批量输入
+    // 支持英文逗号和全角逗号分隔批量输入
     const newTags = trimmed
-      .split(",")
+      .split(/[,，]/)
       .map((t) => t.trim())
       .filter((t) => t.length > 0 && t.length <= 50)
 

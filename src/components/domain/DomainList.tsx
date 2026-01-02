@@ -2,6 +2,7 @@ import { Globe, Loader2 } from "lucide-react"
 import { useCallback, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import type { Domain, DomainStatus } from "@/types"
 
@@ -12,6 +13,11 @@ interface DomainListProps {
   hasMore?: boolean
   isLoadingMore?: boolean
   onLoadMore?: () => void
+  // 批量模式支持
+  isBatchMode?: boolean
+  selectedKeys?: Set<string>
+  onToggleSelection?: (accountId: string, domainId: string) => void
+  accountId?: string
 }
 
 export function DomainList({
@@ -21,6 +27,10 @@ export function DomainList({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  isBatchMode = false,
+  selectedKeys = new Set(),
+  onToggleSelection,
+  accountId = "",
 }: DomainListProps) {
   const { t } = useTranslation()
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -65,31 +75,55 @@ export function DomainList({
 
   return (
     <div className="space-y-1">
-      {domains.map((domain) => (
-        <button
-          type="button"
-          key={domain.id}
-          onClick={() => onSelect(selectedId === domain.id ? null : domain.id)}
-          className={cn(
-            "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            selectedId === domain.id && "bg-sidebar-accent text-sidebar-accent-foreground"
-          )}
-        >
-          <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <div className="flex-1 truncate text-left">
-            <div className="truncate font-medium">{domain.name}</div>
-            {domain.recordCount !== undefined && (
-              <div className="text-muted-foreground text-xs">
-                {t("domain.recordCount", { count: domain.recordCount })}
-              </div>
+      {domains.map((domain) => {
+        const domainKey = `${accountId}::${domain.id}`
+        const isSelected = isBatchMode ? selectedKeys.has(domainKey) : selectedId === domain.id
+
+        return (
+          <button
+            type="button"
+            key={domain.id}
+            onClick={() => {
+              if (isBatchMode && onToggleSelection && accountId) {
+                onToggleSelection(accountId, domain.id)
+              } else {
+                onSelect(selectedId === domain.id ? null : domain.id)
+              }
+            }}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+              "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              isSelected && "bg-sidebar-accent text-sidebar-accent-foreground",
+              isBatchMode && isSelected && "ring-2 ring-primary"
             )}
-          </div>
-          <Badge variant={statusConfig[domain.status]?.variant ?? "secondary"} className="text-xs">
-            {t(statusConfig[domain.status]?.labelKey ?? "domain.status.active")}
-          </Badge>
-        </button>
-      ))}
+          >
+            {isBatchMode && (
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={(e) => {
+                  e.stopPropagation?.()
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+            <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="flex-1 truncate text-left">
+              <div className="truncate font-medium">{domain.name}</div>
+              {domain.recordCount !== undefined && (
+                <div className="text-muted-foreground text-xs">
+                  {t("domain.recordCount", { count: domain.recordCount })}
+                </div>
+              )}
+            </div>
+            <Badge
+              variant={statusConfig[domain.status]?.variant ?? "secondary"}
+              className="text-xs"
+            >
+              {t(statusConfig[domain.status]?.labelKey ?? "domain.status.active")}
+            </Badge>
+          </button>
+        )
+      })}
       {/* 无限滚动触发点 */}
       <div ref={sentinelRef} className="h-1" />
       {isLoadingMore && (

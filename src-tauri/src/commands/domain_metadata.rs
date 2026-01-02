@@ -153,3 +153,121 @@ pub async fn list_all_domain_tags(
 
     Ok(ApiResponse::success(tags))
 }
+
+// ===== 批量标签操作 =====
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchTagRequest {
+    pub account_id: String,
+    pub domain_id: String,
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchTagResult {
+    pub success_count: usize,
+    pub failed_count: usize,
+    pub failures: Vec<BatchTagFailure>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchTagFailure {
+    pub account_id: String,
+    pub domain_id: String,
+    pub reason: String,
+}
+
+// 类型转换
+impl From<dns_orchestrator_core::types::BatchTagRequest> for BatchTagRequest {
+    fn from(core: dns_orchestrator_core::types::BatchTagRequest) -> Self {
+        Self {
+            account_id: core.account_id,
+            domain_id: core.domain_id,
+            tags: core.tags,
+        }
+    }
+}
+
+impl From<BatchTagRequest> for dns_orchestrator_core::types::BatchTagRequest {
+    fn from(local: BatchTagRequest) -> Self {
+        Self {
+            account_id: local.account_id,
+            domain_id: local.domain_id,
+            tags: local.tags,
+        }
+    }
+}
+
+impl From<dns_orchestrator_core::types::BatchTagResult> for BatchTagResult {
+    fn from(core: dns_orchestrator_core::types::BatchTagResult) -> Self {
+        Self {
+            success_count: core.success_count,
+            failed_count: core.failed_count,
+            failures: core.failures.into_iter().map(std::convert::Into::into).collect(),
+        }
+    }
+}
+
+impl From<dns_orchestrator_core::types::BatchTagFailure> for BatchTagFailure {
+    fn from(core: dns_orchestrator_core::types::BatchTagFailure) -> Self {
+        Self {
+            account_id: core.account_id,
+            domain_id: core.domain_id,
+            reason: core.reason,
+        }
+    }
+}
+
+/// 批量添加标签
+#[tauri::command]
+pub async fn batch_add_domain_tags(
+    state: State<'_, AppState>,
+    requests: Vec<BatchTagRequest>,
+) -> Result<ApiResponse<BatchTagResult>, DnsError> {
+    let core_requests: Vec<dns_orchestrator_core::types::BatchTagRequest> =
+        requests.into_iter().map(std::convert::Into::into).collect();
+
+    let result = state
+        .domain_metadata_service
+        .batch_add_tags(core_requests)
+        .await?;
+
+    Ok(ApiResponse::success(result.into()))
+}
+
+/// 批量移除标签
+#[tauri::command]
+pub async fn batch_remove_domain_tags(
+    state: State<'_, AppState>,
+    requests: Vec<BatchTagRequest>,
+) -> Result<ApiResponse<BatchTagResult>, DnsError> {
+    let core_requests: Vec<dns_orchestrator_core::types::BatchTagRequest> =
+        requests.into_iter().map(std::convert::Into::into).collect();
+
+    let result = state
+        .domain_metadata_service
+        .batch_remove_tags(core_requests)
+        .await?;
+
+    Ok(ApiResponse::success(result.into()))
+}
+
+/// 批量替换标签
+#[tauri::command]
+pub async fn batch_set_domain_tags(
+    state: State<'_, AppState>,
+    requests: Vec<BatchTagRequest>,
+) -> Result<ApiResponse<BatchTagResult>, DnsError> {
+    let core_requests: Vec<dns_orchestrator_core::types::BatchTagRequest> =
+        requests.into_iter().map(std::convert::Into::into).collect();
+
+    let result = state
+        .domain_metadata_service
+        .batch_set_tags(core_requests)
+        .await?;
+
+    Ok(ApiResponse::success(result.into()))
+}

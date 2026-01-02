@@ -1,3 +1,4 @@
+import type { BatchTagRequest } from "@/types/domain-metadata"
 import { transport } from "./transport"
 
 class DomainMetadataService {
@@ -60,6 +61,27 @@ class DomainMetadataService {
    */
   async listAllTags() {
     return transport.invoke("list_all_domain_tags")
+  }
+
+  /**
+   * 批量添加标签
+   */
+  async batchAddTags(requests: BatchTagRequest[]) {
+    return transport.invoke("batch_add_domain_tags", { requests })
+  }
+
+  /**
+   * 批量移除标签
+   */
+  async batchRemoveTags(requests: BatchTagRequest[]) {
+    return transport.invoke("batch_remove_domain_tags", { requests })
+  }
+
+  /**
+   * 批量替换标签
+   */
+  async batchSetTags(requests: BatchTagRequest[]) {
+    return transport.invoke("batch_set_domain_tags", { requests })
   }
 }
 

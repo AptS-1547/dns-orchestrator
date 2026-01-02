@@ -25,12 +25,7 @@ pub use dns_orchestrator_provider::{
 pub use dns_orchestrator_core::types::DomainMetadata;
 
 // 工具箱类型
-pub use dns_orchestrator_core::types::{
-    BatchDeleteRequest, CertChainItem, DnsLookupRecord, DnsLookupResult, DnsPropagationResult,
-    DnsPropagationServer, DnsPropagationServerResult, DnskeyRecord, DnssecResult, DsRecord,
-    HttpHeader, HttpHeaderCheckRequest, HttpHeaderCheckResult, HttpMethod, IpGeoInfo,
-    IpLookupResult, RrsigRecord, SecurityHeaderAnalysis, SslCertInfo, SslCheckResult, WhoisResult,
-};
+pub use dns_orchestrator_core::types::BatchDeleteRequest;
 
 // ============ 应用层 Provider 相关类型 ============
 

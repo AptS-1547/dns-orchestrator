@@ -76,7 +76,7 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     let port = port.unwrap_or(443);
     let domain = domain.to_string();
 
-    debug!("[SSL] Starting check for {}:{}", domain, port);
+    debug!("[SSL] Starting check for {domain}:{port}");
     let start_time = std::time::Instant::now();
 
     // 1. 建立 TCP 连接（带超时）
@@ -95,7 +95,7 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
             s
         }
         Ok(Err(e)) => {
-            warn!("[SSL] TCP connection failed: {}", e);
+            warn!("[SSL] TCP connection failed: {e}");
             return Ok(SslCheckResult {
                 domain,
                 port,
@@ -130,7 +130,7 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     let connector = TlsConnector::from(Arc::new(config));
 
     let Ok(server_name) = ServerName::try_from(domain.clone()) else {
-        warn!("[SSL] Invalid domain name: {}", domain);
+        warn!("[SSL] Invalid domain name: {domain}");
         return Ok(SslCheckResult {
             domain,
             port,
@@ -154,7 +154,7 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
             stream
         }
         Ok(Err(e)) => {
-            warn!("[SSL] TLS handshake failed: {}", e);
+            warn!("[SSL] TLS handshake failed: {e}");
             // TLS 握手失败，检查是否为 HTTP
             trace!("[SSL] Checking if HTTP connection...");
             if check_http_connection(&domain, port).await {
@@ -232,7 +232,7 @@ pub async fn ssl_check(domain: &str, port: Option<u16>) -> CoreResult<SslCheckRe
     let (_, cert) = match X509Certificate::from_der(cert_der) {
         Ok(c) => c,
         Err(e) => {
-            warn!("[SSL] Certificate parsing failed: {}", e);
+            warn!("[SSL] Certificate parsing failed: {e}");
             return Ok(SslCheckResult {
                 domain,
                 port,

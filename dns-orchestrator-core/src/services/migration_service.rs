@@ -1,6 +1,6 @@
 //! 凭证格式迁移服务（v1.7.0）
 //!
-//! 负责将旧格式凭证（HashMap<String, HashMap<String, String>>）迁移到新格式（ProviderCredentials）
+//! 负责将旧格式凭证（HashMap<String, `HashMap`<String, String>>）迁移到新格式（ProviderCredentials）
 
 use dns_orchestrator_provider::{ProviderCredentials, ProviderType};
 use std::collections::HashMap;
@@ -47,7 +47,7 @@ impl MigrationService {
     /// 执行迁移
     ///
     /// 注意：备份逻辑已在 Tauri 层实现（src-tauri/src/lib.rs），
-    /// 在调用 migrate_if_needed() 之前执行。
+    /// 在调用 `migrate_if_needed()` 之前执行。
     async fn perform_migration(&self) -> CoreResult<MigrationResult> {
         // 1. 加载原始 JSON（备份已在调用此方法前由 Tauri 层完成）
         let raw_json = self.credential_store.load_raw_json().await?;
@@ -72,20 +72,17 @@ impl MigrationService {
         let mut failed_accounts = Vec::new();
 
         for (account_id, old_cred_map) in old_creds {
-            match account_providers.get(&account_id) {
-                Some(provider) => match ProviderCredentials::from_map(provider, &old_cred_map) {
-                    Ok(provider_creds) => {
-                        new_creds.insert(account_id.clone(), provider_creds);
-                    }
-                    Err(e) => {
-                        log::warn!("账户 {} 凭证转换失败: {}", account_id, e);
-                        failed_accounts.push((account_id, format!("转换失败: {e}")));
-                    }
-                },
-                None => {
-                    log::warn!("找不到账户 {} 的元数据，跳过迁移", account_id);
-                    failed_accounts.push((account_id, "账户元数据缺失".to_string()));
+            if let Some(provider) = account_providers.get(&account_id) { match ProviderCredentials::from_map(provider, &old_cred_map) {
+                Ok(provider_creds) => {
+                    new_creds.insert(account_id.clone(), provider_creds);
                 }
+                Err(e) => {
+                    log::warn!("账户 {account_id} 凭证转换失败: {e}");
+                    failed_accounts.push((account_id, format!("转换失败: {e}")));
+                }
+            } } else {
+                log::warn!("找不到账户 {account_id} 的元数据，跳过迁移");
+                failed_accounts.push((account_id, "账户元数据缺失".to_string()));
             }
         }
 
@@ -120,7 +117,7 @@ pub enum MigrationResult {
     Success {
         /// 成功迁移的账户数量
         migrated_count: usize,
-        /// 失败的账户列表 (account_id, error_reason)
+        /// 失败的账户列表 (`account_id`, `error_reason`)
         failed_accounts: Vec<(String, String)>,
     },
 }

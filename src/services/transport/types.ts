@@ -8,6 +8,8 @@ import type {
   ApiResponse,
   BatchDeleteRequest,
   BatchDeleteResult,
+  BatchTagRequest,
+  BatchTagResult,
   CreateAccountRequest,
   CreateDnsRecordRequest,
   DnsLookupResult,
@@ -107,6 +109,18 @@ export interface CommandMap {
   set_domain_tags: {
     args: { accountId: string; domainId: string; tags: string[] }
     result: ApiResponse<string[]>
+  }
+  batch_add_domain_tags: {
+    args: { requests: BatchTagRequest[] }
+    result: ApiResponse<BatchTagResult>
+  }
+  batch_remove_domain_tags: {
+    args: { requests: BatchTagRequest[] }
+    result: ApiResponse<BatchTagResult>
+  }
+  batch_set_domain_tags: {
+    args: { requests: BatchTagRequest[] }
+    result: ApiResponse<BatchTagResult>
   }
   find_domains_by_tag: {
     args: { tag: string }

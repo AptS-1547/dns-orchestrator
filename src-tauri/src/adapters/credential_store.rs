@@ -23,8 +23,7 @@ enum StorageFormat {
 #[cfg(not(target_os = "android"))]
 mod desktop {
     use super::{
-        async_trait, CoreError, CoreResult, CredentialStore, CredentialsMap, HashMap,
-        LegacyCredentialsMap, ProviderCredentials, StorageFormat,
+        async_trait, CoreError, CoreResult, CredentialStore, CredentialsMap, HashMap, ProviderCredentials, StorageFormat,
     };
     use keyring::Entry;
     use std::sync::Arc;
@@ -170,7 +169,7 @@ mod desktop {
         }
 
         async fn load_raw_json(&self) -> CoreResult<String> {
-            tokio::task::spawn_blocking(|| Self::read_raw_sync())
+            tokio::task::spawn_blocking(Self::read_raw_sync)
                 .await
                 .map_err(|e| CoreError::CredentialError(format!("Task join error: {e}")))?
         }

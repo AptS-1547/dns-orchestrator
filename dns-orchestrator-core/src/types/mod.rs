@@ -9,7 +9,10 @@ mod toolbox;
 
 pub use account::{Account, AccountStatus, CreateAccountRequest, UpdateAccountRequest};
 pub use domain::AppDomain;
-pub use domain_metadata::{DomainMetadata, DomainMetadataKey, DomainMetadataUpdate};
+pub use domain_metadata::{
+    BatchTagFailure, BatchTagRequest, BatchTagResult, DomainMetadata, DomainMetadataKey,
+    DomainMetadataUpdate,
+};
 pub use export::{
     ExportAccountsRequest, ExportAccountsResponse, ExportFile, ExportFileHeader, ExportedAccount,
     ImportAccountsRequest, ImportFailure, ImportPreview, ImportPreviewAccount, ImportResult,
