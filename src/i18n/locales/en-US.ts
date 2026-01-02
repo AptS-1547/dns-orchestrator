@@ -298,6 +298,12 @@ export default {
   },
   settings: {
     title: "Settings",
+    // Tabs
+    tabs: {
+      appearance: "Appearance",
+      features: "Features",
+      about: "About",
+    },
     // Appearance
     appearance: "Appearance",
     theme: "Theme",
