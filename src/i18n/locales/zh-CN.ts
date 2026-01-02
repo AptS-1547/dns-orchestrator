@@ -293,6 +293,12 @@ export default {
   },
   settings: {
     title: "设置",
+    // Tabs
+    tabs: {
+      appearance: "外观",
+      features: "功能",
+      about: "关于",
+    },
     // Appearance
     appearance: "外观",
     theme: "主题",
