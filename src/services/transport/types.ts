@@ -96,6 +96,26 @@ export interface CommandMap {
     args: { accountId: string }
     result: ApiResponse<string[]>
   }
+  add_domain_tag: {
+    args: { accountId: string; domainId: string; tag: string }
+    result: ApiResponse<string[]>
+  }
+  remove_domain_tag: {
+    args: { accountId: string; domainId: string; tag: string }
+    result: ApiResponse<string[]>
+  }
+  set_domain_tags: {
+    args: { accountId: string; domainId: string; tags: string[] }
+    result: ApiResponse<string[]>
+  }
+  find_domains_by_tag: {
+    args: { tag: string }
+    result: ApiResponse<string[]>
+  }
+  list_all_domain_tags: {
+    args: Record<string, never>
+    result: ApiResponse<string[]>
+  }
 
   // DNS commands
   list_dns_records: {

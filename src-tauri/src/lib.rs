@@ -323,6 +323,11 @@ pub fn run() {
         domain_metadata::get_domain_metadata,
         domain_metadata::toggle_domain_favorite,
         domain_metadata::list_account_favorite_domain_keys,
+        domain_metadata::add_domain_tag,
+        domain_metadata::remove_domain_tag,
+        domain_metadata::set_domain_tags,
+        domain_metadata::find_domains_by_tag,
+        domain_metadata::list_all_domain_tags,
         // DNS commands
         dns::list_dns_records,
         dns::create_dns_record,
@@ -359,6 +364,11 @@ pub fn run() {
         domain_metadata::get_domain_metadata,
         domain_metadata::toggle_domain_favorite,
         domain_metadata::list_account_favorite_domain_keys,
+        domain_metadata::add_domain_tag,
+        domain_metadata::remove_domain_tag,
+        domain_metadata::set_domain_tags,
+        domain_metadata::find_domains_by_tag,
+        domain_metadata::list_all_domain_tags,
         // DNS commands
         dns::list_dns_records,
         dns::create_dns_record,

@@ -96,4 +96,125 @@ impl DomainMetadataService {
     pub async fn delete_account_metadata(&self, account_id: &str) -> CoreResult<()> {
         self.repository.delete_by_account(account_id).await
     }
+
+    /// 添加标签（返回更新后的标签列表）
+    pub async fn add_tag(
+        &self,
+        account_id: &str,
+        domain_id: &str,
+        tag: String,
+    ) -> CoreResult<Vec<String>> {
+        use crate::error::CoreError;
+
+        // 标签验证
+        let tag = tag.trim().to_string();
+        if tag.is_empty() {
+            return Err(CoreError::ValidationError(
+                "Tag cannot be empty".to_string(),
+            ));
+        }
+        if tag.len() > 50 {
+            return Err(CoreError::ValidationError(
+                "Tag length cannot exceed 50 characters".to_string(),
+            ));
+        }
+
+        let mut metadata = self.get_metadata(account_id, domain_id).await?;
+
+        // 去重：检查标签是否已存在
+        if metadata.tags.contains(&tag) {
+            return Ok(metadata.tags);
+        }
+
+        // 限制标签数量
+        if metadata.tags.len() >= 10 {
+            return Err(CoreError::ValidationError(
+                "Cannot add more than 10 tags".to_string(),
+            ));
+        }
+
+        metadata.tags.push(tag);
+        metadata.tags.sort();
+        metadata.touch();
+
+        let tags = metadata.tags.clone();
+        self.save_metadata(account_id, domain_id, metadata).await?;
+        Ok(tags)
+    }
+
+    /// 移除标签（返回更新后的标签列表）
+    pub async fn remove_tag(
+        &self,
+        account_id: &str,
+        domain_id: &str,
+        tag: &str,
+    ) -> CoreResult<Vec<String>> {
+        let mut metadata = self.get_metadata(account_id, domain_id).await?;
+
+        // 移除标签（不存在也不报错，静默处理）
+        metadata.tags.retain(|t| t != tag);
+        metadata.touch();
+
+        let tags = metadata.tags.clone();
+        self.save_metadata(account_id, domain_id, metadata).await?;
+        Ok(tags)
+    }
+
+    /// 批量设置标签（替换所有标签）
+    pub async fn set_tags(
+        &self,
+        account_id: &str,
+        domain_id: &str,
+        tags: Vec<String>,
+    ) -> CoreResult<Vec<String>> {
+        use crate::error::CoreError;
+
+        // 验证每个标签
+        for tag in &tags {
+            let trimmed = tag.trim();
+            if trimmed.is_empty() {
+                return Err(CoreError::ValidationError(
+                    "Tag cannot be empty".to_string(),
+                ));
+            }
+            if trimmed.len() > 50 {
+                return Err(CoreError::ValidationError(
+                    "Tag length cannot exceed 50 characters".to_string(),
+                ));
+            }
+        }
+
+        if tags.len() > 10 {
+            return Err(CoreError::ValidationError(
+                "Cannot have more than 10 tags".to_string(),
+            ));
+        }
+
+        let mut metadata = self.get_metadata(account_id, domain_id).await?;
+
+        // 清理、去重、排序
+        let mut cleaned_tags: Vec<String> = tags
+            .into_iter()
+            .map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty())
+            .collect();
+        cleaned_tags.sort();
+        cleaned_tags.dedup();
+
+        metadata.tags = cleaned_tags.clone();
+        metadata.touch();
+
+        self.save_metadata(account_id, domain_id, metadata).await?;
+        Ok(cleaned_tags)
+    }
+
+    /// 按标签查询域名（跨账户）
+    pub async fn find_by_tag(&self, tag: &str) -> CoreResult<Vec<DomainMetadataKey>> {
+        self.repository.find_by_tag(tag).await
+    }
+
+    /// 获取所有使用过的标签（用于自动补全，可选功能）
+    pub async fn list_all_tags(&self) -> CoreResult<Vec<String>> {
+        self.repository.list_all_tags().await
+    }
 }

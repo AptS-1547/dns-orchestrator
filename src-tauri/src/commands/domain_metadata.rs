@@ -81,3 +81,75 @@ pub async fn list_account_favorite_domain_keys(
 
     Ok(ApiResponse::success(result))
 }
+
+/// 添加标签
+#[tauri::command]
+pub async fn add_domain_tag(
+    state: State<'_, AppState>,
+    account_id: String,
+    domain_id: String,
+    tag: String,
+) -> Result<ApiResponse<Vec<String>>, DnsError> {
+    let tags = state
+        .domain_metadata_service
+        .add_tag(&account_id, &domain_id, tag)
+        .await?;
+
+    Ok(ApiResponse::success(tags))
+}
+
+/// 移除标签
+#[tauri::command]
+pub async fn remove_domain_tag(
+    state: State<'_, AppState>,
+    account_id: String,
+    domain_id: String,
+    tag: String,
+) -> Result<ApiResponse<Vec<String>>, DnsError> {
+    let tags = state
+        .domain_metadata_service
+        .remove_tag(&account_id, &domain_id, &tag)
+        .await?;
+
+    Ok(ApiResponse::success(tags))
+}
+
+/// 批量设置标签
+#[tauri::command]
+pub async fn set_domain_tags(
+    state: State<'_, AppState>,
+    account_id: String,
+    domain_id: String,
+    tags: Vec<String>,
+) -> Result<ApiResponse<Vec<String>>, DnsError> {
+    let tags = state
+        .domain_metadata_service
+        .set_tags(&account_id, &domain_id, tags)
+        .await?;
+
+    Ok(ApiResponse::success(tags))
+}
+
+/// 按标签查询域名
+#[tauri::command]
+pub async fn find_domains_by_tag(
+    state: State<'_, AppState>,
+    tag: String,
+) -> Result<ApiResponse<Vec<String>>, DnsError> {
+    let keys = state.domain_metadata_service.find_by_tag(&tag).await?;
+
+    // 返回 domain_id 列表（带 account_id 前缀）
+    let result = keys.into_iter().map(|k| k.to_storage_key()).collect();
+
+    Ok(ApiResponse::success(result))
+}
+
+/// 获取所有标签（用于自动补全）
+#[tauri::command]
+pub async fn list_all_domain_tags(
+    state: State<'_, AppState>,
+) -> Result<ApiResponse<Vec<String>>, DnsError> {
+    let tags = state.domain_metadata_service.list_all_tags().await?;
+
+    Ok(ApiResponse::success(tags))
+}

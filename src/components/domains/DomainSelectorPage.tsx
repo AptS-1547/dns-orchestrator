@@ -1,10 +1,13 @@
-import { ChevronRight, Globe, Loader2, RefreshCw, Search, TriangleAlert } from "lucide-react"
+import { ChevronRight, Globe, Loader2, Plus, RefreshCw, Search, TriangleAlert } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import { useShallow } from "zustand/react/shallow"
 import { getProviderName, ProviderIcon } from "@/components/account/ProviderIcon"
 import { DomainFavoriteButton } from "@/components/domain/DomainFavoriteButton"
+import { DomainTagEditor } from "@/components/domain/DomainTagEditor"
+import { DomainTagList } from "@/components/domain/DomainTagList"
+import { TagFilter } from "@/components/domain/TagFilter"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -42,15 +45,21 @@ export function DomainSelectorPage() {
   )
 
   // 使用 useShallow 优化 domainStore 订阅
-  const { domainsByAccount, isBackgroundRefreshing, expandedAccounts, scrollPosition } =
-    useDomainStore(
-      useShallow((state) => ({
-        domainsByAccount: state.domainsByAccount,
-        isBackgroundRefreshing: state.isBackgroundRefreshing,
-        expandedAccounts: state.expandedAccounts,
-        scrollPosition: state.scrollPosition,
-      }))
-    )
+  const {
+    domainsByAccount,
+    isBackgroundRefreshing,
+    expandedAccounts,
+    scrollPosition,
+    selectedTags,
+  } = useDomainStore(
+    useShallow((state) => ({
+      domainsByAccount: state.domainsByAccount,
+      isBackgroundRefreshing: state.isBackgroundRefreshing,
+      expandedAccounts: state.expandedAccounts,
+      scrollPosition: state.scrollPosition,
+      selectedTags: state.selectedTags,
+    }))
+  )
 
   // actions 单独获取
   const refreshAccount = useDomainStore((state) => state.refreshAccount)
@@ -133,11 +142,25 @@ export function DomainSelectorPage() {
   // 过滤域名
   const getFilteredDomains = useCallback(
     (domains: Domain[]) => {
-      if (!searchQuery.trim()) return domains
-      const query = searchQuery.toLowerCase()
-      return domains.filter((domain) => domain.name.toLowerCase().includes(query))
+      let filtered = domains
+
+      // 搜索查询过滤
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase()
+        filtered = filtered.filter((domain) => domain.name.toLowerCase().includes(query))
+      }
+
+      // 标签筛选（任意匹配）
+      if (selectedTags.size > 0) {
+        filtered = filtered.filter((domain) => {
+          const domainTags = domain.metadata?.tags ?? []
+          return Array.from(selectedTags).some((tag) => domainTags.includes(tag))
+        })
+      }
+
+      return filtered
     },
-    [searchQuery]
+    [searchQuery, selectedTags]
   )
 
   // 渲染域名项
@@ -153,16 +176,38 @@ export function DomainSelectorPage() {
           "hover:bg-accent hover:text-accent-foreground"
         )}
       >
-        <DomainFavoriteButton
-          accountId={accountId}
-          domainId={domain.id}
-          isFavorite={domain.metadata?.isFavorite ?? false}
-        />
-        <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="flex-1 truncate">{domain.name}</span>
-        <Badge variant={config.variant} className="shrink-0">
-          {t(config.labelKey)}
-        </Badge>
+        <div className="flex w-full items-center gap-2">
+          <DomainFavoriteButton
+            accountId={accountId}
+            domainId={domain.id}
+            isFavorite={domain.metadata?.isFavorite ?? false}
+          />
+          <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="truncate">{domain.name}</span>
+            <DomainTagList
+              tags={domain.metadata?.tags ?? []}
+              onClickTag={(tag) => {
+                const { setSelectedTags, selectedTags } = useDomainStore.getState()
+                const newTags = new Set(selectedTags)
+                newTags.add(tag)
+                setSelectedTags(Array.from(newTags))
+              }}
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <Badge variant={config.variant}>{t(config.labelKey)}</Badge>
+            <DomainTagEditor
+              accountId={accountId}
+              domainId={domain.id}
+              currentTags={domain.metadata?.tags ?? []}
+            >
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DomainTagEditor>
+          </div>
+        </div>
       </button>
     )
   }
@@ -285,6 +330,7 @@ export function DomainSelectorPage() {
             className="pl-9"
           />
         </div>
+        <TagFilter />
       </div>
 
       {/* 账户域名列表 */}

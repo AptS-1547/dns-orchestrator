@@ -213,4 +213,38 @@ impl DomainMetadataRepository for TauriDomainMetadataRepository {
 
         Ok(result)
     }
+
+    async fn find_by_tag(&self, tag: &str) -> CoreResult<Vec<DomainMetadataKey>> {
+        self.ensure_cache().await?;
+        let cache = self.cache.read().await;
+        let mut result = Vec::new();
+
+        if let Some(ref cache_data) = *cache {
+            for (storage_key, metadata) in cache_data {
+                if metadata.tags.contains(&tag.to_string()) {
+                    if let Some(key) = DomainMetadataKey::from_storage_key(storage_key) {
+                        result.push(key);
+                    }
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    async fn list_all_tags(&self) -> CoreResult<Vec<String>> {
+        self.ensure_cache().await?;
+        let cache = self.cache.read().await;
+        let mut tags = std::collections::HashSet::new();
+
+        if let Some(ref cache_data) = *cache {
+            for metadata in cache_data.values() {
+                tags.extend(metadata.tags.iter().cloned());
+            }
+        }
+
+        let mut result: Vec<String> = tags.into_iter().collect();
+        result.sort();
+        Ok(result)
+    }
 }

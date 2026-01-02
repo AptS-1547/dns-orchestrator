@@ -92,6 +92,9 @@ interface DomainState {
   expandedAccounts: Set<string>
   scrollPosition: number
 
+  // 标签筛选状态（会话内保持，不持久化）
+  selectedTags: Set<string>
+
   // 方法
   loadFromStorage: () => void
   saveToStorage: () => void
@@ -109,6 +112,16 @@ interface DomainState {
   // 元数据操作
   toggleFavorite: (accountId: string, domainId: string) => Promise<void>
   getFavoriteDomains: () => FavoriteDomain[]
+
+  // 标签操作
+  addTag: (accountId: string, domainId: string, tag: string) => Promise<void>
+  removeTag: (accountId: string, domainId: string, tag: string) => Promise<void>
+  setTags: (accountId: string, domainId: string, tags: string[]) => Promise<void>
+
+  // 标签筛选
+  setSelectedTags: (tags: string[]) => void
+  clearTagFilters: () => void
+  getAllUsedTags: () => string[]
 
   // 便捷 getters
   getDomainsForAccount: (accountId: string) => Domain[]
@@ -128,6 +141,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
   isBackgroundRefreshing: false,
   expandedAccounts: new Set(),
   scrollPosition: initialCache.scrollPosition,
+  selectedTags: new Set(),
 
   // 从 localStorage 加载缓存
   loadFromStorage: () => {
@@ -446,5 +460,155 @@ export const useDomainStore = create<DomainState>((set, get) => ({
 
     // 按收藏时间倒序排序（最新收藏在前）
     return favorites.sort((a, b) => b.favoritedAt - a.favoritedAt)
+  },
+
+  // 添加标签
+  addTag: async (accountId, domainId, tag) => {
+    const response = await domainMetadataService.addTag(accountId, domainId, tag)
+
+    if (!(response.success && response.data)) {
+      logger.error("Failed to add tag:", response.error)
+      return
+    }
+
+    const newTags = response.data
+
+    // 更新本地缓存
+    set((state) => {
+      const cache = state.domainsByAccount[accountId]
+      if (!cache) return {}
+
+      const domains = cache.domains.map((d) => {
+        if (d.id === domainId) {
+          return {
+            ...d,
+            metadata: {
+              ...d.metadata,
+              isFavorite: d.metadata?.isFavorite ?? false,
+              tags: newTags,
+              updatedAt: new Date().toISOString(),
+            },
+          }
+        }
+        return d
+      })
+
+      return {
+        domainsByAccount: {
+          ...state.domainsByAccount,
+          [accountId]: { ...cache, domains },
+        },
+      }
+    })
+
+    get().saveToStorage()
+  },
+
+  // 移除标签
+  removeTag: async (accountId, domainId, tag) => {
+    const response = await domainMetadataService.removeTag(accountId, domainId, tag)
+
+    if (!(response.success && response.data)) {
+      logger.error("Failed to remove tag:", response.error)
+      return
+    }
+
+    const newTags = response.data
+
+    // 更新本地缓存
+    set((state) => {
+      const cache = state.domainsByAccount[accountId]
+      if (!cache) return {}
+
+      const domains = cache.domains.map((d) => {
+        if (d.id === domainId) {
+          return {
+            ...d,
+            metadata: {
+              ...d.metadata,
+              isFavorite: d.metadata?.isFavorite ?? false,
+              tags: newTags,
+              updatedAt: new Date().toISOString(),
+            },
+          }
+        }
+        return d
+      })
+
+      return {
+        domainsByAccount: {
+          ...state.domainsByAccount,
+          [accountId]: { ...cache, domains },
+        },
+      }
+    })
+
+    get().saveToStorage()
+  },
+
+  // 批量设置标签
+  setTags: async (accountId, domainId, tags) => {
+    const response = await domainMetadataService.setTags(accountId, domainId, tags)
+
+    if (!(response.success && response.data)) {
+      logger.error("Failed to set tags:", response.error)
+      return
+    }
+
+    const newTags = response.data
+
+    // 更新本地缓存
+    set((state) => {
+      const cache = state.domainsByAccount[accountId]
+      if (!cache) return {}
+
+      const domains = cache.domains.map((d) => {
+        if (d.id === domainId) {
+          return {
+            ...d,
+            metadata: {
+              ...d.metadata,
+              isFavorite: d.metadata?.isFavorite ?? false,
+              tags: newTags,
+              updatedAt: new Date().toISOString(),
+            },
+          }
+        }
+        return d
+      })
+
+      return {
+        domainsByAccount: {
+          ...state.domainsByAccount,
+          [accountId]: { ...cache, domains },
+        },
+      }
+    })
+
+    get().saveToStorage()
+  },
+
+  // 设置标签筛选
+  setSelectedTags: (tags) => {
+    set({ selectedTags: new Set(tags) })
+  },
+
+  // 清空标签筛选
+  clearTagFilters: () => {
+    set({ selectedTags: new Set() })
+  },
+
+  // 获取所有使用过的标签
+  getAllUsedTags: () => {
+    const { domainsByAccount } = get()
+    const tagsSet = new Set<string>()
+
+    Object.values(domainsByAccount).forEach((cache) => {
+      cache.domains.forEach((domain) => {
+        domain.metadata?.tags?.forEach((tag) => tagsSet.add(tag))
+      })
+    })
+
+    return Array.from(tagsSet).sort()
   },
 }))

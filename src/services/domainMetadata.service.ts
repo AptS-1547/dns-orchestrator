@@ -22,6 +22,45 @@ class DomainMetadataService {
   async listAccountFavorites(accountId: string) {
     return transport.invoke("list_account_favorite_domain_keys", { accountId })
   }
+
+  /**
+   * 添加标签
+   * @returns 更新后的标签列表
+   */
+  async addTag(accountId: string, domainId: string, tag: string) {
+    return transport.invoke("add_domain_tag", { accountId, domainId, tag })
+  }
+
+  /**
+   * 移除标签
+   * @returns 更新后的标签列表
+   */
+  async removeTag(accountId: string, domainId: string, tag: string) {
+    return transport.invoke("remove_domain_tag", { accountId, domainId, tag })
+  }
+
+  /**
+   * 批量设置标签
+   * @returns 更新后的标签列表
+   */
+  async setTags(accountId: string, domainId: string, tags: string[]) {
+    return transport.invoke("set_domain_tags", { accountId, domainId, tags })
+  }
+
+  /**
+   * 按标签查询域名
+   * @returns 域名键列表（格式: account_id::domain_id）
+   */
+  async findByTag(tag: string) {
+    return transport.invoke("find_domains_by_tag", { tag })
+  }
+
+  /**
+   * 获取所有标签（用于自动补全）
+   */
+  async listAllTags() {
+    return transport.invoke("list_all_domain_tags")
+  }
 }
 
 export const domainMetadataService = new DomainMetadataService()

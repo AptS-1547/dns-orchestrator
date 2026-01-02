@@ -60,4 +60,10 @@ pub trait DomainMetadataRepository: Send + Sync {
         &self,
         account_id: &str,
     ) -> CoreResult<Vec<DomainMetadataKey>>;
+
+    /// 按标签查询域名（返回所有包含该标签的域名键）
+    async fn find_by_tag(&self, tag: &str) -> CoreResult<Vec<DomainMetadataKey>>;
+
+    /// 获取所有使用过的标签（去重、排序）
+    async fn list_all_tags(&self) -> CoreResult<Vec<String>>;
 }
