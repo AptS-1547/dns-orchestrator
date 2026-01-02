@@ -10,8 +10,10 @@ export interface DomainMetadata {
   color?: string
   /** 备注（Phase 3） */
   note?: string
-  /** 最后修改时间（Unix 时间戳，毫秒） */
-  updatedAt: number
+  /** 收藏时间（ISO8601 字符串） */
+  favoritedAt?: string
+  /** 最后修改时间（ISO8601 字符串） */
+  updatedAt: string
 }
 
 /**

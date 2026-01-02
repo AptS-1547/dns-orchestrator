@@ -1,4 +1,13 @@
-import { Globe, Home, PanelLeftClose, PanelLeftOpen, Settings, Users, Wrench } from "lucide-react"
+import {
+  Globe,
+  Home,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings,
+  Star,
+  Users,
+  Wrench,
+} from "lucide-react"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
@@ -7,7 +16,7 @@ import { TIMING } from "@/constants"
 import { cn } from "@/lib/utils"
 import { useSettingsStore } from "@/stores"
 
-type NavItem = "main" | "domains" | "toolbox" | "settings" | "accounts"
+type NavItem = "main" | "domains" | "favorites" | "toolbox" | "settings" | "accounts"
 
 interface SidebarProps {
   currentView: NavItem
@@ -28,6 +37,7 @@ interface NavItemConfig {
 const navItems: NavItemConfig[] = [
   { id: "main", icon: Home, labelKey: "nav.home", position: "top" },
   { id: "domains", icon: Globe, labelKey: "nav.domains", position: "top" },
+  { id: "favorites", icon: Star, labelKey: "nav.favorites", position: "top" },
   { id: "accounts", icon: Users, labelKey: "accounts.manage", position: "top" },
   { id: "toolbox", icon: Wrench, labelKey: "toolbox.title", position: "bottom" },
   { id: "settings", icon: Settings, labelKey: "settings.title", position: "bottom" },

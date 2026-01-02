@@ -21,9 +21,10 @@ import { AppLayout } from "./AppLayout"
 /** 路由路径到导航项的映射 */
 function getNavItemFromPath(
   pathname: string
-): "main" | "domains" | "toolbox" | "settings" | "accounts" {
+): "main" | "domains" | "favorites" | "toolbox" | "settings" | "accounts" {
   if (pathname === "/") return "main"
   if (pathname.startsWith("/domains")) return "domains"
+  if (pathname.startsWith("/favorites")) return "favorites"
   if (pathname.startsWith("/toolbox")) return "toolbox"
   if (pathname.startsWith("/settings")) return "settings"
   if (pathname.startsWith("/accounts")) return "accounts"
@@ -97,10 +98,13 @@ export function RootLayout() {
   }, [checkForUpdates, isMobile])
 
   // 导航处理
-  const handleNavigate = (view: "main" | "domains" | "toolbox" | "settings" | "accounts") => {
+  const handleNavigate = (
+    view: "main" | "domains" | "favorites" | "toolbox" | "settings" | "accounts"
+  ) => {
     const paths: Record<string, string> = {
       main: "/",
       domains: "/domains",
+      favorites: "/favorites",
       toolbox: "/toolbox",
       settings: "/settings",
       accounts: "/accounts",

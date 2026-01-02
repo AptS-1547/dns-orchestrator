@@ -195,6 +195,7 @@ export default {
   nav: {
     home: "主页",
     domains: "域名",
+    favorites: "收藏",
     collapse: "收起侧边栏",
     expand: "展开侧边栏",
   },
@@ -214,6 +215,11 @@ export default {
     useTools: "DNS/WHOIS/SSL 查询工具",
     manageAccounts: "添加或管理账户",
     configureSettings: "主题、语言等设置",
+  },
+  favorites: {
+    searchPlaceholder: "搜索收藏的域名或账户",
+    empty: "还没有收藏域名",
+    emptyDesc: "在域名列表中点击星星图标收藏常用域名",
   },
   settings: {
     title: "设置",

@@ -73,6 +73,13 @@ impl DomainMetadataService {
     pub async fn toggle_favorite(&self, account_id: &str, domain_id: &str) -> CoreResult<bool> {
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
         metadata.is_favorite = !metadata.is_favorite;
+
+        // 首次收藏时记录时间，之后永不修改
+        if metadata.is_favorite && metadata.favorited_at.is_none() {
+            metadata.favorited_at = Some(chrono::Utc::now());
+        }
+        // 注意：取消收藏时不清空 favorited_at
+
         metadata.touch();
 
         let new_state = metadata.is_favorite;

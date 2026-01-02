@@ -60,8 +60,12 @@ pub struct DomainMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 
-    /// 最后修改时间（Unix 时间戳，毫秒）
-    pub updated_at: i64,
+    /// 收藏时间（仅收藏时有值）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub favorited_at: Option<chrono::DateTime<chrono::Utc>>,
+
+    /// 最后修改时间
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl Default for DomainMetadata {
@@ -71,7 +75,8 @@ impl Default for DomainMetadata {
             tags: Vec::new(),
             color: None,
             note: None,
-            updated_at: chrono::Utc::now().timestamp_millis(),
+            favorited_at: None,
+            updated_at: chrono::Utc::now(),
         }
     }
 }
@@ -84,25 +89,31 @@ impl DomainMetadata {
         tags: Vec<String>,
         color: Option<String>,
         note: Option<String>,
+        favorited_at: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Self {
         Self {
             is_favorite,
             tags,
             color,
             note,
-            updated_at: chrono::Utc::now().timestamp_millis(),
+            favorited_at,
+            updated_at: chrono::Utc::now(),
         }
     }
 
     /// 刷新更新时间
     pub fn touch(&mut self) {
-        self.updated_at = chrono::Utc::now().timestamp_millis();
+        self.updated_at = chrono::Utc::now();
     }
 
     /// 是否为空元数据（所有字段都是默认值）
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        !self.is_favorite && self.tags.is_empty() && self.color.is_none() && self.note.is_none()
+        !self.is_favorite
+            && self.tags.is_empty()
+            && self.color.is_none()
+            && self.note.is_none()
+            && self.favorited_at.is_none()
     }
 }
 

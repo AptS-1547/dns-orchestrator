@@ -200,6 +200,7 @@ export default {
   nav: {
     home: "Home",
     domains: "Domains",
+    favorites: "Favorites",
     collapse: "Collapse sidebar",
     expand: "Expand sidebar",
   },
@@ -219,6 +220,11 @@ export default {
     useTools: "DNS/WHOIS/SSL lookup tools",
     manageAccounts: "Add or manage accounts",
     configureSettings: "Theme, language settings",
+  },
+  favorites: {
+    searchPlaceholder: "Search favorite domains or accounts",
+    empty: "No favorite domains yet",
+    emptyDesc: "Click the star icon in the domain list to bookmark frequently used domains",
   },
   settings: {
     title: "Settings",

@@ -1,5 +1,6 @@
 //! 域名元数据相关命令
 
+use chrono::{DateTime, Utc};
 use tauri::State;
 
 use crate::error::DnsError;
@@ -16,7 +17,9 @@ pub struct DomainMetadata {
     pub tags: Vec<String>,
     pub color: Option<String>,
     pub note: Option<String>,
-    pub updated_at: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub favorited_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
 }
 
 // 类型转换
@@ -27,6 +30,7 @@ impl From<dns_orchestrator_core::types::DomainMetadata> for DomainMetadata {
             tags: core.tags,
             color: core.color,
             note: core.note,
+            favorited_at: core.favorited_at,
             updated_at: core.updated_at,
         }
     }

@@ -6,6 +6,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom"
 import { AccountsPage } from "@/components/accounts/AccountsPage"
 import { DnsRecordPage } from "@/components/domains/DnsRecordPage"
 import { DomainSelectorPage } from "@/components/domains/DomainSelectorPage"
+import { FavoriteDomainsPage } from "@/components/domains/FavoriteDomainsPage"
 import { HomePage } from "@/components/home/HomePage"
 import { RootLayout } from "@/components/layout/RootLayout"
 import { SettingsPage } from "@/components/settings/SettingsPage"
@@ -27,6 +28,10 @@ export const router = createBrowserRouter([
       {
         path: "domains/:accountId/:domainId",
         element: <DnsRecordPage />,
+      },
+      {
+        path: "favorites",
+        element: <FavoriteDomainsPage />,
       },
       {
         path: "accounts",

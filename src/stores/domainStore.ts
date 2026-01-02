@@ -42,8 +42,10 @@ function getInitialCache(): {
       // 旧格式
       return { domainsByAccount: parsed, scrollPosition: 0 }
     }
-  } catch {
-    // 忽略解析错误
+  } catch (err) {
+    // 解析错误时清空缓存
+    logger.warn("Failed to load domain cache, clearing:", err)
+    localStorage.removeItem(STORAGE_KEYS.DOMAINS_CACHE)
   }
   return { domainsByAccount: {}, scrollPosition: 0 }
 }
@@ -383,12 +385,17 @@ export const useDomainStore = create<DomainState>((set, get) => ({
 
       const domains = cache.domains.map((d) => {
         if (d.id === domainId) {
+          // 保留原有的 favoritedAt（如果存在）
+          const existingFavoritedAt = d.metadata?.favoritedAt
+
           return {
             ...d,
             metadata: {
               isFavorite: newFavoriteState,
               tags: d.metadata?.tags ?? [],
-              updatedAt: Date.now(),
+              updatedAt: new Date().toISOString(),
+              // 首次收藏时记录时间，之后永远保留
+              favoritedAt: existingFavoritedAt ?? new Date().toISOString(),
             },
           }
         }
@@ -428,7 +435,10 @@ export const useDomainStore = create<DomainState>((set, get) => ({
             domainName: domain.name,
             accountName: account.name,
             provider: domain.provider,
-            favoritedAt: domain.metadata.updatedAt,
+            // 优先使用 favoritedAt，回退到 updatedAt（转换为时间戳）
+            favoritedAt: new Date(
+              domain.metadata.favoritedAt ?? domain.metadata.updatedAt
+            ).getTime(),
           })
         }
       })

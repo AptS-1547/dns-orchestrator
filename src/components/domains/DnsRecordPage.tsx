@@ -72,7 +72,7 @@ export function DnsRecordPage() {
         subtitle={`${t("dns.title")} · ${selectedAccount?.name}`}
         showMobileMenu={false}
         backButton={
-          <Button variant="ghost" size="icon" onClick={() => navigate("/domains")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
         }
