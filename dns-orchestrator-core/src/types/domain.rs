@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use dns_orchestrator_provider::{DomainStatus, ProviderDomain, ProviderType};
 
+use super::domain_metadata::DomainMetadata;
+
 /// 应用层域名类型（包含 `account_id`）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppDomain {
@@ -21,6 +23,9 @@ pub struct AppDomain {
     /// DNS 记录数量
     #[serde(rename = "recordCount", skip_serializing_if = "Option::is_none")]
     pub record_count: Option<u32>,
+    /// 用户自定义元数据
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<DomainMetadata>,
 }
 
 impl AppDomain {
@@ -34,6 +39,14 @@ impl AppDomain {
             provider: provider_domain.provider,
             status: provider_domain.status,
             record_count: provider_domain.record_count,
+            metadata: None,
         }
+    }
+
+    /// 附加元数据（供 `DomainService` 使用）
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: Option<DomainMetadata>) -> Self {
+        self.metadata = metadata;
+        self
     }
 }

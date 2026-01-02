@@ -135,7 +135,7 @@ export function DnsTableToolbar({
       {/* 搜索和筛选 */}
       <div className="flex items-center gap-2">
         <div className="relative max-w-sm flex-1">
-          <Search className="-translate-y-1/2 absolute top-1/2 left-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t("dns.searchPlaceholder")}
             value={keyword}
@@ -146,7 +146,7 @@ export function DnsTableToolbar({
             <Button
               variant="ghost"
               size="icon"
-              className="-translate-y-1/2 absolute top-1/2 right-1 h-6 w-6"
+              className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2"
               onClick={() => onSearchChange("")}
             >
               <X className="h-3 w-3" />

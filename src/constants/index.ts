@@ -40,6 +40,8 @@ export const STORAGE_KEYS = {
   SIDEBAR_COLLAPSED: "sidebarCollapsed",
   DOMAINS_CACHE: "dns-orchestrator-domains-cache",
   PAGINATION_MODE: "paginationMode",
+  SHOW_RECORD_HINTS: "showRecordHints",
+  OPERATION_NOTIFICATIONS: "operationNotifications",
 } as const
 
 /** 业务限制 */

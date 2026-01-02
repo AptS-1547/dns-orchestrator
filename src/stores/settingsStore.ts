@@ -24,11 +24,15 @@ interface SettingsState {
   debugMode: boolean
   sidebarCollapsed: boolean
   paginationMode: PaginationMode
+  showRecordHints: boolean
+  operationNotifications: boolean
   setTheme: (theme: Theme) => void
   setLanguage: (lang: LanguageCode) => void
   setDebugMode: (enabled: boolean) => void
   setSidebarCollapsed: (collapsed: boolean) => void
   setPaginationMode: (mode: PaginationMode) => void
+  setShowRecordHints: (enabled: boolean) => void
+  setOperationNotifications: (enabled: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -38,6 +42,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   sidebarCollapsed: localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === "true",
   paginationMode:
     (localStorage.getItem(STORAGE_KEYS.PAGINATION_MODE) as PaginationMode) || "infinite",
+  showRecordHints: localStorage.getItem(STORAGE_KEYS.SHOW_RECORD_HINTS) === "true",
+  operationNotifications: localStorage.getItem(STORAGE_KEYS.OPERATION_NOTIFICATIONS) !== "false",
 
   setTheme: (theme) => {
     set({ theme })
@@ -73,6 +79,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setPaginationMode: (mode) => {
     set({ paginationMode: mode })
     localStorage.setItem(STORAGE_KEYS.PAGINATION_MODE, mode)
+  },
+
+  setShowRecordHints: (enabled) => {
+    set({ showRecordHints: enabled })
+    localStorage.setItem(STORAGE_KEYS.SHOW_RECORD_HINTS, String(enabled))
+  },
+
+  setOperationNotifications: (enabled) => {
+    set({ operationNotifications: enabled })
+    localStorage.setItem(STORAGE_KEYS.OPERATION_NOTIFICATIONS, String(enabled))
   },
 }))
 

@@ -1,0 +1,15 @@
+# 文档目录结构说明
+
+本目录包含 DNS Orchestrator 的所有文档。
+
+## 目录结构
+
+- `guides/` - 用户指南
+- `development/` - 开发文档
+- `architecture/` - 架构设计
+- `api/` - API 参考
+- `projects/` - 项目管理
+- `release-notes/` - 发行说明
+- `i18n/` - 国际化文档
+
+详见：[文档中心](./README.md)

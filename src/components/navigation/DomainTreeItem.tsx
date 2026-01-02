@@ -1,7 +1,9 @@
 import { Globe } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
+import { type DomainColorKey, getDomainColor } from "@/constants/colors"
 import { cn } from "@/lib/utils"
+import { useSettingsStore } from "@/stores"
 import type { Domain, DomainStatus } from "@/types"
 
 interface DomainTreeItemProps {
@@ -23,6 +25,10 @@ const statusConfig: Record<
 
 export function DomainTreeItem({ domain, isSelected, onSelect }: DomainTreeItemProps) {
   const { t } = useTranslation()
+  const theme = useSettingsStore((state) => state.theme)
+  const isDark =
+    theme === "dark" ||
+    (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
   const config = statusConfig[domain.status] ?? statusConfig.active
 
   return (
@@ -35,6 +41,15 @@ export function DomainTreeItem({ domain, isSelected, onSelect }: DomainTreeItemP
         isSelected && "bg-sidebar-accent text-sidebar-accent-foreground"
       )}
     >
+      {/* 颜色色块（固定占位以保持对齐） */}
+      <div
+        className="h-3 w-0.5 shrink-0 rounded-full"
+        style={{
+          backgroundColor: domain.metadata?.color
+            ? getDomainColor(domain.metadata.color as DomainColorKey, isDark)
+            : "transparent",
+        }}
+      />
       <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       <span className="flex-1 truncate text-left">{domain.name}</span>
       <Badge variant={config.variant} className="px-1.5 py-0 text-[10px]">

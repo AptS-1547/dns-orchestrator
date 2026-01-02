@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { DNS } from "@/constants"
-import { useDnsStore } from "@/stores"
+import { useDnsStore, useDomainStore } from "@/stores"
+import { useSettingsStore } from "@/stores/settingsStore"
 import type { DnsRecord, DnsRecordType, RecordData } from "@/types"
 import { RECORD_TYPE_INFO, RECORD_TYPES, TTL_OPTIONS } from "@/types/dns"
 
@@ -97,6 +98,9 @@ function initFormData(record: DnsRecord | null | undefined): FormData {
         tag: data.content.tag,
         value: data.content.value,
       }
+    default:
+      // Exhaustive check: TypeScript will error if new record type is added but not handled
+      throw new Error(`Unhandled record type in initFormData: ${(data as any).type}`)
   }
 }
 
@@ -112,6 +116,90 @@ export function DnsRecordForm({
   const isEditing = !!record
 
   const [formData, setFormData] = useState<FormData>(initFormData(record))
+
+  // 获取当前域名（从缓存中根据 accountId 和 domainId 查找）
+  const currentDomain = useDomainStore((state) => {
+    const domains = state.getDomainsForAccount(accountId)
+    return domains.find((d) => d.id === domainId) ?? null
+  })
+
+  // 获取设置开关状态
+  const showRecordHints = useSettingsStore((state) => state.showRecordHints)
+
+  // 计算完整域名
+  const getFQDN = useCallback(
+    (name: string): string => {
+      if (!currentDomain?.name) return ""
+      const cleanName = name.trim()
+      if (!cleanName || cleanName === "@") return currentDomain.name
+      return `${cleanName}.${currentDomain.name}`
+    },
+    [currentDomain?.name]
+  )
+
+  // 获取当前 Value 值
+  const getCurrentValue = (): string => {
+    switch (formData.type) {
+      case "A":
+      case "AAAA":
+        return formData.address
+      case "CNAME":
+        return formData.target
+      case "MX":
+        return formData.exchange
+      case "TXT":
+        return formData.text
+      case "NS":
+        return formData.nameserver
+      case "SRV":
+        return formData.target
+      case "CAA":
+        return formData.value
+      default:
+        // Exhaustive check: TypeScript will error if new record type is added but not handled
+        throw new Error(`Unhandled record type in getCurrentValue: ${(formData as any).type}`)
+    }
+  }
+
+  // 生成提示文案
+  const getRecordHint = (): string | null => {
+    const fqdn = getFQDN(formData.name)
+    const value = getCurrentValue()
+
+    // Value 或域名为空时不显示
+    if (!(value && fqdn)) return null
+
+    // 构建 i18n 参数
+    const params: Record<string, string | number> = { fqdn, value }
+
+    // 为特殊记录类型添加额外字段
+    switch (formData.type) {
+      case "MX":
+        params.priority = formData.priority
+        break
+      case "SRV":
+        params.priority = formData.priority
+        params.weight = formData.weight
+        params.port = formData.port
+        break
+      case "CAA":
+        params.tag = formData.tag
+        break
+    }
+
+    // 生成基本提示
+    let hint = t(`dns.recordHints.${formData.type}`, params)
+
+    // 如果是 A/AAAA 且开启了 Proxy，追加提示
+    if (supportsProxy && formData.proxied && (formData.type === "A" || formData.type === "AAAA")) {
+      hint += ` ${t("dns.recordHints.proxyEnabled")}`
+    }
+
+    return hint
+  }
+
+  // 计算提示内容
+  const recordHint = getRecordHint()
 
   // 构建 RecordData
   const buildRecordData = (): RecordData => {
@@ -145,6 +233,9 @@ export function DnsRecordForm({
           type: "CAA",
           content: { flags: formData.flags, tag: formData.tag, value: formData.value },
         }
+      default:
+        // Exhaustive check: TypeScript will error if new record type is added but not handled
+        throw new Error(`Unhandled record type in buildRecordData: ${(formData as any).type}`)
     }
   }
 
@@ -196,10 +287,29 @@ export function DnsRecordForm({
       case "CAA":
         setFormData({ ...baseData, type: "CAA", flags: 0, tag: "issue", value: "" })
         break
+      default:
+        // Exhaustive check: TypeScript will error if new record type is added but not handled
+        throw new Error(`Unhandled record type in handleTypeChange: ${newType}`)
     }
   }
 
   const typeInfo = RECORD_TYPE_INFO[formData.type]
+
+  // 渲染 Record Hint 提示组件
+  const renderRecordHint = () => {
+    if (showRecordHints && recordHint) {
+      return (
+        <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
+          <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">{recordHint}</p>
+        </div>
+      )
+    }
+    return (
+      <p className="text-muted-foreground text-xs">
+        {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
+      </p>
+    )
+  }
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -256,9 +366,7 @@ export function DnsRecordForm({
                 placeholder={typeInfo.example}
                 required
               />
-              <p className="text-muted-foreground text-xs">
-                {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-              </p>
+              {renderRecordHint()}
             </div>
           )}
 
@@ -272,9 +380,7 @@ export function DnsRecordForm({
                 placeholder={typeInfo.example}
                 required
               />
-              <p className="text-muted-foreground text-xs">
-                {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-              </p>
+              {renderRecordHint()}
             </div>
           )}
 
@@ -304,9 +410,7 @@ export function DnsRecordForm({
                   placeholder={typeInfo.example}
                   required
                 />
-                <p className="text-muted-foreground text-xs">
-                  {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                </p>
+                {renderRecordHint()}
               </div>
             </>
           )}
@@ -321,9 +425,7 @@ export function DnsRecordForm({
                 placeholder={typeInfo.example}
                 required
               />
-              <p className="text-muted-foreground text-xs">
-                {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-              </p>
+              {renderRecordHint()}
             </div>
           )}
 
@@ -337,9 +439,7 @@ export function DnsRecordForm({
                 placeholder={typeInfo.example}
                 required
               />
-              <p className="text-muted-foreground text-xs">
-                {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-              </p>
+              {renderRecordHint()}
             </div>
           )}
 
@@ -399,9 +499,7 @@ export function DnsRecordForm({
                   placeholder={typeInfo.example}
                   required
                 />
-                <p className="text-muted-foreground text-xs">
-                  {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                </p>
+                {renderRecordHint()}
               </div>
             </>
           )}
@@ -448,9 +546,7 @@ export function DnsRecordForm({
                   placeholder={typeInfo.example}
                   required
                 />
-                <p className="text-muted-foreground text-xs">
-                  {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                </p>
+                {renderRecordHint()}
               </div>
             </>
           )}

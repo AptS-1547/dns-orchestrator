@@ -31,7 +31,7 @@ fn get_algorithm_name(algorithm: u8) -> String {
         14 => "ECDSAP384SHA384".to_string(),
         15 => "Ed25519".to_string(),
         16 => "Ed448".to_string(),
-        _ => format!("Unknown ({})", algorithm),
+        _ => format!("Unknown ({algorithm})"),
     }
 }
 
@@ -42,7 +42,7 @@ fn get_digest_type_name(digest_type: u8) -> String {
         2 => "SHA-256".to_string(),
         3 => "GOST R 34.11-94".to_string(),
         4 => "SHA-384".to_string(),
-        _ => format!("Unknown ({})", digest_type),
+        _ => format!("Unknown ({digest_type})"),
     }
 }
 
@@ -62,19 +62,21 @@ fn extract_signature_record(
     use chrono::{DateTime, Utc};
 
     // 格式化时间戳
-    let expiration = DateTime::<Utc>::from_timestamp(i64::from(sig_expiration), 0)
-        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
-        .unwrap_or_else(|| format!("Invalid ({})", sig_expiration));
+    let expiration = DateTime::<Utc>::from_timestamp(i64::from(sig_expiration), 0).map_or_else(
+        || format!("Invalid ({sig_expiration})"),
+        |dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+    );
 
-    let inception = DateTime::<Utc>::from_timestamp(i64::from(sig_inception), 0)
-        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string())
-        .unwrap_or_else(|| format!("Invalid ({})", sig_inception));
+    let inception = DateTime::<Utc>::from_timestamp(i64::from(sig_inception), 0).map_or_else(
+        || format!("Invalid ({sig_inception})"),
+        |dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+    );
 
     // Base64 编码签名
     let signature_b64 = STANDARD.encode(signature_bytes);
 
     RrsigRecord {
-        type_covered: format!("{:?}", type_covered),
+        type_covered: format!("{type_covered:?}"),
         algorithm,
         algorithm_name: get_algorithm_name(algorithm),
         labels,
@@ -109,35 +111,32 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
     // 根据 nameserver 参数决定使用自定义还是系统默认
     let effective_ns = nameserver.filter(|s| !s.is_empty());
 
-    let (resolver, used_nameserver) = match effective_ns {
-        Some(ns) => {
-            let ns_ip: IpAddr = ns.parse().map_err(|_| {
-                CoreError::ValidationError(format!("Invalid DNS server address: {ns}"))
-            })?;
+    let (resolver, used_nameserver) = if let Some(ns) = effective_ns {
+        let ns_ip: IpAddr = ns
+            .parse()
+            .map_err(|_| CoreError::ValidationError(format!("Invalid DNS server address: {ns}")))?;
 
-            let config = ResolverConfig::from_parts(
-                None,
-                vec![],
-                NameServerConfigGroup::from_ips_clear(&[ns_ip], 53, true),
-            );
-            let provider = TokioConnectionProvider::default();
-            let mut opts = ResolverOpts::default();
-            opts.validate = true; // 启用 DNSSEC 验证
-            let resolver = TokioResolver::builder_with_config(config, provider)
-                .with_options(opts)
-                .build();
-            (resolver, ns.to_string())
-        }
-        None => {
-            let system_dns = get_system_dns();
-            let provider = TokioConnectionProvider::default();
-            let mut opts = ResolverOpts::default();
-            opts.validate = true; // 启用 DNSSEC 验证
-            let resolver = TokioResolver::builder_with_config(ResolverConfig::default(), provider)
-                .with_options(opts)
-                .build();
-            (resolver, system_dns)
-        }
+        let config = ResolverConfig::from_parts(
+            None,
+            vec![],
+            NameServerConfigGroup::from_ips_clear(&[ns_ip], 53, true),
+        );
+        let provider = TokioConnectionProvider::default();
+        let mut opts = ResolverOpts::default();
+        opts.validate = true; // 启用 DNSSEC 验证
+        let resolver = TokioResolver::builder_with_config(config, provider)
+            .with_options(opts)
+            .build();
+        (resolver, ns.to_string())
+    } else {
+        let system_dns = get_system_dns();
+        let provider = TokioConnectionProvider::default();
+        let mut opts = ResolverOpts::default();
+        opts.validate = true; // 启用 DNSSEC 验证
+        let resolver = TokioResolver::builder_with_config(ResolverConfig::default(), provider)
+            .with_options(opts)
+            .build();
+        (resolver, system_dns)
     };
 
     let mut dnskey_records = Vec::new();
@@ -170,7 +169,7 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
                     let key_tag = match dnskey.calculate_key_tag() {
                         Ok(tag) => tag,
                         Err(e) => {
-                            log::warn!("Failed to calculate key_tag: {}", e);
+                            log::warn!("Failed to calculate key_tag: {e}");
                             0
                         }
                     };
@@ -181,7 +180,7 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
                     } else if dnskey.zone_key() {
                         "ZSK".to_string()
                     } else {
-                        format!("Unknown (flags={})", flags)
+                        format!("Unknown (flags={flags})")
                     };
 
                     dnskey_records.push(DnskeyRecord {
@@ -301,11 +300,11 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
             );
         } else {
             validation_status = "insecure".to_string();
-            log::debug!("DNSSEC validation for {}: No DNSSEC records found", domain);
+            log::debug!("DNSSEC validation for {domain}: No DNSSEC records found");
         }
     } else {
         validation_status = "insecure".to_string();
-        log::debug!("DNSSEC validation for {}: DNSSEC not enabled", domain);
+        log::debug!("DNSSEC validation for {domain}: DNSSEC not enabled");
     }
 
     let response_time_ms = start_time.elapsed().as_millis() as u64;

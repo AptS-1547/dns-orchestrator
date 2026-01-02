@@ -39,7 +39,7 @@ pub async fn http_header_check(
         format!("https://{}", request.url)
     };
 
-    debug!("[HTTP] Normalized URL: {}", url);
+    debug!("[HTTP] Normalized URL: {url}");
 
     // 构建 HTTP 客户端
     let client = Client::builder()
@@ -91,7 +91,7 @@ pub async fn http_header_check(
 
     // 提取响应头
     let mut headers: Vec<HttpHeader> = Vec::new();
-    for (name, value) in response.headers().iter() {
+    for (name, value) in response.headers() {
         headers.push(HttpHeader {
             name: name.to_string(),
             value: value.to_str().unwrap_or("<binary>").to_string(),
@@ -138,7 +138,7 @@ pub async fn http_header_check(
     // 添加 Content-Type 和请求体
     if let Some(body) = &request.body {
         if let Some(content_type) = &request.content_type {
-            raw_request.push_str(&format!("Content-Type: {}\r\n", content_type));
+            raw_request.push_str(&format!("Content-Type: {content_type}\r\n"));
         }
         raw_request.push_str(&format!("Content-Length: {}\r\n", body.len()));
         raw_request.push_str("\r\n");
@@ -148,7 +148,7 @@ pub async fn http_header_check(
     }
 
     // 构建原始响应报文
-    let mut raw_response = format!("HTTP/1.1 {} {}\r\n", status_code, status_text);
+    let mut raw_response = format!("HTTP/1.1 {status_code} {status_text}\r\n");
     for header in &headers {
         raw_response.push_str(&format!("{}: {}\r\n", header.name, header.value));
     }

@@ -140,7 +140,7 @@ export function ToolboxPage() {
         </div>
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="scroll-pb-safe mx-auto max-w-4xl p-4 sm:p-6">
+          <div className="mx-auto max-w-4xl scroll-pb-safe p-4 sm:p-6">
             <TabsContent value="dns" className="fade-in-0 mt-0 animate-in duration-200">
               <DnsLookup />
             </TabsContent>

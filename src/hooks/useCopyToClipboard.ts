@@ -14,7 +14,7 @@ export function useCopyToClipboard() {
       try {
         await navigator.clipboard.writeText(text)
         toast.success(successMessage || t("common.copied"))
-      } catch (err) {
+      } catch (_err) {
         toast.error(t("common.copyFailed"))
       }
     },

@@ -8,6 +8,8 @@ import type {
   ApiResponse,
   BatchDeleteRequest,
   BatchDeleteResult,
+  BatchTagRequest,
+  BatchTagResult,
   CreateAccountRequest,
   CreateDnsRecordRequest,
   DnsLookupResult,
@@ -15,6 +17,8 @@ import type {
   DnsRecord,
   DnssecResult,
   Domain,
+  DomainMetadata,
+  DomainMetadataUpdate,
   ExportAccountsRequest,
   ExportAccountsResponse,
   HttpHeaderCheckRequest,
@@ -80,6 +84,56 @@ export interface CommandMap {
   get_domain: {
     args: { accountId: string; domainId: string }
     result: ApiResponse<Domain>
+  }
+
+  // Domain metadata commands
+  get_domain_metadata: {
+    args: { accountId: string; domainId: string }
+    result: ApiResponse<DomainMetadata>
+  }
+  toggle_domain_favorite: {
+    args: { accountId: string; domainId: string }
+    result: ApiResponse<boolean>
+  }
+  list_account_favorite_domain_keys: {
+    args: { accountId: string }
+    result: ApiResponse<string[]>
+  }
+  add_domain_tag: {
+    args: { accountId: string; domainId: string; tag: string }
+    result: ApiResponse<string[]>
+  }
+  remove_domain_tag: {
+    args: { accountId: string; domainId: string; tag: string }
+    result: ApiResponse<string[]>
+  }
+  set_domain_tags: {
+    args: { accountId: string; domainId: string; tags: string[] }
+    result: ApiResponse<string[]>
+  }
+  batch_add_domain_tags: {
+    args: { requests: BatchTagRequest[] }
+    result: ApiResponse<BatchTagResult>
+  }
+  batch_remove_domain_tags: {
+    args: { requests: BatchTagRequest[] }
+    result: ApiResponse<BatchTagResult>
+  }
+  batch_set_domain_tags: {
+    args: { requests: BatchTagRequest[] }
+    result: ApiResponse<BatchTagResult>
+  }
+  find_domains_by_tag: {
+    args: { tag: string }
+    result: ApiResponse<string[]>
+  }
+  list_all_domain_tags: {
+    args: Record<string, never>
+    result: ApiResponse<string[]>
+  }
+  update_domain_metadata: {
+    args: { accountId: string; domainId: string; update: DomainMetadataUpdate }
+    result: ApiResponse<DomainMetadata>
   }
 
   // DNS commands

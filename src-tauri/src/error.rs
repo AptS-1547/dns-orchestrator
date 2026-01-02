@@ -86,6 +86,13 @@ impl From<CoreError> for DnsError {
                 provider: "network".to_string(),
                 message: s,
             },
+            // v1.7.0 迁移相关错误
+            CoreError::MigrationRequired => {
+                Self::CredentialError("Credential migration required".to_string())
+            }
+            CoreError::MigrationFailed(s) => {
+                Self::CredentialError(format!("Migration failed: {s}"))
+            }
             CoreError::Provider(e) => Self::Provider(e),
         }
     }

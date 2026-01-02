@@ -16,19 +16,8 @@ import { logger } from "@/lib/logger"
 import { cleanupInvalidRecentDomains } from "@/lib/recent-domains"
 import { initTheme, useAccountStore, useDomainStore } from "@/stores"
 import { useUpdaterStore } from "@/stores/updaterStore"
+import { getNavItemFromPath, NAV_PATHS, type NavItem } from "@/types"
 import { AppLayout } from "./AppLayout"
-
-/** 路由路径到导航项的映射 */
-function getNavItemFromPath(
-  pathname: string
-): "main" | "domains" | "toolbox" | "settings" | "accounts" {
-  if (pathname === "/") return "main"
-  if (pathname.startsWith("/domains")) return "domains"
-  if (pathname.startsWith("/toolbox")) return "toolbox"
-  if (pathname.startsWith("/settings")) return "settings"
-  if (pathname.startsWith("/accounts")) return "accounts"
-  return "main"
-}
 
 export function RootLayout() {
   const location = useLocation()
@@ -97,15 +86,8 @@ export function RootLayout() {
   }, [checkForUpdates, isMobile])
 
   // 导航处理
-  const handleNavigate = (view: "main" | "domains" | "toolbox" | "settings" | "accounts") => {
-    const paths: Record<string, string> = {
-      main: "/",
-      domains: "/domains",
-      toolbox: "/toolbox",
-      settings: "/settings",
-      accounts: "/accounts",
-    }
-    navigate(paths[view])
+  const handleNavigate = (view: NavItem) => {
+    navigate(NAV_PATHS[view])
   }
 
   // 当前导航项（用于侧边栏高亮）

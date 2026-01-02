@@ -183,7 +183,7 @@ export function AccountsPage() {
                     className={cn(
                       "cursor-pointer transition-all",
                       hasError && "border-destructive/50 bg-destructive/5",
-                      isSelected && "ring-2 ring-primary bg-primary/5"
+                      isSelected && "bg-primary/5 ring-2 ring-primary"
                     )}
                   >
                     <CardContent className="p-4">

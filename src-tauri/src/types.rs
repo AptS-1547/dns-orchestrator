@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 // ============ Re-export 库类型 ============
 
@@ -13,19 +12,20 @@ pub use dns_orchestrator_provider::{
     DomainStatus,
     // 分页类型
     PaginatedResponse,
+    // Provider 凭证类型（v1.7.0 类型安全重构）
+    ProviderCredentials,
     // Provider 元数据类型
     ProviderMetadata,
     ProviderType,
     UpdateDnsRecordRequest,
 };
 
+// ============ Re-export Core 库类型 ============
+
+pub use dns_orchestrator_core::types::DomainMetadata;
+
 // 工具箱类型
-pub use dns_orchestrator_core::types::{
-    BatchDeleteRequest, CertChainItem, DnsLookupRecord, DnsLookupResult, DnsPropagationResult,
-    DnsPropagationServer, DnsPropagationServerResult, DnskeyRecord, DnssecResult, DsRecord,
-    HttpHeader, HttpHeaderCheckRequest, HttpHeaderCheckResult, HttpMethod, IpGeoInfo,
-    IpLookupResult, RrsigRecord, SecurityHeaderAnalysis, SslCertInfo, SslCheckResult, WhoisResult,
-};
+pub use dns_orchestrator_core::types::BatchDeleteRequest;
 
 // ============ 应用层 Provider 相关类型 ============
 
@@ -51,20 +51,22 @@ pub struct Account {
     pub error: Option<String>,
 }
 
+/// 创建账户请求（v1.7.0 类型安全重构）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAccountRequest {
     pub name: String,
     pub provider: ProviderType,
-    pub credentials: HashMap<String, String>,
+    pub credentials: ProviderCredentials,
 }
 
+/// 更新账户请求（v1.7.0 类型安全重构）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateAccountRequest {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub credentials: Option<HashMap<String, String>>,
+    pub credentials: Option<ProviderCredentials>,
 }
 
 // ============ 应用层 Domain（包含 account_id）============
@@ -80,6 +82,8 @@ pub struct Domain {
     pub status: DomainStatus,
     #[serde(rename = "recordCount", skip_serializing_if = "Option::is_none")]
     pub record_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<DomainMetadata>,
 }
 
 // ============ API 响应类型 ============

@@ -115,7 +115,7 @@ export function HttpHeaderCheck() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* URL 和 Method */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <div className="md:col-span-4">
               <Label htmlFor="url">{t("toolbox.httpHeaderCheck.url")}</Label>
               <Input
@@ -152,14 +152,14 @@ export function HttpHeaderCheck() {
             <div className="flex items-center justify-between">
               <Label>{t("toolbox.httpHeaderCheck.customHeaders")}</Label>
               <Button type="button" variant="outline" size="sm" onClick={handleAddHeader}>
-                <Plus className="size-4 mr-1" />
+                <Plus className="mr-1 size-4" />
                 {t("toolbox.httpHeaderCheck.addHeader")}
               </Button>
             </div>
             {customHeaders.length > 0 && (
               <div className="space-y-2">
                 {customHeaders.map((header) => (
-                  <div key={header.id} className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                  <div key={header.id} className="grid grid-cols-1 gap-2 md:grid-cols-12">
                     <Input
                       className="md:col-span-5"
                       placeholder={t("toolbox.httpHeaderCheck.headerName")}
@@ -190,7 +190,7 @@ export function HttpHeaderCheck() {
           {/* 请求体（仅 POST/PUT/PATCH） */}
           {["POST", "PUT", "PATCH"].includes(method) && (
             <div className="space-y-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="contentType">{t("toolbox.httpHeaderCheck.contentType")}</Label>
                   <Input
@@ -208,7 +208,7 @@ export function HttpHeaderCheck() {
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder={t("toolbox.httpHeaderCheck.requestBodyPlaceholder")}
-                  className="font-mono text-sm min-h-[100px]"
+                  className="min-h-[100px] font-mono text-sm"
                 />
               </div>
             </div>
@@ -217,12 +217,12 @@ export function HttpHeaderCheck() {
           <Button onClick={handleQuery} disabled={isLoading || !url} className="w-full">
             {isLoading ? (
               <>
-                <Loader2 className="size-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
                 {t("common.loading")}
               </>
             ) : (
               <>
-                <Send className="size-4 mr-2" />
+                <Send className="mr-2 size-4" />
                 {t("toolbox.httpHeaderCheck.check")}
               </>
             )}
@@ -241,27 +241,27 @@ export function HttpHeaderCheck() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     {t("toolbox.httpHeaderCheck.statusCode")}
                   </div>
-                  <div className="text-2xl font-bold">
+                  <div className="font-bold text-2xl">
                     <Badge variant={result.statusCode < 400 ? "default" : "destructive"}>
                       {result.statusCode} {result.statusText}
                     </Badge>
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     {t("toolbox.httpHeaderCheck.responseTime")}
                   </div>
-                  <div className="text-2xl font-bold">{result.responseTimeMs} ms</div>
+                  <div className="font-bold text-2xl">{result.responseTimeMs} ms</div>
                 </div>
                 {result.contentLength !== undefined && (
                   <div>
-                    <div className="text-sm text-muted-foreground">Content-Length</div>
-                    <div className="text-2xl font-bold">
+                    <div className="text-muted-foreground text-sm">Content-Length</div>
+                    <div className="font-bold text-2xl">
                       {(result.contentLength / 1024).toFixed(2)} KB
                     </div>
                   </div>
@@ -285,18 +285,18 @@ export function HttpHeaderCheck() {
                 {result.securityAnalysis.map((analysis) => (
                   <div
                     key={analysis.name}
-                    className="flex items-start justify-between p-3 border rounded-md"
+                    className="flex items-start justify-between rounded-md border p-3"
                   >
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <code className="text-sm font-mono">{analysis.name}</code>
+                        <code className="font-mono text-sm">{analysis.name}</code>
                         <Badge variant={getStatusBadgeVariant(analysis.status)}>
                           {t(`toolbox.httpHeaderCheck.status.${analysis.status}`)}
                         </Badge>
                       </div>
                       {analysis.recommendation && (
-                        <div className="flex items-start gap-2 mt-2 text-sm text-amber-600 dark:text-amber-400">
-                          <Info className="size-4 mt-0.5 shrink-0" />
+                        <div className="mt-2 flex items-start gap-2 text-amber-600 text-sm dark:text-amber-400">
+                          <Info className="mt-0.5 size-4 shrink-0" />
                           <span>{analysis.recommendation}</span>
                         </div>
                       )}
@@ -315,7 +315,7 @@ export function HttpHeaderCheck() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              <div className="max-h-[400px] space-y-2 overflow-y-auto">
                 {result.headers.map((header, index) => (
                   <HeaderItem
                     key={`header-${header.name}-${index}`}
@@ -351,8 +351,8 @@ export function HttpHeaderCheck() {
             <CardContent className="space-y-4">
               {/* 原始请求 */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-semibold">
+                <div className="mb-2 flex items-center justify-between">
+                  <Label className="font-semibold text-sm">
                     {t("toolbox.httpHeaderCheck.rawRequest")}
                   </Label>
                   <Button
@@ -360,19 +360,19 @@ export function HttpHeaderCheck() {
                     size="sm"
                     onClick={() => copyToClipboard(result.rawRequest)}
                   >
-                    <Copy className="size-4 mr-1" />
+                    <Copy className="mr-1 size-4" />
                     {t("common.copy")}
                   </Button>
                 </div>
-                <pre className="p-3 bg-muted rounded-md text-xs font-mono max-w-full overflow-x-auto whitespace-pre-wrap break-all">
+                <pre className="max-w-full overflow-x-auto whitespace-pre-wrap break-all rounded-md bg-muted p-3 font-mono text-xs">
                   {result.rawRequest}
                 </pre>
               </div>
 
               {/* 原始响应 */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-semibold">
+                <div className="mb-2 flex items-center justify-between">
+                  <Label className="font-semibold text-sm">
                     {t("toolbox.httpHeaderCheck.rawResponse")}
                   </Label>
                   <Button
@@ -380,11 +380,11 @@ export function HttpHeaderCheck() {
                     size="sm"
                     onClick={() => copyToClipboard(result.rawResponse)}
                   >
-                    <Copy className="size-4 mr-1" />
+                    <Copy className="mr-1 size-4" />
                     {t("common.copy")}
                   </Button>
                 </div>
-                <pre className="p-3 bg-muted rounded-md text-xs font-mono max-w-full overflow-x-auto whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto">
+                <pre className="max-h-[300px] max-w-full overflow-x-auto overflow-y-auto whitespace-pre-wrap break-all rounded-md bg-muted p-3 font-mono text-xs">
                   {result.rawResponse}
                 </pre>
               </div>

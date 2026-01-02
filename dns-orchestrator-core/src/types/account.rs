@@ -2,9 +2,8 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
-use dns_orchestrator_provider::ProviderType;
+use dns_orchestrator_provider::{ProviderCredentials, ProviderType};
 
 /// 账户状态
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -41,18 +40,18 @@ pub struct Account {
     pub error: Option<String>,
 }
 
-/// 创建账户请求
+/// 创建账户请求（v1.7.0 类型安全重构）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAccountRequest {
     /// 账户名称
     pub name: String,
     /// DNS 服务商类型
     pub provider: ProviderType,
-    /// 凭证键值对
-    pub credentials: HashMap<String, String>,
+    /// 凭证（结构化类型）
+    pub credentials: ProviderCredentials,
 }
 
-/// 更新账户请求
+/// 更新账户请求（v1.7.0 类型安全重构）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateAccountRequest {
     /// 账户 ID
@@ -60,5 +59,5 @@ pub struct UpdateAccountRequest {
     /// 新的账户名称（可选）
     pub name: Option<String>,
     /// 新的凭证（可选，提供时会覆盖原有凭证）
-    pub credentials: Option<HashMap<String, String>>,
+    pub credentials: Option<ProviderCredentials>,
 }

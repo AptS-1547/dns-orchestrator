@@ -17,11 +17,13 @@ export default {
     search: "Search",
     filter: "Filter",
     clearFilter: "Clear filter",
+    clearAll: "Clear All",
     type: "Type",
     noMatch: "No matching records",
     example: "e.g.",
     copied: "Copied",
     copy: "Copy",
+    copyFailed: "Copy failed",
     selectAll: "Select All",
     deselectAll: "Deselect All",
     yes: "Yes",
@@ -165,6 +167,18 @@ export default {
       SRV: "Service Record",
       CAA: "CA Authorization",
     },
+    // DNS record live hints
+    recordHints: {
+      A: "💡 This record will point {{fqdn}} to IP {{value}}",
+      AAAA: "💡 This record will point {{fqdn}} to IPv6 address {{value}}",
+      CNAME: "💡 Accessing {{fqdn}} will actually request {{value}}",
+      MX: "💡 Emails sent to {{fqdn}} will be handled by {{value}} (priority {{priority}})",
+      TXT: "💡 {{fqdn}} will have a text record with content {{value}}",
+      NS: "💡 DNS resolution for {{fqdn}} will be handled by {{value}}",
+      SRV: "💡 Service {{fqdn}} will point to {{value}}:{{port}} (priority {{priority}}, weight {{weight}})",
+      CAA: "💡 {{fqdn}} allows {{value}} to issue SSL certificates (tag: {{tag}})",
+      proxyEnabled: "(Proxy enabled, real IP will be hidden)",
+    },
     // Toast messages
     fetchFailed: "Failed to fetch DNS records",
     createSuccess: 'Record "{{name}}" added successfully',
@@ -190,6 +204,61 @@ export default {
     },
     // Toast messages
     fetchFailed: "Failed to fetch domains",
+    // Tags
+    tags: {
+      edit: "Edit Tags",
+      editTitle: "Edit Domain Tags",
+      editDescription: "Manage tags for this domain (max 10 tags)",
+      inputLabel: "Add Tag",
+      inputPlaceholder: "Enter tag name (comma-separated for multiple)",
+      inputHint: "Press Enter or click + to add, max 50 characters per tag",
+      currentTags: "Current Tags",
+      saveSuccess: "Tags updated successfully",
+      maxTagsError: "Cannot add more than 10 tags",
+      filter: "Filter by Tag",
+      filterByTag: "Filter by Tag",
+      filterLogicHint: "Show domains with any selected tag",
+      // Batch operations
+      batchAdd: "Batch Add Tags",
+      batchRemove: "Batch Remove Tags",
+      batchSet: "Batch Replace Tags",
+      batchAddTitle: "Batch Add Tags",
+      batchAddDescription: "Add tags to {{count}} domains (keep existing tags)",
+      addToSelected: "Add to {{count}} selected domains",
+      batchAddSuccess: "Successfully added tags to {{count}} domains",
+      batchAddPartial: "Completed: {{success}} succeeded, {{failed}} failed",
+      batchRemoveTitle: "Batch Remove Tags",
+      batchRemoveDescription: "Select tags to remove from {{count}} domains",
+      removeFromSelected: "Remove from {{count}} selected domains",
+      batchRemoveSuccess: "Successfully removed tags from {{count}} domains",
+      batchRemovePartial: "Completed: {{success}} succeeded, {{failed}} failed",
+      batchSetTitle: "Batch Replace Tags",
+      batchSetDescription: "Clear existing tags and replace with new tags for {{count}} domains",
+      batchSetWarning: "Warning: This will clear all existing tags for selected domains!",
+      setForSelected: "Replace tags for {{count}} selected domains",
+      batchSetSuccess: "Successfully replaced tags for {{count}} domains",
+      batchSetPartial: "Completed: {{success}} succeeded, {{failed}} failed",
+    },
+    // Metadata editing (Phase 3)
+    metadata: {
+      edit: "Edit Metadata",
+      editTitle: "Edit Domain Metadata",
+      editDescription: "Manage favorites, tags, colors and notes for this domain",
+      saveSuccess: "Metadata updated successfully",
+    },
+    // Color marking
+    color: {
+      label: "Color Mark",
+      select: "Select Color",
+      clear: "Clear Color",
+    },
+    // Note
+    note: {
+      label: "Note",
+      placeholder: "Add a note for this domain...",
+      maxLength: "Note cannot exceed 500 characters",
+    },
+    selectedCount: "{{count}} domains selected",
   },
   domains: {
     selectTitle: "Select Domain",
@@ -200,6 +269,7 @@ export default {
   nav: {
     home: "Home",
     domains: "Domains",
+    favorites: "Favorites",
     collapse: "Collapse sidebar",
     expand: "Expand sidebar",
   },
@@ -211,6 +281,8 @@ export default {
     totalDomains: "Total Domains",
     recentDomains: "Recent Domains",
     recentDomainsDesc: "Quickly access recently visited domains",
+    favoriteDomains: "Favorite Domains",
+    favoriteDomainsDesc: "Your bookmarked domains",
     quickActions: "Quick Actions",
     quickActionsDesc: "Common feature shortcuts",
     manageDomains: "Manage DNS records",
@@ -218,8 +290,20 @@ export default {
     manageAccounts: "Add or manage accounts",
     configureSettings: "Theme, language settings",
   },
+  favorites: {
+    title: "Favorite",
+    searchPlaceholder: "Search favorite domains or accounts",
+    empty: "No favorite domains yet",
+    emptyDesc: "Click the star icon in the domain list to bookmark frequently used domains",
+  },
   settings: {
     title: "Settings",
+    // Tabs
+    tabs: {
+      appearance: "Appearance",
+      features: "Features",
+      about: "About",
+    },
     // Appearance
     appearance: "Appearance",
     theme: "Theme",
@@ -237,6 +321,11 @@ export default {
     notificationsDesc: "Manage notification preferences",
     operationNotifications: "Operation Notifications",
     operationNotificationsDesc: "Show success/failure notifications for operations",
+    // DNS Record Hints
+    recordHints: "DNS Record Hints",
+    recordHintsDesc: "Show guided hints when editing DNS records",
+    showRecordHints: "Show record effect preview",
+    showRecordHintsDesc: "Display explanations of DNS record effects for beginners",
     // Pagination
     pagination: "Pagination Mode",
     paginationDesc: "Choose how DNS records are displayed",

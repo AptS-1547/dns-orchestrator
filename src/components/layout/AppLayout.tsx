@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useSettingsStore } from "@/stores"
+import type { NavItem } from "@/types"
 import { Sidebar } from "./Sidebar"
-
-type NavItem = "main" | "domains" | "toolbox" | "settings" | "accounts"
 
 interface AppLayoutProps {
   children?: ReactNode
@@ -39,7 +38,7 @@ export function AppLayout({
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 px-0 bg-sidebar" hideClose>
+            <SheetContent side="left" className="w-72 bg-sidebar px-0" hideClose>
               <Sidebar
                 currentView={currentView}
                 onNavigate={(view) => {

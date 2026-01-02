@@ -13,6 +13,7 @@ fn convert_domain(core_domain: dns_orchestrator_core::types::AppDomain) -> Domai
         provider: core_domain.provider,
         status: core_domain.status,
         record_count: core_domain.record_count,
+        metadata: core_domain.metadata,
     }
 }
 

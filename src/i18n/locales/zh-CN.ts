@@ -17,11 +17,13 @@ export default {
     search: "搜索",
     filter: "筛选",
     clearFilter: "清除筛选",
+    clearAll: "清除全部",
     type: "类型",
     noMatch: "没有匹配的记录",
     example: "例如",
     copied: "已复制",
     copy: "复制",
+    copyFailed: "复制失败",
     selectAll: "全选",
     deselectAll: "取消全选",
     yes: "是",
@@ -160,6 +162,18 @@ export default {
       SRV: "服务记录",
       CAA: "CA 授权",
     },
+    // DNS 记录实时提示
+    recordHints: {
+      A: "💡 该记录会将 {{fqdn}} 指向 IP {{value}}",
+      AAAA: "💡 该记录会将 {{fqdn}} 指向 IPv6 地址 {{value}}",
+      CNAME: "💡 访问 {{fqdn}} 时，将实际请求 {{value}}",
+      MX: "💡 发往 {{fqdn}} 的邮件将由 {{value}} 负责处理（优先级 {{priority}}）",
+      TXT: "💡 {{fqdn}} 会拥有内容为 {{value}} 的文本记录",
+      NS: "💡 {{fqdn}} 的域名解析将由 {{value}} 负责",
+      SRV: "💡 服务 {{fqdn}} 将指向 {{value}}:{{port}}（优先级 {{priority}}，权重 {{weight}}）",
+      CAA: "💡 {{fqdn}} 允许 {{value}} 签发 SSL 证书（标签：{{tag}}）",
+      proxyEnabled: "（已启用代理，真实 IP 将被隐藏）",
+    },
     // Toast messages
     fetchFailed: "获取 DNS 记录失败",
     createSuccess: '记录 "{{name}}" 添加成功',
@@ -185,6 +199,61 @@ export default {
     },
     // Toast messages
     fetchFailed: "获取域名列表失败",
+    // Tags
+    tags: {
+      edit: "编辑标签",
+      editTitle: "编辑域名标签",
+      editDescription: "管理该域名的标签（最多 10 个）",
+      inputLabel: "添加标签",
+      inputPlaceholder: "输入标签名（逗号分隔多个）",
+      inputHint: "按 Enter 或点击 + 添加，单个标签最长 50 字符",
+      currentTags: "当前标签",
+      saveSuccess: "标签更新成功",
+      maxTagsError: "最多只能添加 10 个标签",
+      filter: "按标签筛选",
+      filterByTag: "按标签筛选",
+      filterLogicHint: "显示包含任一所选标签的域名",
+      // 批量操作
+      batchAdd: "批量添加标签",
+      batchRemove: "批量移除标签",
+      batchSet: "批量替换标签",
+      batchAddTitle: "批量添加标签",
+      batchAddDescription: "将为 {{count}} 个域名添加以下标签（保留原有标签）",
+      addToSelected: "添加到选中的 {{count}} 个域名",
+      batchAddSuccess: "成功为 {{count}} 个域名添加标签",
+      batchAddPartial: "添加完成：{{success}} 成功，{{failed}} 失败",
+      batchRemoveTitle: "批量移除标签",
+      batchRemoveDescription: "选择要从 {{count}} 个域名中移除的标签",
+      removeFromSelected: "从选中的 {{count}} 个域名移除",
+      batchRemoveSuccess: "成功从 {{count}} 个域名移除标签",
+      batchRemovePartial: "移除完成：{{success}} 成功，{{failed}} 失败",
+      batchSetTitle: "批量替换标签",
+      batchSetDescription: "将清空 {{count}} 个域名的现有标签，并替换为以下标签",
+      batchSetWarning: "警告：此操作将清空所有选中域名的现有标签！",
+      setForSelected: "替换选中的 {{count}} 个域名的标签",
+      batchSetSuccess: "成功替换 {{count}} 个域名的标签",
+      batchSetPartial: "替换完成：{{success}} 成功，{{failed}} 失败",
+    },
+    // 元数据编辑 (Phase 3)
+    metadata: {
+      edit: "编辑元数据",
+      editTitle: "编辑域名元数据",
+      editDescription: "管理该域名的收藏、标签、颜色和备注",
+      saveSuccess: "元数据更新成功",
+    },
+    // 颜色标记
+    color: {
+      label: "颜色标记",
+      select: "选择颜色",
+      clear: "清空颜色",
+    },
+    // 备注
+    note: {
+      label: "备注",
+      placeholder: "为这个域名添加备注...",
+      maxLength: "备注不能超过 500 字符",
+    },
+    selectedCount: "已选择 {{count}} 个域名",
   },
   domains: {
     selectTitle: "选择域名",
@@ -195,6 +264,7 @@ export default {
   nav: {
     home: "主页",
     domains: "域名",
+    favorites: "收藏",
     collapse: "收起侧边栏",
     expand: "展开侧边栏",
   },
@@ -206,6 +276,8 @@ export default {
     totalDomains: "域名总数",
     recentDomains: "最近访问",
     recentDomainsDesc: "快速访问最近操作的域名",
+    favoriteDomains: "收藏域名",
+    favoriteDomainsDesc: "你收藏的常用域名",
     quickActions: "快捷操作",
     quickActionsDesc: "常用功能入口",
     manageDomains: "管理 DNS 记录",
@@ -213,8 +285,20 @@ export default {
     manageAccounts: "添加或管理账户",
     configureSettings: "主题、语言等设置",
   },
+  favorites: {
+    title: "收藏",
+    searchPlaceholder: "搜索收藏的域名或账户",
+    empty: "还没有收藏域名",
+    emptyDesc: "在域名列表中点击星星图标收藏常用域名",
+  },
   settings: {
     title: "设置",
+    // Tabs
+    tabs: {
+      appearance: "外观",
+      features: "功能",
+      about: "关于",
+    },
     // Appearance
     appearance: "外观",
     theme: "主题",
@@ -232,6 +316,11 @@ export default {
     notificationsDesc: "管理通知偏好设置",
     operationNotifications: "操作通知",
     operationNotificationsDesc: "显示操作成功/失败的提示",
+    // DNS Record Hints
+    recordHints: "DNS 记录提示",
+    recordHintsDesc: "在编辑 DNS 记录时显示引导式提示",
+    showRecordHints: "显示记录效果预览",
+    showRecordHintsDesc: "为新手用户显示 DNS 记录的实际效果说明",
     // Pagination
     pagination: "分页模式",
     paginationDesc: "选择 DNS 记录列表的分页方式",

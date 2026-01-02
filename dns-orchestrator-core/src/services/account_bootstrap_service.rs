@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use dns_orchestrator_provider::{create_provider, ProviderCredentials};
+use dns_orchestrator_provider::create_provider;
 
 use crate::error::CoreResult;
 use crate::types::AccountStatus;
@@ -91,32 +91,8 @@ impl AccountBootstrapService {
                 continue;
             };
 
-            // 转换凭证并创建 provider
-            let provider_credentials =
-                match ProviderCredentials::from_map(&account.provider, credentials) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        log::warn!("Invalid credentials for account {}: {}", account.id, e);
-                        if let Err(update_err) = self
-                            .metadata_service
-                            .update_status(
-                                &account.id,
-                                AccountStatus::Error,
-                                Some(format!("凭证格式错误: {e}")),
-                            )
-                            .await
-                        {
-                            log::warn!(
-                                "Failed to update status for account {}: {update_err}",
-                                account.id
-                            );
-                        }
-                        error_count += 1;
-                        continue;
-                    }
-                };
-
-            let provider = match create_provider(provider_credentials) {
+            // 直接使用 ProviderCredentials 创建 provider
+            let provider = match create_provider(credentials.clone()) {
                 Ok(p) => p,
                 Err(e) => {
                     log::warn!(

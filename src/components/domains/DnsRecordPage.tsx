@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, StickyNote } from "lucide-react"
 import { useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
@@ -53,17 +53,17 @@ export function DnsRecordPage() {
     }
   }, [accountId, domainId, navigate])
 
-  // 参数缺失时不渲染
-  if (!(accountId && domainId)) {
-    return null
-  }
-
-  // 获取当前账户对应的提供商功能
+  // 获取当前账户对应的提供商功能（必须在早期 return 之前调用）
   const providerFeatures = useMemo(() => {
     if (!selectedAccount) return null
     const provider = providers.find((p) => p.id === selectedAccount.provider)
     return provider?.features ?? null
   }, [selectedAccount, providers])
+
+  // 参数缺失时不渲染
+  if (!(accountId && domainId)) {
+    return null
+  }
 
   return (
     <PageLayout>
@@ -72,9 +72,19 @@ export function DnsRecordPage() {
         subtitle={`${t("dns.title")} · ${selectedAccount?.name}`}
         showMobileMenu={false}
         backButton={
-          <Button variant="ghost" size="icon" onClick={() => navigate("/domains")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
+        }
+        actions={
+          selectedDomain?.metadata?.note ? (
+            <div className="hidden max-w-md items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 md:flex">
+              <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate text-muted-foreground text-sm">
+                {selectedDomain.metadata.note}
+              </span>
+            </div>
+          ) : undefined
         }
       />
 
