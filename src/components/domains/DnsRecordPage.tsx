@@ -78,9 +78,9 @@ export function DnsRecordPage() {
         }
         actions={
           selectedDomain?.metadata?.note ? (
-            <div className="hidden md:flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 max-w-md">
+            <div className="hidden max-w-md items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 md:flex">
               <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground truncate">
+              <span className="truncate text-muted-foreground text-sm">
                 {selectedDomain.metadata.note}
               </span>
             </div>

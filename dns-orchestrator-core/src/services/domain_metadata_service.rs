@@ -255,15 +255,16 @@ impl DomainMetadataService {
         &self,
         requests: Vec<BatchTagRequest>,
     ) -> CoreResult<BatchTagResult> {
-        let mut success_count = 0;
+        let mut entries_to_save = Vec::new();
         let mut failures = Vec::new();
 
+        // 第一阶段：在内存中处理所有修改
         for req in requests {
             match self
-                .add_tags_internal(&req.account_id, &req.domain_id, req.tags)
+                .add_tags_internal_no_save(&req.account_id, &req.domain_id, req.tags)
                 .await
             {
-                Ok(_) => success_count += 1,
+                Ok((key, metadata)) => entries_to_save.push((key, metadata)),
                 Err(e) => failures.push(BatchTagFailure {
                     account_id: req.account_id,
                     domain_id: req.domain_id,
@@ -272,8 +273,13 @@ impl DomainMetadataService {
             }
         }
 
+        // 第二阶段：一次性批量保存
+        if !entries_to_save.is_empty() {
+            self.repository.batch_save(&entries_to_save).await?;
+        }
+
         Ok(BatchTagResult {
-            success_count,
+            success_count: entries_to_save.len(),
             failed_count: failures.len(),
             failures,
         })
@@ -284,15 +290,16 @@ impl DomainMetadataService {
         &self,
         requests: Vec<BatchTagRequest>,
     ) -> CoreResult<BatchTagResult> {
-        let mut success_count = 0;
+        let mut entries_to_save = Vec::new();
         let mut failures = Vec::new();
 
+        // 第一阶段：在内存中处理所有修改
         for req in requests {
             match self
-                .remove_tags_internal(&req.account_id, &req.domain_id, req.tags)
+                .remove_tags_internal_no_save(&req.account_id, &req.domain_id, req.tags)
                 .await
             {
-                Ok(_) => success_count += 1,
+                Ok((key, metadata)) => entries_to_save.push((key, metadata)),
                 Err(e) => failures.push(BatchTagFailure {
                     account_id: req.account_id,
                     domain_id: req.domain_id,
@@ -301,8 +308,13 @@ impl DomainMetadataService {
             }
         }
 
+        // 第二阶段：一次性批量保存
+        if !entries_to_save.is_empty() {
+            self.repository.batch_save(&entries_to_save).await?;
+        }
+
         Ok(BatchTagResult {
-            success_count,
+            success_count: entries_to_save.len(),
             failed_count: failures.len(),
             failures,
         })
@@ -313,15 +325,16 @@ impl DomainMetadataService {
         &self,
         requests: Vec<BatchTagRequest>,
     ) -> CoreResult<BatchTagResult> {
-        let mut success_count = 0;
+        let mut entries_to_save = Vec::new();
         let mut failures = Vec::new();
 
+        // 第一阶段：在内存中处理所有修改
         for req in requests {
             match self
-                .set_tags_internal(&req.account_id, &req.domain_id, req.tags)
+                .set_tags_internal_no_save(&req.account_id, &req.domain_id, req.tags)
                 .await
             {
-                Ok(_) => success_count += 1,
+                Ok((key, metadata)) => entries_to_save.push((key, metadata)),
                 Err(e) => failures.push(BatchTagFailure {
                     account_id: req.account_id,
                     domain_id: req.domain_id,
@@ -330,22 +343,27 @@ impl DomainMetadataService {
             }
         }
 
+        // 第二阶段：一次性批量保存
+        if !entries_to_save.is_empty() {
+            self.repository.batch_save(&entries_to_save).await?;
+        }
+
         Ok(BatchTagResult {
-            success_count,
+            success_count: entries_to_save.len(),
             failed_count: failures.len(),
             failures,
         })
     }
 
-    // ===== 内部辅助方法 =====
+    // ===== 内部辅助方法（用于批量操作优化） =====
 
-    /// 内部方法：为单个域名添加多个标签（优化：减少重复 save 调用）
-    async fn add_tags_internal(
+    /// 内部方法：为单个域名添加标签（不保存，用于批量操作）
+    async fn add_tags_internal_no_save(
         &self,
         account_id: &str,
         domain_id: &str,
         tags_to_add: Vec<String>,
-    ) -> CoreResult<Vec<String>> {
+    ) -> CoreResult<(DomainMetadataKey, DomainMetadata)> {
         use crate::error::CoreError;
 
         // 验证每个标签
@@ -384,23 +402,23 @@ impl DomainMetadataService {
         all_tags.sort();
         all_tags.dedup();
 
-        metadata.tags = all_tags.clone();
+        metadata.tags = all_tags;
         metadata.touch();
 
-        self.save_metadata(account_id, domain_id, metadata).await?;
-        Ok(all_tags)
+        let key = DomainMetadataKey::new(account_id.to_string(), domain_id.to_string());
+        Ok((key, metadata))
     }
 
-    /// 内部方法：为单个域名移除多个标签
-    async fn remove_tags_internal(
+    /// 内部方法：为单个域名移除标签（不保存，用于批量操作）
+    async fn remove_tags_internal_no_save(
         &self,
         account_id: &str,
         domain_id: &str,
         tags_to_remove: Vec<String>,
-    ) -> CoreResult<Vec<String>> {
+    ) -> CoreResult<(DomainMetadataKey, DomainMetadata)> {
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
 
-        // 移除指定的标签（不存在也不报错，静默处理）
+        // 移除指定的标签
         let tags_to_remove_set: std::collections::HashSet<String> = tags_to_remove
             .into_iter()
             .map(|t| t.trim().to_string())
@@ -409,18 +427,17 @@ impl DomainMetadataService {
         metadata.tags.retain(|t| !tags_to_remove_set.contains(t));
         metadata.touch();
 
-        let tags = metadata.tags.clone();
-        self.save_metadata(account_id, domain_id, metadata).await?;
-        Ok(tags)
+        let key = DomainMetadataKey::new(account_id.to_string(), domain_id.to_string());
+        Ok((key, metadata))
     }
 
-    /// 内部方法：为单个域名替换全部标签
-    async fn set_tags_internal(
+    /// 内部方法：为单个域名替换标签（不保存，用于批量操作）
+    async fn set_tags_internal_no_save(
         &self,
         account_id: &str,
         domain_id: &str,
         tags: Vec<String>,
-    ) -> CoreResult<Vec<String>> {
+    ) -> CoreResult<(DomainMetadataKey, DomainMetadata)> {
         use crate::error::CoreError;
 
         // 验证每个标签
@@ -455,10 +472,10 @@ impl DomainMetadataService {
         cleaned_tags.sort();
         cleaned_tags.dedup();
 
-        metadata.tags = cleaned_tags.clone();
+        metadata.tags = cleaned_tags;
         metadata.touch();
 
-        self.save_metadata(account_id, domain_id, metadata).await?;
-        Ok(cleaned_tags)
+        let key = DomainMetadataKey::new(account_id.to_string(), domain_id.to_string());
+        Ok((key, metadata))
     }
 }

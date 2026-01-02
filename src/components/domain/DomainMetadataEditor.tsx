@@ -1,4 +1,4 @@
-import { Edit, Plus, X, ChevronDown } from "lucide-react"
+import { ChevronDown, Edit, Plus, X } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
@@ -18,12 +18,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { DomainColorPicker } from "./DomainColorPicker"
 import type { DomainColorValue } from "@/constants/colors"
 import { extractErrorMessage } from "@/lib/error"
 import { cn } from "@/lib/utils"
 import { useDomainStore } from "@/stores"
 import type { DomainMetadata } from "@/types"
+import { DomainColorPicker } from "./DomainColorPicker"
 
 interface DomainMetadataEditorProps {
   accountId: string
@@ -126,7 +126,7 @@ export function DomainMetadataEditor({
             </Button>
           )}
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{t("domain.metadata.editTitle")}</DialogTitle>
             <DialogDescription>{t("domain.metadata.editDescription")}</DialogDescription>
@@ -233,7 +233,7 @@ export function DomainMetadataEditor({
                 <Label htmlFor="note">{t("domain.note.label")}</Label>
                 <span
                   className={cn(
-                    "text-xs text-muted-foreground",
+                    "text-muted-foreground text-xs",
                     note.length > 450 && "text-yellow-600 dark:text-yellow-500",
                     note.length > 500 && "text-destructive"
                   )}

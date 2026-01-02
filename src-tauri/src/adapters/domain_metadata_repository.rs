@@ -132,6 +132,36 @@ impl DomainMetadataRepository for TauriDomainMetadataRepository {
         Ok(())
     }
 
+    async fn batch_save(&self, entries: &[(DomainMetadataKey, DomainMetadata)]) -> CoreResult<()> {
+        if entries.is_empty() {
+            return Ok(());
+        }
+
+        self.ensure_cache().await?;
+        let mut cache = self.cache.write().await;
+        let cache_data = cache
+            .as_mut()
+            .ok_or_else(|| CoreError::StorageError("Cache not initialized".to_string()))?;
+
+        // 批量修改内存缓存
+        for (key, metadata) in entries {
+            let storage_key = key.to_storage_key();
+            if metadata.is_empty() {
+                cache_data.remove(&storage_key);
+            } else {
+                cache_data.insert(storage_key, metadata.clone());
+            }
+        }
+
+        // 只写入一次文件
+        self.save_to_store(cache_data)?;
+        log::info!(
+            "Batch saved {} domain metadata entries to store",
+            entries.len()
+        );
+        Ok(())
+    }
+
     async fn update(
         &self,
         key: &DomainMetadataKey,

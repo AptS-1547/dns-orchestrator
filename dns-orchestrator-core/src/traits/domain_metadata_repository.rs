@@ -42,6 +42,16 @@ pub trait DomainMetadataRepository: Send + Sync {
     /// 如果 `metadata.is_empty()` 为 true，应删除存储条目
     async fn save(&self, key: &DomainMetadataKey, metadata: &DomainMetadata) -> CoreResult<()>;
 
+    /// 批量保存多个域名的元数据（性能优化，只写入一次文件）
+    ///
+    /// # Arguments
+    /// * `entries` - 键值对列表
+    ///
+    /// # Note
+    /// - 此方法用于批量操作性能优化，避免多次文件写入
+    /// - 如果某个 `metadata.is_empty()` 为 true，应删除对应存储条目
+    async fn batch_save(&self, entries: &[(DomainMetadataKey, DomainMetadata)]) -> CoreResult<()>;
+
     /// 更新元数据（部分更新，Phase 2/3 使用）
     async fn update(
         &self,

@@ -119,9 +119,9 @@ export function DomainSelectorPage() {
         viewport.scrollTop = scrollPosition
       }
     }
-    // 只在挂载时执行，scrollPosition 是从 store 读取的初始值
+    // 只在挂载时执行一次，恢复上次的滚动位置
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrollPosition])
+  }, [])
 
   // 监听滚动事件，保存滚动位置
   useEffect(() => {

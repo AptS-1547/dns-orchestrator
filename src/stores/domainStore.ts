@@ -5,7 +5,7 @@ import i18n from "@/i18n"
 import { extractErrorMessage, getErrorMessage, isCredentialError } from "@/lib/error"
 import { logger } from "@/lib/logger"
 import { domainMetadataService, domainService } from "@/services"
-import type { Domain } from "@/types"
+import type { ApiResponse, BatchTagRequest, BatchTagResult, Domain, DomainMetadata } from "@/types"
 import { useAccountStore } from "./accountStore"
 
 interface AccountDomainCache {
@@ -73,6 +73,201 @@ const getDomainPageSize = (accountId: string): number => {
   const maxPageSize = provider?.limits.maxPageSizeDomains ?? 100
 
   return Math.min(PAGINATION.PAGE_SIZE, maxPageSize)
+}
+
+/**
+ * ========== 辅助函数：消除重复代码 ==========
+ */
+
+/**
+ * 元数据构建函数类型
+ */
+type MetadataBuilder = (domain: Domain) => DomainMetadata
+
+/**
+ * 批量标签操作的本地更新逻辑
+ */
+type BatchTagLocalUpdater = (existingTags: string[], tagsToApply: string[]) => string[]
+
+/**
+ * 构造包含标签更新的元数据对象（保留其他字段，只更新 tags 和 updatedAt）
+ *
+ * @param domain - 域名对象
+ * @param newTags - 新的标签数组
+ * @returns 完整的元数据对象
+ */
+function buildMetadataWithTags(domain: Domain, newTags: string[]): DomainMetadata {
+  return {
+    ...domain.metadata,
+    isFavorite: domain.metadata?.isFavorite ?? false,
+    tags: newTags,
+    color: domain.metadata?.color || "none",
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+/**
+ * 在账户缓存中更新单个域名的元数据
+ *
+ * @param state - Zustand state
+ * @param accountId - 账户 ID
+ * @param domainId - 域名 ID
+ * @param metadataBuilder - 元数据构建函数
+ * @returns 新的 state 对象（仅包含 domainsByAccount）
+ */
+function updateDomainInCache(
+  state: DomainState,
+  accountId: string,
+  domainId: string,
+  metadataBuilder: MetadataBuilder
+): Partial<DomainState> {
+  const cache = state.domainsByAccount[accountId]
+  if (!cache) return {}
+
+  const domains = cache.domains.map((d) => {
+    if (d.id === domainId) {
+      return {
+        ...d,
+        metadata: metadataBuilder(d),
+      }
+    }
+    return d
+  })
+
+  return {
+    domainsByAccount: {
+      ...state.domainsByAccount,
+      [accountId]: { ...cache, domains },
+    },
+  }
+}
+
+/**
+ * 合并标签（去重并排序）
+ */
+const mergeTagsUpdater: BatchTagLocalUpdater = (existingTags, tagsToAdd) => {
+  return Array.from(new Set([...existingTags, ...tagsToAdd])).sort()
+}
+
+/**
+ * 移除标签
+ */
+const removeTagsUpdater: BatchTagLocalUpdater = (existingTags, tagsToRemove) => {
+  const toRemoveSet = new Set(tagsToRemove)
+  return existingTags.filter((t) => !toRemoveSet.has(t))
+}
+
+/**
+ * 替换标签（排序）
+ */
+const replaceTagsUpdater: BatchTagLocalUpdater = (_existingTags, newTags) => {
+  return [...newTags].sort()
+}
+
+/**
+ * 执行批量标签操作的通用逻辑
+ *
+ * @param selectedDomainKeys - 选中的域名 key 集合
+ * @param tags - 要应用的标签
+ * @param apiCall - 后端 API 调用函数
+ * @param localUpdater - 本地标签更新逻辑（合并/移除/替换）
+ * @param successMessage - 成功提示 i18n key
+ * @param partialMessage - 部分成功提示 i18n key
+ * @param set - Zustand set 函数
+ * @param get - Zustand get 函数
+ */
+async function executeBatchTagOperation(
+  selectedDomainKeys: Set<string>,
+  tags: string[],
+  apiCall: (requests: BatchTagRequest[]) => Promise<ApiResponse<BatchTagResult>>,
+  localUpdater: BatchTagLocalUpdater,
+  successMessage: string,
+  partialMessage: string,
+  set: (partial: Partial<DomainState> | ((state: DomainState) => Partial<DomainState>)) => void,
+  get: () => DomainState
+): Promise<void> {
+  if (selectedDomainKeys.size === 0) return
+
+  set({ isBatchOperating: true })
+  try {
+    // 1. 构建请求
+    const requests = Array.from(selectedDomainKeys).map((key) => {
+      const [accountId, domainId] = key.split("::")
+      return { accountId, domainId, tags }
+    })
+
+    // 2. 调用 API
+    const response = await apiCall(requests)
+
+    if (response.success && response.data) {
+      const result = response.data
+
+      // 3. 计算成功的 keys
+      const successKeys = new Set(
+        requests
+          .filter(
+            (req) =>
+              !result.failures.some(
+                (f) => f.accountId === req.accountId && f.domainId === req.domainId
+              )
+          )
+          .map((req) => `${req.accountId}::${req.domainId}`)
+      )
+
+      // 4. 更新本地缓存
+      set((state) => {
+        const newDomainsByAccount = { ...state.domainsByAccount }
+
+        successKeys.forEach((key) => {
+          const [accountId, domainId] = key.split("::")
+          const cache = newDomainsByAccount[accountId]
+          if (!cache) return
+
+          newDomainsByAccount[accountId] = {
+            ...cache,
+            domains: cache.domains.map((d) => {
+              if (d.id === domainId) {
+                const existingTags = d.metadata?.tags ?? []
+                const newTags = localUpdater(existingTags, tags)
+
+                return {
+                  ...d,
+                  metadata: buildMetadataWithTags(d, newTags),
+                }
+              }
+              return d
+            }),
+          }
+        })
+
+        return {
+          domainsByAccount: newDomainsByAccount,
+          selectedDomainKeys: new Set(),
+          isBatchMode: false,
+        }
+      })
+
+      get().saveToStorage()
+
+      // 5. 显示提示
+      if (result.failedCount === 0) {
+        toast.success(i18n.t(successMessage, { count: result.successCount }))
+      } else {
+        toast.warning(
+          i18n.t(partialMessage, {
+            success: result.successCount,
+            failed: result.failedCount,
+          })
+        )
+      }
+    } else {
+      toast.error(getErrorMessage(response.error))
+    }
+  } catch (err) {
+    toast.error(extractErrorMessage(err))
+  } finally {
+    set({ isBatchOperating: false })
+  }
 }
 
 interface DomainState {
@@ -503,33 +698,9 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     const newTags = response.data
 
     // 更新本地缓存
-    set((state) => {
-      const cache = state.domainsByAccount[accountId]
-      if (!cache) return {}
-
-      const domains = cache.domains.map((d) => {
-        if (d.id === domainId) {
-          return {
-            ...d,
-            metadata: {
-              ...d.metadata,
-              isFavorite: d.metadata?.isFavorite ?? false,
-              tags: newTags,
-              color: d.metadata?.color || "none",
-              updatedAt: new Date().toISOString(),
-            },
-          }
-        }
-        return d
-      })
-
-      return {
-        domainsByAccount: {
-          ...state.domainsByAccount,
-          [accountId]: { ...cache, domains },
-        },
-      }
-    })
+    set((state) =>
+      updateDomainInCache(state, accountId, domainId, (d) => buildMetadataWithTags(d, newTags))
+    )
 
     get().saveToStorage()
   },
@@ -546,33 +717,9 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     const newTags = response.data
 
     // 更新本地缓存
-    set((state) => {
-      const cache = state.domainsByAccount[accountId]
-      if (!cache) return {}
-
-      const domains = cache.domains.map((d) => {
-        if (d.id === domainId) {
-          return {
-            ...d,
-            metadata: {
-              ...d.metadata,
-              isFavorite: d.metadata?.isFavorite ?? false,
-              tags: newTags,
-              color: d.metadata?.color || "none",
-              updatedAt: new Date().toISOString(),
-            },
-          }
-        }
-        return d
-      })
-
-      return {
-        domainsByAccount: {
-          ...state.domainsByAccount,
-          [accountId]: { ...cache, domains },
-        },
-      }
-    })
+    set((state) =>
+      updateDomainInCache(state, accountId, domainId, (d) => buildMetadataWithTags(d, newTags))
+    )
 
     get().saveToStorage()
   },
@@ -589,33 +736,9 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     const newTags = response.data
 
     // 更新本地缓存
-    set((state) => {
-      const cache = state.domainsByAccount[accountId]
-      if (!cache) return {}
-
-      const domains = cache.domains.map((d) => {
-        if (d.id === domainId) {
-          return {
-            ...d,
-            metadata: {
-              ...d.metadata,
-              isFavorite: d.metadata?.isFavorite ?? false,
-              tags: newTags,
-              color: d.metadata?.color || "none",
-              updatedAt: new Date().toISOString(),
-            },
-          }
-        }
-        return d
-      })
-
-      return {
-        domainsByAccount: {
-          ...state.domainsByAccount,
-          [accountId]: { ...cache, domains },
-        },
-      }
-    })
+    set((state) =>
+      updateDomainInCache(state, accountId, domainId, (d) => buildMetadataWithTags(d, newTags))
+    )
 
     get().saveToStorage()
 
@@ -642,27 +765,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     const newMetadata = response.data
 
     // 更新本地缓存
-    set((state) => {
-      const cache = state.domainsByAccount[accountId]
-      if (!cache) return {}
-
-      const domains = cache.domains.map((d) => {
-        if (d.id === domainId) {
-          return {
-            ...d,
-            metadata: newMetadata,
-          }
-        }
-        return d
-      })
-
-      return {
-        domainsByAccount: {
-          ...state.domainsByAccount,
-          [accountId]: { ...cache, domains },
-        },
-      }
-    })
+    set((state) => updateDomainInCache(state, accountId, domainId, () => newMetadata))
 
     get().saveToStorage()
   },
@@ -746,276 +849,41 @@ export const useDomainStore = create<DomainState>((set, get) => ({
   },
 
   batchAddTags: async (tags) => {
-    const { selectedDomainKeys } = get()
-    if (selectedDomainKeys.size === 0) return
-
-    set({ isBatchOperating: true })
-    try {
-      // 解析 key 构建请求
-      const requests = Array.from(selectedDomainKeys).map((key) => {
-        const [accountId, domainId] = key.split("::")
-        return { accountId, domainId, tags }
-      })
-
-      const response = await domainMetadataService.batchAddTags(requests)
-
-      if (response.success && response.data) {
-        const result = response.data
-
-        // 更新本地缓存（只更新成功的）
-        const successKeys = new Set(
-          requests
-            .filter(
-              (req) =>
-                !result.failures.some(
-                  (f: { accountId: string; domainId: string }) =>
-                    f.accountId === req.accountId && f.domainId === req.domainId
-                )
-            )
-            .map((req) => `${req.accountId}::${req.domainId}`)
-        )
-
-        set((state) => {
-          const newDomainsByAccount = { ...state.domainsByAccount }
-
-          // 按账户更新域名
-          successKeys.forEach((key) => {
-            const [accountId, domainId] = key.split("::")
-            const cache = newDomainsByAccount[accountId]
-            if (!cache) return
-
-            newDomainsByAccount[accountId] = {
-              ...cache,
-              domains: cache.domains.map((d) => {
-                if (d.id === domainId) {
-                  const existingTags = d.metadata?.tags ?? []
-                  const mergedTags = Array.from(new Set([...existingTags, ...tags])).sort()
-
-                  return {
-                    ...d,
-                    metadata: {
-                      ...d.metadata,
-                      isFavorite: d.metadata?.isFavorite ?? false,
-                      tags: mergedTags,
-                      color: d.metadata?.color || "none",
-                      updatedAt: new Date().toISOString(),
-                    },
-                  }
-                }
-                return d
-              }),
-            }
-          })
-
-          return {
-            domainsByAccount: newDomainsByAccount,
-            selectedDomainKeys: new Set(),
-            isBatchMode: false,
-          }
-        })
-
-        get().saveToStorage()
-
-        // 提示
-        if (result.failedCount === 0) {
-          toast.success(i18n.t("domain.tags.batchAddSuccess", { count: result.successCount }))
-        } else {
-          toast.warning(
-            i18n.t("domain.tags.batchAddPartial", {
-              success: result.successCount,
-              failed: result.failedCount,
-            })
-          )
-        }
-      } else {
-        toast.error(getErrorMessage(response.error))
-      }
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      set({ isBatchOperating: false })
-    }
+    await executeBatchTagOperation(
+      get().selectedDomainKeys,
+      tags,
+      domainMetadataService.batchAddTags.bind(domainMetadataService),
+      mergeTagsUpdater,
+      "domain.tags.batchAddSuccess",
+      "domain.tags.batchAddPartial",
+      set,
+      get
+    )
   },
 
   batchRemoveTags: async (tags) => {
-    const { selectedDomainKeys } = get()
-    if (selectedDomainKeys.size === 0) return
-
-    set({ isBatchOperating: true })
-    try {
-      // 解析 key 构建请求
-      const requests = Array.from(selectedDomainKeys).map((key) => {
-        const [accountId, domainId] = key.split("::")
-        return { accountId, domainId, tags }
-      })
-
-      const response = await domainMetadataService.batchRemoveTags(requests)
-
-      if (response.success && response.data) {
-        const result = response.data
-
-        // 更新本地缓存（只更新成功的）
-        const successKeys = new Set(
-          requests
-            .filter(
-              (req) =>
-                !result.failures.some(
-                  (f: { accountId: string; domainId: string }) =>
-                    f.accountId === req.accountId && f.domainId === req.domainId
-                )
-            )
-            .map((req) => `${req.accountId}::${req.domainId}`)
-        )
-
-        set((state) => {
-          const newDomainsByAccount = { ...state.domainsByAccount }
-
-          // 按账户更新域名
-          successKeys.forEach((key) => {
-            const [accountId, domainId] = key.split("::")
-            const cache = newDomainsByAccount[accountId]
-            if (!cache) return
-
-            newDomainsByAccount[accountId] = {
-              ...cache,
-              domains: cache.domains.map((d) => {
-                if (d.id === domainId) {
-                  const existingTags = d.metadata?.tags ?? []
-                  const tagsToRemoveSet = new Set(tags)
-                  const filteredTags = existingTags.filter((t) => !tagsToRemoveSet.has(t))
-
-                  return {
-                    ...d,
-                    metadata: {
-                      ...d.metadata,
-                      isFavorite: d.metadata?.isFavorite ?? false,
-                      tags: filteredTags,
-                      color: d.metadata?.color || "none",
-                      updatedAt: new Date().toISOString(),
-                    },
-                  }
-                }
-                return d
-              }),
-            }
-          })
-
-          return {
-            domainsByAccount: newDomainsByAccount,
-            selectedDomainKeys: new Set(),
-            isBatchMode: false,
-          }
-        })
-
-        get().saveToStorage()
-
-        // 提示
-        if (result.failedCount === 0) {
-          toast.success(i18n.t("domain.tags.batchRemoveSuccess", { count: result.successCount }))
-        } else {
-          toast.warning(
-            i18n.t("domain.tags.batchRemovePartial", {
-              success: result.successCount,
-              failed: result.failedCount,
-            })
-          )
-        }
-      } else {
-        toast.error(getErrorMessage(response.error))
-      }
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      set({ isBatchOperating: false })
-    }
+    await executeBatchTagOperation(
+      get().selectedDomainKeys,
+      tags,
+      domainMetadataService.batchRemoveTags.bind(domainMetadataService),
+      removeTagsUpdater,
+      "domain.tags.batchRemoveSuccess",
+      "domain.tags.batchRemovePartial",
+      set,
+      get
+    )
   },
 
   batchSetTags: async (tags) => {
-    const { selectedDomainKeys } = get()
-    if (selectedDomainKeys.size === 0) return
-
-    set({ isBatchOperating: true })
-    try {
-      // 解析 key 构建请求
-      const requests = Array.from(selectedDomainKeys).map((key) => {
-        const [accountId, domainId] = key.split("::")
-        return { accountId, domainId, tags }
-      })
-
-      const response = await domainMetadataService.batchSetTags(requests)
-
-      if (response.success && response.data) {
-        const result = response.data
-
-        // 更新本地缓存（只更新成功的）
-        const successKeys = new Set(
-          requests
-            .filter(
-              (req) =>
-                !result.failures.some(
-                  (f: { accountId: string; domainId: string }) =>
-                    f.accountId === req.accountId && f.domainId === req.domainId
-                )
-            )
-            .map((req) => `${req.accountId}::${req.domainId}`)
-        )
-
-        set((state) => {
-          const newDomainsByAccount = { ...state.domainsByAccount }
-
-          // 按账户更新域名
-          successKeys.forEach((key) => {
-            const [accountId, domainId] = key.split("::")
-            const cache = newDomainsByAccount[accountId]
-            if (!cache) return
-
-            newDomainsByAccount[accountId] = {
-              ...cache,
-              domains: cache.domains.map((d) => {
-                if (d.id === domainId) {
-                  return {
-                    ...d,
-                    metadata: {
-                      ...d.metadata,
-                      isFavorite: d.metadata?.isFavorite ?? false,
-                      tags: [...tags].sort(), // 替换为新标签
-                      color: d.metadata?.color || "none",
-                      updatedAt: new Date().toISOString(),
-                    },
-                  }
-                }
-                return d
-              }),
-            }
-          })
-
-          return {
-            domainsByAccount: newDomainsByAccount,
-            selectedDomainKeys: new Set(),
-            isBatchMode: false,
-          }
-        })
-
-        get().saveToStorage()
-
-        // 提示
-        if (result.failedCount === 0) {
-          toast.success(i18n.t("domain.tags.batchSetSuccess", { count: result.successCount }))
-        } else {
-          toast.warning(
-            i18n.t("domain.tags.batchSetPartial", {
-              success: result.successCount,
-              failed: result.failedCount,
-            })
-          )
-        }
-      } else {
-        toast.error(getErrorMessage(response.error))
-      }
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      set({ isBatchOperating: false })
-    }
+    await executeBatchTagOperation(
+      get().selectedDomainKeys,
+      tags,
+      domainMetadataService.batchSetTags.bind(domainMetadataService),
+      replaceTagsUpdater,
+      "domain.tags.batchSetSuccess",
+      "domain.tags.batchSetPartial",
+      set,
+      get
+    )
   },
 }))
