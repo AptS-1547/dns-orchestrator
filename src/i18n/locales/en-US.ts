@@ -205,6 +205,7 @@ export default {
       maxTagsError: "Cannot add more than 10 tags",
       filter: "Filter by Tag",
       filterByTag: "Filter by Tag",
+      filterLogicHint: "Show domains with any selected tag",
     },
   },
   domains: {

@@ -1,6 +1,7 @@
 import { X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 interface DomainTagListProps {
@@ -27,35 +28,60 @@ export function DomainTagList({
   }
 
   return (
-    <div className={cn("flex flex-wrap gap-1.5", className)}>
-      {tags.map((tag) => (
-        <Badge
-          key={tag}
-          variant="secondary"
-          className={cn(
-            "group relative transition-all",
-            onClickTag && "cursor-pointer hover:bg-secondary/80",
-            editable && "pr-6"
-          )}
-          onClick={() => onClickTag?.(tag)}
-        >
-          <span className="text-xs">{tag}</span>
-          {editable && onRemoveTag && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-0 right-0 h-full w-5 p-0 opacity-0 group-hover:opacity-100"
+    <TooltipProvider>
+      <div className={cn("flex flex-wrap gap-1.5", className)}>
+        {tags.map((tag) => {
+          const isLongTag = tag.length > 15
+
+          const BadgeContent = (
+            <Badge
+              key={tag}
+              variant={onClickTag ? "outline" : "secondary"}
+              className={cn(
+                "group relative transition-all",
+                onClickTag && "cursor-pointer hover:bg-accent hover:border-primary/50",
+                editable && "pr-6"
+              )}
               onClick={(e) => {
                 e.stopPropagation()
-                onRemoveTag(tag)
+                onClickTag?.(tag)
               }}
             >
-              <X className="h-3 w-3" />
-              <span className="sr-only">Remove tag</span>
-            </Button>
-          )}
-        </Badge>
-      ))}
-    </div>
+              <span className="text-xs max-w-[120px] sm:max-w-[150px] truncate inline-block align-bottom">
+                {tag}
+              </span>
+              {editable && onRemoveTag && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-0 right-0 h-full w-5 p-0 opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemoveTag(tag)
+                  }}
+                  aria-label={`Remove ${tag}`}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </Badge>
+          )
+
+          // 长标签包裹 Tooltip
+          if (isLongTag) {
+            return (
+              <Tooltip key={tag}>
+                <TooltipTrigger asChild>{BadgeContent}</TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[300px]">
+                  {tag}
+                </TooltipContent>
+              </Tooltip>
+            )
+          }
+
+          return BadgeContent
+        })}
+      </div>
+    </TooltipProvider>
   )
 }

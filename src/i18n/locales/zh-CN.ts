@@ -200,6 +200,7 @@ export default {
       maxTagsError: "最多只能添加 10 个标签",
       filter: "按标签筛选",
       filterByTag: "按标签筛选",
+      filterLogicHint: "显示包含任一所选标签的域名",
     },
   },
   domains: {

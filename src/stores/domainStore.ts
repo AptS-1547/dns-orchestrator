@@ -586,6 +586,16 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     })
 
     get().saveToStorage()
+
+    // 清理筛选器中不存在的标签
+    const allUsedTags = get().getAllUsedTags()
+    const { selectedTags } = get()
+    if (selectedTags.size > 0) {
+      const validTags = Array.from(selectedTags).filter((tag) => allUsedTags.includes(tag))
+      if (validTags.length !== selectedTags.size) {
+        set({ selectedTags: new Set(validTags) })
+      }
+    }
   },
 
   // 设置标签筛选
@@ -605,7 +615,9 @@ export const useDomainStore = create<DomainState>((set, get) => ({
 
     Object.values(domainsByAccount).forEach((cache) => {
       cache.domains.forEach((domain) => {
-        domain.metadata?.tags?.forEach((tag) => tagsSet.add(tag))
+        domain.metadata?.tags?.forEach((tag) => {
+          tagsSet.add(tag)
+        })
       })
     })
 

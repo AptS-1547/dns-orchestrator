@@ -2,6 +2,7 @@ import { Plus, X } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,8 +15,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { extractErrorMessage } from "@/lib/error"
+import { cn } from "@/lib/utils"
 import { useDomainStore } from "@/stores"
 
 interface DomainTagEditorProps {
@@ -129,24 +130,43 @@ export function DomainTagEditor({
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-muted-foreground text-xs">
-                {t("domain.tags.inputHint")} ({tags.length}/10)
-              </p>
+              <div className="flex items-center justify-between text-xs">
+                <p className="text-muted-foreground">{t("domain.tags.inputHint")}</p>
+                <div className="flex gap-3 text-muted-foreground">
+                  <span className={cn(inputValue.length > 45 && "text-destructive")}>
+                    {inputValue.length}/50
+                  </span>
+                  <span>{tags.length}/10</span>
+                </div>
+              </div>
             </div>
 
             {/* 标签列表 */}
             {tags.length > 0 && (
               <div className="space-y-2">
-                <Label>{t("domain.tags.currentTags")}</Label>
+                <div className="flex items-center justify-between">
+                  <Label>{t("domain.tags.currentTags")}</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTags([])}
+                    className="h-auto p-1 text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    {t("common.clearAll")}
+                  </Button>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => (
                     <Badge key={tag} variant="secondary" className="group relative pr-6">
-                      <span className="text-xs">{tag}</span>
+                      <span className="text-xs max-w-[100px] truncate inline-block align-bottom">
+                        {tag}
+                      </span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute top-0 right-0 h-full w-5 p-0 opacity-0 group-hover:opacity-100"
+                        className="absolute top-0 right-0 h-full w-5 p-0 opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                         onClick={() => handleRemoveTag(tag)}
+                        aria-label={`Remove ${tag}`}
                       >
                         <X className="h-3 w-3" />
                       </Button>
