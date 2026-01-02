@@ -85,7 +85,7 @@ export function TagFilterButton() {
               </div>
               {filteredTags.map((tag) => (
                 <CommandItem key={tag} onSelect={() => handleToggleTag(tag)}>
-                  <Checkbox checked={selectedTags.has(tag)} className="mr-2 pointer-events-none" />
+                  <Checkbox checked={selectedTags.has(tag)} className="pointer-events-none mr-2" />
                   <span>{tag}</span>
                 </CommandItem>
               ))}

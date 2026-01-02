@@ -98,6 +98,9 @@ function initFormData(record: DnsRecord | null | undefined): FormData {
         tag: data.content.tag,
         value: data.content.value,
       }
+    default:
+      // Exhaustive check: TypeScript will error if new record type is added but not handled
+      throw new Error(`Unhandled record type in initFormData: ${(data as any).type}`)
   }
 }
 
@@ -135,7 +138,7 @@ export function DnsRecordForm({
   )
 
   // 获取当前 Value 值
-  const getCurrentValue = useCallback((): string => {
+  const getCurrentValue = (): string => {
     switch (formData.type) {
       case "A":
       case "AAAA":
@@ -152,11 +155,14 @@ export function DnsRecordForm({
         return formData.target
       case "CAA":
         return formData.value
+      default:
+        // Exhaustive check: TypeScript will error if new record type is added but not handled
+        throw new Error(`Unhandled record type in getCurrentValue: ${(formData as any).type}`)
     }
-  }, [formData])
+  }
 
   // 生成提示文案
-  const getRecordHint = useCallback((): string | null => {
+  const getRecordHint = (): string | null => {
     const fqdn = getFQDN(formData.name)
     const value = getCurrentValue()
 
@@ -190,7 +196,7 @@ export function DnsRecordForm({
     }
 
     return hint
-  }, [formData, getFQDN, getCurrentValue, supportsProxy, t])
+  }
 
   // 计算提示内容
   const recordHint = getRecordHint()
@@ -227,6 +233,9 @@ export function DnsRecordForm({
           type: "CAA",
           content: { flags: formData.flags, tag: formData.tag, value: formData.value },
         }
+      default:
+        // Exhaustive check: TypeScript will error if new record type is added but not handled
+        throw new Error(`Unhandled record type in buildRecordData: ${(formData as any).type}`)
     }
   }
 
@@ -278,10 +287,29 @@ export function DnsRecordForm({
       case "CAA":
         setFormData({ ...baseData, type: "CAA", flags: 0, tag: "issue", value: "" })
         break
+      default:
+        // Exhaustive check: TypeScript will error if new record type is added but not handled
+        throw new Error(`Unhandled record type in handleTypeChange: ${newType}`)
     }
   }
 
   const typeInfo = RECORD_TYPE_INFO[formData.type]
+
+  // 渲染 Record Hint 提示组件
+  const renderRecordHint = () => {
+    if (showRecordHints && recordHint) {
+      return (
+        <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
+          <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">{recordHint}</p>
+        </div>
+      )
+    }
+    return (
+      <p className="text-muted-foreground text-xs">
+        {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
+      </p>
+    )
+  }
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -338,17 +366,7 @@ export function DnsRecordForm({
                 placeholder={typeInfo.example}
                 required
               />
-              {showRecordHints && recordHint ? (
-                <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
-                  <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">
-                    {recordHint}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                </p>
-              )}
+              {renderRecordHint()}
             </div>
           )}
 
@@ -362,17 +380,7 @@ export function DnsRecordForm({
                 placeholder={typeInfo.example}
                 required
               />
-              {showRecordHints && recordHint ? (
-                <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
-                  <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">
-                    {recordHint}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                </p>
-              )}
+              {renderRecordHint()}
             </div>
           )}
 
@@ -402,17 +410,7 @@ export function DnsRecordForm({
                   placeholder={typeInfo.example}
                   required
                 />
-                {showRecordHints && recordHint ? (
-                  <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
-                    <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">
-                      {recordHint}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                  </p>
-                )}
+                {renderRecordHint()}
               </div>
             </>
           )}
@@ -427,17 +425,7 @@ export function DnsRecordForm({
                 placeholder={typeInfo.example}
                 required
               />
-              {showRecordHints && recordHint ? (
-                <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
-                  <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">
-                    {recordHint}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                </p>
-              )}
+              {renderRecordHint()}
             </div>
           )}
 
@@ -451,17 +439,7 @@ export function DnsRecordForm({
                 placeholder={typeInfo.example}
                 required
               />
-              {showRecordHints && recordHint ? (
-                <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
-                  <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">
-                    {recordHint}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                </p>
-              )}
+              {renderRecordHint()}
             </div>
           )}
 
@@ -521,17 +499,7 @@ export function DnsRecordForm({
                   placeholder={typeInfo.example}
                   required
                 />
-                {showRecordHints && recordHint ? (
-                  <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
-                    <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">
-                      {recordHint}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                  </p>
-                )}
+                {renderRecordHint()}
               </div>
             </>
           )}
@@ -578,17 +546,7 @@ export function DnsRecordForm({
                   placeholder={typeInfo.example}
                   required
                 />
-                {showRecordHints && recordHint ? (
-                  <div className="fade-in animate-in rounded-md border border-blue-200 bg-blue-50 p-3 duration-200 dark:border-blue-800 dark:bg-blue-950/30">
-                    <p className="text-blue-700 text-sm leading-relaxed dark:text-blue-300">
-                      {recordHint}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    {t(typeInfo.descriptionKey)} - {t("common.example")}: {typeInfo.example}
-                  </p>
-                )}
+                {renderRecordHint()}
               </div>
             </>
           )}
