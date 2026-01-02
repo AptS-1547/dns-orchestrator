@@ -1,4 +1,4 @@
-import type { BatchTagRequest } from "@/types/domain-metadata"
+import type { BatchTagRequest, DomainMetadataUpdate } from "@/types/domain-metadata"
 import { transport } from "./transport"
 
 class DomainMetadataService {
@@ -7,6 +7,14 @@ class DomainMetadataService {
    */
   async getMetadata(accountId: string, domainId: string) {
     return transport.invoke("get_domain_metadata", { accountId, domainId })
+  }
+
+  /**
+   * 更新域名元数据（通用部分更新，Phase 3）
+   * @returns 更新后的完整元数据
+   */
+  async updateMetadata(accountId: string, domainId: string, update: DomainMetadataUpdate) {
+    return transport.invoke("update_domain_metadata", { accountId, domainId, update })
   }
 
   /**

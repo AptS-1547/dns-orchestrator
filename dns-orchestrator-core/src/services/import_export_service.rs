@@ -119,10 +119,13 @@ impl ImportExportService {
         // 2. 加载凭证并构建导出数据
         let mut exported_accounts = Vec::new();
         for account in selected_accounts {
-            let credentials = if let Some(creds) = self.ctx.credential_store.get(&account.id).await? { creds } else {
-                log::warn!("No credentials found for account: {}", account.id);
-                continue;
-            };
+            let credentials =
+                if let Some(creds) = self.ctx.credential_store.get(&account.id).await? {
+                    creds
+                } else {
+                    log::warn!("No credentials found for account: {}", account.id);
+                    continue;
+                };
 
             // 转换 ProviderCredentials 为 HashMap
             let credentials_map = credentials.to_map();

@@ -331,6 +331,7 @@ pub fn run() {
         domain_metadata::batch_add_domain_tags,
         domain_metadata::batch_remove_domain_tags,
         domain_metadata::batch_set_domain_tags,
+        domain_metadata::update_domain_metadata,
         // DNS commands
         dns::list_dns_records,
         dns::create_dns_record,
@@ -375,6 +376,7 @@ pub fn run() {
         domain_metadata::batch_add_domain_tags,
         domain_metadata::batch_remove_domain_tags,
         domain_metadata::batch_set_domain_tags,
+        domain_metadata::update_domain_metadata,
         // DNS commands
         dns::list_dns_records,
         dns::create_dns_record,

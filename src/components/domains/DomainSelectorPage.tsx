@@ -15,7 +15,7 @@ import { useShallow } from "zustand/react/shallow"
 import { getProviderName, ProviderIcon } from "@/components/account/ProviderIcon"
 import { DomainBatchActionBar } from "@/components/domain/DomainBatchActionBar"
 import { DomainFavoriteButton } from "@/components/domain/DomainFavoriteButton"
-import { DomainTagEditor } from "@/components/domain/DomainTagEditor"
+import { DomainMetadataEditor } from "@/components/domain/DomainMetadataEditor"
 import { DomainTagList } from "@/components/domain/DomainTagList"
 import { SelectedTagsList, TagFilterButton } from "@/components/domain/TagFilter"
 import { Badge } from "@/components/ui/badge"
@@ -28,8 +28,9 @@ import { PageHeader } from "@/components/ui/page-header"
 import { PageLayout } from "@/components/ui/page-layout"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
+import { type DomainColorKey, getDomainColor } from "@/constants/colors"
 import { cn } from "@/lib/utils"
-import { useAccountStore, useDomainStore } from "@/stores"
+import { useAccountStore, useDomainStore, useSettingsStore } from "@/stores"
 import type { Account, Domain, DomainStatus } from "@/types"
 
 const statusConfig: Record<
@@ -46,6 +47,12 @@ const statusConfig: Record<
 export function DomainSelectorPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+
+  // 获取主题状态（用于颜色标记显示）
+  const theme = useSettingsStore((state) => state.theme)
+  const isDark =
+    theme === "dark" ||
+    (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
 
   // 使用 useShallow 优化 accountStore 订阅
   const { accounts, isLoading: isAccountsLoading } = useAccountStore(
@@ -234,6 +241,16 @@ export function DomainSelectorPage() {
               isFavorite={domain.metadata?.isFavorite ?? false}
             />
           )}
+          {/* 颜色标记（固定占位以保持对齐） */}
+          <div
+            className="h-3 w-0.5 shrink-0 rounded-full"
+            style={{
+              backgroundColor: domain.metadata?.color
+                ? getDomainColor(domain.metadata.color as DomainColorKey, isDark)
+                : "transparent",
+            }}
+            aria-label={domain.metadata?.color ? `Color: ${domain.metadata.color}` : undefined}
+          />
           <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="flex min-w-0 flex-1 items-center">
             <div className="flex min-w-0 items-center gap-2">
@@ -253,15 +270,15 @@ export function DomainSelectorPage() {
           <div className="flex shrink-0 items-center gap-1">
             <Badge variant={config.variant}>{t(config.labelKey)}</Badge>
             {!isBatchMode && (
-              <DomainTagEditor
+              <DomainMetadataEditor
                 accountId={accountId}
                 domainId={domain.id}
-                currentTags={domain.metadata?.tags ?? []}
+                currentMetadata={domain.metadata}
               >
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Plus className="h-4 w-4" />
                 </Button>
-              </DomainTagEditor>
+              </DomainMetadataEditor>
             )}
           </div>
         </div>

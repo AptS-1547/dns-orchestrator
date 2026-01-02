@@ -2,6 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
+/// 默认颜色值（无颜色）
+fn default_color() -> String {
+    "none".to_string()
+}
+
 /// 域名元数据键（复合主键）
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -52,9 +57,9 @@ pub struct DomainMetadata {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
 
-    /// 颜色标记（可选，HEX 格式如 "#FF5733"，Phase 3 实现）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
+    /// 颜色标记（"none" 表示无颜色，Phase 3 实现）
+    #[serde(default = "default_color")]
+    pub color: String,
 
     /// 备注（可选，Phase 3 实现）
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -73,7 +78,7 @@ impl Default for DomainMetadata {
         Self {
             is_favorite: false,
             tags: Vec::new(),
-            color: None,
+            color: "none".to_string(),
             note: None,
             favorited_at: None,
             updated_at: chrono::Utc::now(),
@@ -87,7 +92,7 @@ impl DomainMetadata {
     pub fn new(
         is_favorite: bool,
         tags: Vec<String>,
-        color: Option<String>,
+        color: String,
         note: Option<String>,
         favorited_at: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Self {
@@ -111,7 +116,7 @@ impl DomainMetadata {
     pub fn is_empty(&self) -> bool {
         !self.is_favorite
             && self.tags.is_empty()
-            && self.color.is_none()
+            && self.color == "none"
             && self.note.is_none()
             && self.favorited_at.is_none()
     }
@@ -127,8 +132,9 @@ pub struct DomainMetadataUpdate {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
 
+    /// 空字符串表示清空颜色
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<Option<String>>, // Option<Option<T>> 允许清空字段
+    pub color: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<Option<String>>,

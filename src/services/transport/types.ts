@@ -18,6 +18,7 @@ import type {
   DnssecResult,
   Domain,
   DomainMetadata,
+  DomainMetadataUpdate,
   ExportAccountsRequest,
   ExportAccountsResponse,
   HttpHeaderCheckRequest,
@@ -129,6 +130,10 @@ export interface CommandMap {
   list_all_domain_tags: {
     args: Record<string, never>
     result: ApiResponse<string[]>
+  }
+  update_domain_metadata: {
+    args: { accountId: string; domainId: string; update: DomainMetadataUpdate }
+    result: ApiResponse<DomainMetadata>
   }
 
   // DNS commands

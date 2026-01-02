@@ -125,6 +125,15 @@ interface DomainState {
   removeTag: (accountId: string, domainId: string, tag: string) => Promise<void>
   setTags: (accountId: string, domainId: string, tags: string[]) => Promise<void>
 
+  // 元数据操作 (Phase 3)
+  updateMetadata: (
+    accountId: string,
+    domainId: string,
+    update: import("@/types").DomainMetadataUpdate
+  ) => Promise<void>
+  setColor: (accountId: string, domainId: string, color: string | null) => Promise<void>
+  setNote: (accountId: string, domainId: string, note: string | null) => Promise<void>
+
   // 标签筛选
   setSelectedTags: (tags: string[]) => void
   clearTagFilters: () => void
@@ -426,6 +435,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
             metadata: {
               isFavorite: newFavoriteState,
               tags: d.metadata?.tags ?? [],
+              color: d.metadata?.color || "none",
               updatedAt: new Date().toISOString(),
               // 首次收藏时记录时间，之后永远保留
               favoritedAt: existingFavoritedAt ?? new Date().toISOString(),
@@ -505,6 +515,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
               ...d.metadata,
               isFavorite: d.metadata?.isFavorite ?? false,
               tags: newTags,
+              color: d.metadata?.color || "none",
               updatedAt: new Date().toISOString(),
             },
           }
@@ -547,6 +558,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
               ...d.metadata,
               isFavorite: d.metadata?.isFavorite ?? false,
               tags: newTags,
+              color: d.metadata?.color || "none",
               updatedAt: new Date().toISOString(),
             },
           }
@@ -589,6 +601,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
               ...d.metadata,
               isFavorite: d.metadata?.isFavorite ?? false,
               tags: newTags,
+              color: d.metadata?.color || "none",
               updatedAt: new Date().toISOString(),
             },
           }
@@ -615,6 +628,57 @@ export const useDomainStore = create<DomainState>((set, get) => ({
         set({ selectedTags: new Set(validTags) })
       }
     }
+  },
+
+  // 更新元数据（通用方法，Phase 3）
+  updateMetadata: async (accountId, domainId, update) => {
+    const response = await domainMetadataService.updateMetadata(accountId, domainId, update)
+
+    if (!(response.success && response.data)) {
+      logger.error("Failed to update metadata:", response.error)
+      return
+    }
+
+    const newMetadata = response.data
+
+    // 更新本地缓存
+    set((state) => {
+      const cache = state.domainsByAccount[accountId]
+      if (!cache) return {}
+
+      const domains = cache.domains.map((d) => {
+        if (d.id === domainId) {
+          return {
+            ...d,
+            metadata: newMetadata,
+          }
+        }
+        return d
+      })
+
+      return {
+        domainsByAccount: {
+          ...state.domainsByAccount,
+          [accountId]: { ...cache, domains },
+        },
+      }
+    })
+
+    get().saveToStorage()
+  },
+
+  // 设置颜色（便捷方法）
+  setColor: async (accountId, domainId, color) => {
+    await get().updateMetadata(accountId, domainId, {
+      color: color || "none",
+    })
+  },
+
+  // 设置备注（便捷方法）
+  setNote: async (accountId, domainId, note) => {
+    await get().updateMetadata(accountId, domainId, {
+      note: note === null ? null : note,
+    })
   },
 
   // 设置标签筛选
@@ -704,7 +768,8 @@ export const useDomainStore = create<DomainState>((set, get) => ({
             .filter(
               (req) =>
                 !result.failures.some(
-                  (f) => f.accountId === req.accountId && f.domainId === req.domainId
+                  (f: { accountId: string; domainId: string }) =>
+                    f.accountId === req.accountId && f.domainId === req.domainId
                 )
             )
             .map((req) => `${req.accountId}::${req.domainId}`)
@@ -732,6 +797,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
                       ...d.metadata,
                       isFavorite: d.metadata?.isFavorite ?? false,
                       tags: mergedTags,
+                      color: d.metadata?.color || "none",
                       updatedAt: new Date().toISOString(),
                     },
                   }
@@ -794,7 +860,8 @@ export const useDomainStore = create<DomainState>((set, get) => ({
             .filter(
               (req) =>
                 !result.failures.some(
-                  (f) => f.accountId === req.accountId && f.domainId === req.domainId
+                  (f: { accountId: string; domainId: string }) =>
+                    f.accountId === req.accountId && f.domainId === req.domainId
                 )
             )
             .map((req) => `${req.accountId}::${req.domainId}`)
@@ -823,6 +890,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
                       ...d.metadata,
                       isFavorite: d.metadata?.isFavorite ?? false,
                       tags: filteredTags,
+                      color: d.metadata?.color || "none",
                       updatedAt: new Date().toISOString(),
                     },
                   }
@@ -885,7 +953,8 @@ export const useDomainStore = create<DomainState>((set, get) => ({
             .filter(
               (req) =>
                 !result.failures.some(
-                  (f) => f.accountId === req.accountId && f.domainId === req.domainId
+                  (f: { accountId: string; domainId: string }) =>
+                    f.accountId === req.accountId && f.domainId === req.domainId
                 )
             )
             .map((req) => `${req.accountId}::${req.domainId}`)
@@ -910,6 +979,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
                       ...d.metadata,
                       isFavorite: d.metadata?.isFavorite ?? false,
                       tags: [...tags].sort(), // 替换为新标签
+                      color: d.metadata?.color || "none",
                       updatedAt: new Date().toISOString(),
                     },
                   }

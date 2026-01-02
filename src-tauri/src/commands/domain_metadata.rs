@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 pub struct DomainMetadata {
     pub is_favorite: bool,
     pub tags: Vec<String>,
-    pub color: Option<String>,
+    pub color: String,
     pub note: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub favorited_at: Option<DateTime<Utc>>,
@@ -206,7 +206,11 @@ impl From<dns_orchestrator_core::types::BatchTagResult> for BatchTagResult {
         Self {
             success_count: core.success_count,
             failed_count: core.failed_count,
-            failures: core.failures.into_iter().map(std::convert::Into::into).collect(),
+            failures: core
+                .failures
+                .into_iter()
+                .map(std::convert::Into::into)
+                .collect(),
         }
     }
 }
@@ -270,4 +274,58 @@ pub async fn batch_set_domain_tags(
         .await?;
 
     Ok(ApiResponse::success(result.into()))
+}
+
+// ===== 通用元数据更新（Phase 3） =====
+
+/// 元数据部分更新请求
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainMetadataUpdate {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_favorite: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<Option<String>>,
+}
+
+// 类型转换
+impl From<DomainMetadataUpdate> for dns_orchestrator_core::types::DomainMetadataUpdate {
+    fn from(local: DomainMetadataUpdate) -> Self {
+        Self {
+            is_favorite: local.is_favorite,
+            tags: local.tags,
+            color: local.color,
+            note: local.note,
+        }
+    }
+}
+
+/// 更新域名元数据（通用部分更新）
+#[tauri::command]
+pub async fn update_domain_metadata(
+    state: State<'_, AppState>,
+    account_id: String,
+    domain_id: String,
+    update: DomainMetadataUpdate,
+) -> Result<ApiResponse<DomainMetadata>, DnsError> {
+    // 调用 update_metadata 方法（带验证）
+    state
+        .domain_metadata_service
+        .update_metadata(&account_id, &domain_id, update.into())
+        .await?;
+
+    // 返回更新后的完整元数据
+    let metadata = state
+        .domain_metadata_service
+        .get_metadata(&account_id, &domain_id)
+        .await?;
+
+    Ok(ApiResponse::success(metadata.into()))
 }

@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { type DomainColorKey, getDomainColor } from "@/constants/colors"
 import { cn } from "@/lib/utils"
+import { useSettingsStore } from "@/stores"
 import type { Domain, DomainStatus } from "@/types"
 
 interface DomainListProps {
@@ -33,6 +35,10 @@ export function DomainList({
   accountId = "",
 }: DomainListProps) {
   const { t } = useTranslation()
+  const theme = useSettingsStore((state) => state.theme)
+  const isDark =
+    theme === "dark" ||
+    (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   // 设置 IntersectionObserver 用于无限滚动
@@ -100,12 +106,21 @@ export function DomainList({
             {isBatchMode && (
               <Checkbox
                 checked={isSelected}
-                onCheckedChange={(e) => {
-                  e.stopPropagation?.()
+                onCheckedChange={() => {
+                  // Checkbox change handler
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
             )}
+            {/* 颜色色块（固定占位以保持对齐） */}
+            <div
+              className="h-3 w-0.5 shrink-0 rounded-full"
+              style={{
+                backgroundColor: domain.metadata?.color
+                  ? getDomainColor(domain.metadata.color as DomainColorKey, isDark)
+                  : "transparent",
+              }}
+            />
             <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="flex-1 truncate text-left">
               <div className="truncate font-medium">{domain.name}</div>

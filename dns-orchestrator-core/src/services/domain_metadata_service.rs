@@ -62,6 +62,33 @@ impl DomainMetadataService {
         domain_id: &str,
         update: DomainMetadataUpdate,
     ) -> CoreResult<()> {
+        use crate::error::CoreError;
+
+        // 颜色验证（"none" 表示无颜色）
+        const VALID_COLORS: &[&str] = &[
+            "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink", "brown", "gray",
+            "none",
+        ];
+
+        if let Some(ref color) = update.color {
+            if !VALID_COLORS.contains(&color.as_str()) {
+                return Err(CoreError::ValidationError(format!(
+                    "Invalid color key: '{}'. Must be one of: {}",
+                    color,
+                    VALID_COLORS.join(", ")
+                )));
+            }
+        }
+
+        // 备注长度验证（仅验证非空值）
+        if let Some(Some(ref note)) = update.note {
+            if note.len() > 500 {
+                return Err(CoreError::ValidationError(
+                    "Note length cannot exceed 500 characters".to_string(),
+                ));
+            }
+        }
+
         let key = DomainMetadataKey::new(account_id.to_string(), domain_id.to_string());
         self.repository.update(&key, &update).await
     }

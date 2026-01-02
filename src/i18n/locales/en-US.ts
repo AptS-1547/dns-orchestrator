@@ -227,6 +227,25 @@ export default {
       batchSetSuccess: "Successfully replaced tags for {{count}} domains",
       batchSetPartial: "Completed: {{success}} succeeded, {{failed}} failed",
     },
+    // Metadata editing (Phase 3)
+    metadata: {
+      edit: "Edit Metadata",
+      editTitle: "Edit Domain Metadata",
+      editDescription: "Manage favorites, tags, colors and notes for this domain",
+      saveSuccess: "Metadata updated successfully",
+    },
+    // Color marking
+    color: {
+      label: "Color Mark",
+      select: "Select Color",
+      clear: "Clear Color",
+    },
+    // Note
+    note: {
+      label: "Note",
+      placeholder: "Add a note for this domain...",
+      maxLength: "Note cannot exceed 500 characters",
+    },
     selectedCount: "{{count}} domains selected",
   },
   domains: {
@@ -260,6 +279,7 @@ export default {
     configureSettings: "Theme, language settings",
   },
   favorites: {
+    title: "Favorite",
     searchPlaceholder: "Search favorite domains or accounts",
     empty: "No favorite domains yet",
     emptyDesc: "Click the star icon in the domain list to bookmark frequently used domains",

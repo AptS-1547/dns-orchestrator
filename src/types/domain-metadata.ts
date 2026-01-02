@@ -6,8 +6,8 @@ export interface DomainMetadata {
   isFavorite: boolean
   /** 标签列表（Phase 2） */
   tags: string[]
-  /** 颜色标记（Phase 3） */
-  color?: string
+  /** 颜色标记（Phase 3，"none" 表示无颜色） */
+  color: string
   /** 备注（Phase 3） */
   note?: string
   /** 收藏时间（ISO8601 字符串） */
@@ -22,8 +22,8 @@ export interface DomainMetadata {
 export interface DomainMetadataUpdate {
   isFavorite?: boolean
   tags?: string[]
-  /** null 表示清空字段 */
-  color?: string | null
+  /** "none" 表示清空颜色 */
+  color?: string
   /** null 表示清空字段 */
   note?: string | null
 }

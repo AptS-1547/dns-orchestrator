@@ -23,7 +23,8 @@ enum StorageFormat {
 #[cfg(not(target_os = "android"))]
 mod desktop {
     use super::{
-        async_trait, CoreError, CoreResult, CredentialStore, CredentialsMap, HashMap, ProviderCredentials, StorageFormat,
+        async_trait, CoreError, CoreResult, CredentialStore, CredentialsMap, HashMap,
+        ProviderCredentials, StorageFormat,
     };
     use keyring::Entry;
     use std::sync::Arc;

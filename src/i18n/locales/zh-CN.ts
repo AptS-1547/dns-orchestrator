@@ -222,6 +222,25 @@ export default {
       batchSetSuccess: "成功替换 {{count}} 个域名的标签",
       batchSetPartial: "替换完成：{{success}} 成功，{{failed}} 失败",
     },
+    // 元数据编辑 (Phase 3)
+    metadata: {
+      edit: "编辑元数据",
+      editTitle: "编辑域名元数据",
+      editDescription: "管理该域名的收藏、标签、颜色和备注",
+      saveSuccess: "元数据更新成功",
+    },
+    // 颜色标记
+    color: {
+      label: "颜色标记",
+      select: "选择颜色",
+      clear: "清空颜色",
+    },
+    // 备注
+    note: {
+      label: "备注",
+      placeholder: "为这个域名添加备注...",
+      maxLength: "备注不能超过 500 字符",
+    },
     selectedCount: "已选择 {{count}} 个域名",
   },
   domains: {
@@ -255,6 +274,7 @@ export default {
     configureSettings: "主题、语言等设置",
   },
   favorites: {
+    title: "收藏",
     searchPlaceholder: "搜索收藏的域名或账户",
     empty: "还没有收藏域名",
     emptyDesc: "在域名列表中点击星星图标收藏常用域名",

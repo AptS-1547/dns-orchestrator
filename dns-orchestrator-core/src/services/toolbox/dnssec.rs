@@ -62,9 +62,15 @@ fn extract_signature_record(
     use chrono::{DateTime, Utc};
 
     // 格式化时间戳
-    let expiration = DateTime::<Utc>::from_timestamp(i64::from(sig_expiration), 0).map_or_else(|| format!("Invalid ({sig_expiration})"), |dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string());
+    let expiration = DateTime::<Utc>::from_timestamp(i64::from(sig_expiration), 0).map_or_else(
+        || format!("Invalid ({sig_expiration})"),
+        |dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+    );
 
-    let inception = DateTime::<Utc>::from_timestamp(i64::from(sig_inception), 0).map_or_else(|| format!("Invalid ({sig_inception})"), |dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string());
+    let inception = DateTime::<Utc>::from_timestamp(i64::from(sig_inception), 0).map_or_else(
+        || format!("Invalid ({sig_inception})"),
+        |dt| dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+    );
 
     // Base64 编码签名
     let signature_b64 = STANDARD.encode(signature_bytes);
@@ -106,9 +112,9 @@ pub async fn dnssec_check(domain: &str, nameserver: Option<&str>) -> CoreResult<
     let effective_ns = nameserver.filter(|s| !s.is_empty());
 
     let (resolver, used_nameserver) = if let Some(ns) = effective_ns {
-        let ns_ip: IpAddr = ns.parse().map_err(|_| {
-            CoreError::ValidationError(format!("Invalid DNS server address: {ns}"))
-        })?;
+        let ns_ip: IpAddr = ns
+            .parse()
+            .map_err(|_| CoreError::ValidationError(format!("Invalid DNS server address: {ns}")))?;
 
         let config = ResolverConfig::from_parts(
             None,

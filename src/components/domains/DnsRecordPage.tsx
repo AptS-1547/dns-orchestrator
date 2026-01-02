@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, StickyNote } from "lucide-react"
 import { useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useParams } from "react-router-dom"
@@ -75,6 +75,16 @@ export function DnsRecordPage() {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
+        }
+        actions={
+          selectedDomain?.metadata?.note ? (
+            <div className="hidden md:flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 max-w-md">
+              <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground truncate">
+                {selectedDomain.metadata.note}
+              </span>
+            </div>
+          ) : undefined
         }
       />
 

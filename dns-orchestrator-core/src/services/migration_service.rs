@@ -72,15 +72,17 @@ impl MigrationService {
         let mut failed_accounts = Vec::new();
 
         for (account_id, old_cred_map) in old_creds {
-            if let Some(provider) = account_providers.get(&account_id) { match ProviderCredentials::from_map(provider, &old_cred_map) {
-                Ok(provider_creds) => {
-                    new_creds.insert(account_id.clone(), provider_creds);
+            if let Some(provider) = account_providers.get(&account_id) {
+                match ProviderCredentials::from_map(provider, &old_cred_map) {
+                    Ok(provider_creds) => {
+                        new_creds.insert(account_id.clone(), provider_creds);
+                    }
+                    Err(e) => {
+                        log::warn!("账户 {account_id} 凭证转换失败: {e}");
+                        failed_accounts.push((account_id, format!("转换失败: {e}")));
+                    }
                 }
-                Err(e) => {
-                    log::warn!("账户 {account_id} 凭证转换失败: {e}");
-                    failed_accounts.push((account_id, format!("转换失败: {e}")));
-                }
-            } } else {
+            } else {
                 log::warn!("找不到账户 {account_id} 的元数据，跳过迁移");
                 failed_accounts.push((account_id, "账户元数据缺失".to_string()));
             }
