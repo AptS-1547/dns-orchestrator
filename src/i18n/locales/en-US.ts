@@ -167,6 +167,18 @@ export default {
       SRV: "Service Record",
       CAA: "CA Authorization",
     },
+    // DNS record live hints
+    recordHints: {
+      A: "💡 This record will point {{fqdn}} to IP {{value}}",
+      AAAA: "💡 This record will point {{fqdn}} to IPv6 address {{value}}",
+      CNAME: "💡 Accessing {{fqdn}} will actually request {{value}}",
+      MX: "💡 Emails sent to {{fqdn}} will be handled by {{value}} (priority {{priority}})",
+      TXT: "💡 {{fqdn}} will have a text record with content {{value}}",
+      NS: "💡 DNS resolution for {{fqdn}} will be handled by {{value}}",
+      SRV: "💡 Service {{fqdn}} will point to {{value}}:{{port}} (priority {{priority}}, weight {{weight}})",
+      CAA: "💡 {{fqdn}} allows {{value}} to issue SSL certificates (tag: {{tag}})",
+      proxyEnabled: "(Proxy enabled, real IP will be hidden)",
+    },
     // Toast messages
     fetchFailed: "Failed to fetch DNS records",
     createSuccess: 'Record "{{name}}" added successfully',
@@ -303,6 +315,11 @@ export default {
     notificationsDesc: "Manage notification preferences",
     operationNotifications: "Operation Notifications",
     operationNotificationsDesc: "Show success/failure notifications for operations",
+    // DNS Record Hints
+    recordHints: "DNS Record Hints",
+    recordHintsDesc: "Show guided hints when editing DNS records",
+    showRecordHints: "Show record effect preview",
+    showRecordHintsDesc: "Display explanations of DNS record effects for beginners",
     // Pagination
     pagination: "Pagination Mode",
     paginationDesc: "Choose how DNS records are displayed",

@@ -1,16 +1,19 @@
 import { Filter, X } from "lucide-react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useShallow } from "zustand/react/shallow"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useDomainStore } from "@/stores"
 
@@ -20,6 +23,8 @@ import { useDomainStore } from "@/stores"
  */
 export function TagFilterButton() {
   const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const { selectedTags, setSelectedTags, getAllUsedTags } = useDomainStore(
     useShallow((state) => ({
@@ -30,6 +35,13 @@ export function TagFilterButton() {
   )
 
   const allTags = getAllUsedTags()
+
+  // 过滤标签
+  const filteredTags = useMemo(() => {
+    if (!searchQuery.trim()) return allTags
+    const query = searchQuery.toLowerCase()
+    return allTags.filter((tag) => tag.toLowerCase().includes(query))
+  }, [allTags, searchQuery])
 
   const handleToggleTag = (tag: string) => {
     const newTags = new Set(selectedTags)
@@ -46,8 +58,8 @@ export function TagFilterButton() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-10 w-full sm:w-auto">
           <Filter className="mr-2 h-4 w-4" />
           {t("domain.tags.filter")}
@@ -57,29 +69,31 @@ export function TagFilterButton() {
             </Badge>
           )}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
-        <DropdownMenuLabel>
-          <div>
-            {t("domain.tags.filterByTag")}
-            <span className="mt-0.5 block font-normal text-muted-foreground text-xs">
-              {t("domain.tags.filterLogicHint")}
-            </span>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {allTags.map((tag) => (
-          <DropdownMenuCheckboxItem
-            key={tag}
-            checked={selectedTags.has(tag)}
-            onCheckedChange={() => handleToggleTag(tag)}
-            onSelect={(e) => e.preventDefault()}
-          >
-            {tag}
-          </DropdownMenuCheckboxItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="start">
+        <Command>
+          <CommandInput
+            placeholder={t("common.search")}
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+          />
+          <CommandList className="max-h-[240px]">
+            <CommandEmpty>{t("common.noMatch")}</CommandEmpty>
+            <CommandGroup>
+              <div className="px-2 py-1.5 text-muted-foreground text-xs">
+                {t("domain.tags.filterLogicHint")}
+              </div>
+              {filteredTags.map((tag) => (
+                <CommandItem key={tag} onSelect={() => handleToggleTag(tag)}>
+                  <Checkbox checked={selectedTags.has(tag)} className="pointer-events-none mr-2" />
+                  <span>{tag}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }
 

@@ -162,6 +162,18 @@ export default {
       SRV: "服务记录",
       CAA: "CA 授权",
     },
+    // DNS 记录实时提示
+    recordHints: {
+      A: "💡 该记录会将 {{fqdn}} 指向 IP {{value}}",
+      AAAA: "💡 该记录会将 {{fqdn}} 指向 IPv6 地址 {{value}}",
+      CNAME: "💡 访问 {{fqdn}} 时，将实际请求 {{value}}",
+      MX: "💡 发往 {{fqdn}} 的邮件将由 {{value}} 负责处理（优先级 {{priority}}）",
+      TXT: "💡 {{fqdn}} 会拥有内容为 {{value}} 的文本记录",
+      NS: "💡 {{fqdn}} 的域名解析将由 {{value}} 负责",
+      SRV: "💡 服务 {{fqdn}} 将指向 {{value}}:{{port}}（优先级 {{priority}}，权重 {{weight}}）",
+      CAA: "💡 {{fqdn}} 允许 {{value}} 签发 SSL 证书（标签：{{tag}}）",
+      proxyEnabled: "（已启用代理，真实 IP 将被隐藏）",
+    },
     // Toast messages
     fetchFailed: "获取 DNS 记录失败",
     createSuccess: '记录 "{{name}}" 添加成功',
@@ -298,6 +310,11 @@ export default {
     notificationsDesc: "管理通知偏好设置",
     operationNotifications: "操作通知",
     operationNotificationsDesc: "显示操作成功/失败的提示",
+    // DNS Record Hints
+    recordHints: "DNS 记录提示",
+    recordHintsDesc: "在编辑 DNS 记录时显示引导式提示",
+    showRecordHints: "显示记录效果预览",
+    showRecordHintsDesc: "为新手用户显示 DNS 记录的实际效果说明",
     // Pagination
     pagination: "分页模式",
     paginationDesc: "选择 DNS 记录列表的分页方式",

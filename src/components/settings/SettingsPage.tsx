@@ -37,10 +37,12 @@ export function SettingsPage() {
     language,
     debugMode,
     paginationMode,
+    showRecordHints,
     setTheme,
     setLanguage,
     setDebugMode,
     setPaginationMode,
+    setShowRecordHints,
   } = useSettingsStore()
   const {
     checking,
@@ -192,6 +194,30 @@ export function SettingsPage() {
               }
               description={t("settings.operationNotificationsDesc")}
               control={<Switch id="notifications" defaultChecked />}
+            />
+          </SettingItem>
+        </SettingSection>
+
+        {/* DNS 记录提示设置 */}
+        <SettingSection
+          title={t("settings.recordHints")}
+          description={t("settings.recordHintsDesc")}
+        >
+          <SettingItem>
+            <SettingRow
+              label={
+                <Label htmlFor="record-hints" className="font-medium text-sm">
+                  {t("settings.showRecordHints")}
+                </Label>
+              }
+              description={t("settings.showRecordHintsDesc")}
+              control={
+                <Switch
+                  id="record-hints"
+                  checked={showRecordHints}
+                  onCheckedChange={setShowRecordHints}
+                />
+              }
             />
           </SettingItem>
         </SettingSection>
