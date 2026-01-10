@@ -13,6 +13,8 @@ export default {
     noData: "暂无数据",
     total: "共",
     records: "条记录",
+    perPage: "每页",
+    items: "条",
     showing: "显示",
     search: "搜索",
     filter: "筛选",
@@ -28,6 +30,7 @@ export default {
     deselectAll: "取消全选",
     yes: "是",
     no: "否",
+    pageWithNumber: "第 {{page}} 页",
   },
   account: {
     title: "账号",
@@ -126,6 +129,7 @@ export default {
     batchDeleteConfirm: "确认批量删除",
     batchDeleteConfirmDesc: "确定要删除选中的 {{count}} 条记录吗？此操作无法撤销。",
     selectedCount: "已选择 {{count}} 条",
+    selectedCountShort: "已选 {{count}}",
     noRecords: "暂无 DNS 记录",
     searchPlaceholder: "搜索名称...",
     // Fields
@@ -184,6 +188,99 @@ export default {
     deleteFailed: "删除记录失败",
     batchDeleteSuccess: "成功删除 {{count}} 条记录",
     batchDeletePartial: "成功删除 {{success}} 条记录，{{failed}} 条失败",
+    // 向导模式
+    wizard: {
+      title: "添加 DNS 记录",
+      advancedMode: "高级模式",
+      wizardMode: "向导模式",
+      back: "上一步",
+      next: "下一步",
+      // 步骤名称
+      steps: {
+        subdomain: "子域名",
+        target: "目标",
+        preset: "选择服务",
+        confirm: "确认",
+      },
+      // 目的选择
+      purpose: {
+        title: "你想用这个域名做什么？",
+        subtitle: "选择一个场景，我们会引导你完成配置",
+        website: "让网站可以访问",
+        websiteDesc: "将域名指向服务器 IP 地址",
+        mail: "设置邮件服务",
+        mailDesc: "配置邮件服务器（MX 记录）",
+        subdomain: "指向另一个域名",
+        subdomainDesc: "创建域名别名（CNAME 记录）",
+        verification: "域名验证 / TXT 配置",
+        verificationDesc: "添加 TXT 记录用于验证或配置",
+      },
+      // 子域名设置
+      subdomain: {
+        title: "设置子域名",
+        subtitle: "选择你想配置的子域名",
+        label: "子域名",
+        hint: "输入 @ 或留空表示根域名",
+        common: "常用选项",
+        preview: "将配置 {{fqdn}}",
+      },
+      // 目标设置
+      target: {
+        label: "目标",
+        ipLabel: "服务器 IP 地址",
+        domainLabel: "目标域名",
+        txtLabel: "TXT 记录值",
+        ipv4Hint: "输入你的服务器 IPv4 地址",
+        ipv6Hint: "输入你的服务器 IPv6 地址",
+        cnameHint: "输入目标域名（不含 http://）",
+        txtHint: "输入 TXT 记录的值",
+        title: {
+          website: "输入服务器地址",
+          subdomain: "输入目标域名",
+          verification: "输入 TXT 值",
+        },
+        subtitle: {
+          website: "{{fqdn}} 应该指向哪个服务器？",
+          subdomain: "访问 {{fqdn}} 时应该跳转到哪里？",
+          verification: "为 {{fqdn}} 添加什么内容？",
+        },
+        preview: {
+          website: "{{fqdn}} 将指向 IP {{ip}}",
+          subdomain: "访问 {{fqdn}} 时将跳转到 {{target}}",
+          verification: "{{fqdn}} 将拥有 TXT 记录：{{value}}",
+        },
+      },
+      // 邮件预设
+      mail: {
+        title: "选择邮件服务",
+        subtitle: "选择你使用的邮件服务商，我们会自动配置 MX 记录",
+        manual: "手动配置",
+        manualDesc: "自行填写 MX 记录信息",
+        recordCount: "{{count}} 条记录",
+        presets: {
+          gmail: "Gmail / Google Workspace",
+          gmailDesc: "谷歌企业邮箱",
+          microsoft365: "Microsoft 365 / Outlook",
+          microsoft365Desc: "微软企业邮箱",
+          aliyun: "阿里企业邮箱",
+          aliyunDesc: "阿里云企业邮箱服务",
+          tencent: "腾讯企业邮箱",
+          tencentDesc: "腾讯企业邮箱服务",
+          netease: "网易企业邮箱",
+          neteaseDesc: "网易企业邮箱服务",
+        },
+      },
+      // 确认
+      confirm: {
+        title: "确认配置",
+        subtitle: "即将创建 {{count}} 条 DNS 记录",
+        manualMailSubtitle: "将打开高级模式手动配置",
+        hint: "DNS 记录生效可能需要几分钟到 48 小时",
+        manualMailHint: "你选择了手动配置，接下来将打开高级表单",
+        create: "创建 {{count}} 条记录",
+        openAdvanced: "打开高级模式",
+      },
+    },
   },
   domain: {
     title: "域名",
@@ -258,6 +355,11 @@ export default {
       maxLength: "备注不能超过 500 字符",
     },
     selectedCount: "已选择 {{count}} 个域名",
+    // 批量模式
+    batch: {
+      enterMode: "批量选择",
+      exitMode: "退出批量模式",
+    },
   },
   domains: {
     selectTitle: "选择域名",

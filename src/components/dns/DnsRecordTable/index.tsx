@@ -22,6 +22,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { TIMING } from "@/constants"
 import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
@@ -29,6 +36,7 @@ import { useDnsStore, useDomainStore, useSettingsStore } from "@/stores"
 import type { DnsRecord } from "@/types"
 import { DnsBatchActionBar } from "../DnsBatchActionBar"
 import { DnsRecordForm } from "../DnsRecordForm"
+import { DnsRecordWizard } from "../DnsRecordWizard"
 import { DnsTableToolbar } from "../DnsTableToolbar"
 import { useDnsTableSort } from "../useDnsTableSort"
 import { DesktopTable } from "./DesktopTable"
@@ -85,6 +93,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
   // actions 单独获取（函数引用稳定，不需要 shallow）
   const setKeyword = useDnsStore((state) => state.setKeyword)
   const setRecordType = useDnsStore((state) => state.setRecordType)
+  const setPageSize = useDnsStore((state) => state.setPageSize)
   const fetchRecords = useDnsStore((state) => state.fetchRecords)
   const fetchMoreRecords = useDnsStore((state) => state.fetchMoreRecords)
   const jumpToPage = useDnsStore((state) => state.jumpToPage)
@@ -96,6 +105,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
   const batchDeleteRecords = useDnsStore((state) => state.batchDeleteRecords)
 
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
   const [editingRecord, setEditingRecord] = useState<DnsRecord | null>(null)
   const [deletingRecord, setDeletingRecord] = useState<DnsRecord | null>(null)
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false)
@@ -224,6 +234,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
         onRefresh={handleRefresh}
         onToggleSelectMode={toggleSelectMode}
         onAdd={() => setShowAddForm(true)}
+        onAddWizard={() => setShowWizard(true)}
       />
 
       {/* Table / Card List */}
@@ -272,7 +283,27 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
 
       {/* Pagination (传统分页模式) */}
       {paginationMode === "paginated" && totalCount > 0 && (
-        <div className="flex justify-center border-t px-4 py-2">
+        <div className="flex items-center justify-between border-t px-4 py-2 md:justify-center">
+          {/* 移动端分页选择器 */}
+          <div className="flex items-center gap-1 md:hidden">
+            <Select
+              value={String(pageSize)}
+              onValueChange={(val) => setPageSize(accountId, domainId, Number(val))}
+            >
+              <SelectTrigger className="h-8 w-16">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50, 100].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-muted-foreground text-xs">{t("common.items")}</span>
+          </div>
+
           <Pagination className="mx-0">
             <PaginationContent className="gap-1">
               <PaginationItem>
@@ -285,55 +316,79 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
                 />
               </PaginationItem>
 
-              {(() => {
-                const totalPages = Math.ceil(totalCount / pageSize)
-                const pages: (number | "ellipsis")[] = []
+              {/* 移动端简化显示：页码选择器 */}
+              {isMobile ? (
+                <PaginationItem>
+                  <Select
+                    value={String(page)}
+                    onValueChange={(val) => jumpToPage(accountId, domainId, Number(val))}
+                  >
+                    <SelectTrigger className="h-8 w-auto gap-1 border-none bg-transparent px-2 shadow-none">
+                      <span className="text-sm">
+                        {page} / {Math.ceil(totalCount / pageSize)}
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[240px]">
+                      {Array.from({ length: Math.ceil(totalCount / pageSize) }, (_, i) => (
+                        <SelectItem key={i + 1} value={String(i + 1)}>
+                          {t("common.pageWithNumber", { page: i + 1 })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </PaginationItem>
+              ) : (
+                /* 桌面端完整页码 */
+                (() => {
+                  const totalPages = Math.ceil(totalCount / pageSize)
+                  const pages: (number | "ellipsis")[] = []
 
-                // 生成页码数组（显示当前页附近的页码）
-                if (totalPages <= 7) {
-                  // 总页数少，全部显示
-                  for (let i = 1; i <= totalPages; i++) {
-                    pages.push(i)
-                  }
-                } else {
-                  // 总页数多，显示部分页码
-                  if (page <= 3) {
-                    // 靠近开头
-                    pages.push(1, 2, 3, 4, "ellipsis", totalPages)
-                  } else if (page >= totalPages - 2) {
-                    // 靠近结尾
-                    pages.push(
-                      1,
-                      "ellipsis",
-                      totalPages - 3,
-                      totalPages - 2,
-                      totalPages - 1,
-                      totalPages
-                    )
+                  // 生成页码数组（显示当前页附近的页码）
+                  if (totalPages <= 7) {
+                    // 总页数少，全部显示
+                    for (let i = 1; i <= totalPages; i++) {
+                      pages.push(i)
+                    }
                   } else {
-                    // 中间
-                    pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages)
+                    // 总页数多，显示部分页码
+                    if (page <= 3) {
+                      // 靠近开头
+                      pages.push(1, 2, 3, 4, "ellipsis", totalPages)
+                    } else if (page >= totalPages - 2) {
+                      // 靠近结尾
+                      pages.push(
+                        1,
+                        "ellipsis",
+                        totalPages - 3,
+                        totalPages - 2,
+                        totalPages - 1,
+                        totalPages
+                      )
+                    } else {
+                      // 中间
+                      pages.push(1, "ellipsis", page - 1, page, page + 1, "ellipsis", totalPages)
+                    }
                   }
-                }
 
-                return pages.map((p, i) =>
-                  p === "ellipsis" ? (
-                    <PaginationItem key={`ellipsis-${i}`}>
-                      <PaginationEllipsis className="h-8 w-8" />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem key={p}>
-                      <PaginationLink
-                        onClick={() => jumpToPage(accountId, domainId, p)}
-                        isActive={page === p}
-                        className="h-8 w-8 cursor-pointer text-xs"
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
+                  return pages.map((p, i) =>
+                    p === "ellipsis" ? (
+                      <PaginationItem key={`ellipsis-${i}`}>
+                        <PaginationEllipsis className="h-8 w-8" />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          onClick={() => jumpToPage(accountId, domainId, p)}
+                          isActive={page === p}
+                          className="h-8 w-8 cursor-pointer text-xs"
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
                   )
-                )
-              })()}
+                })()
+              )}
 
               <PaginationItem>
                 <PaginationNext
@@ -364,6 +419,16 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
           record={editingRecord}
           onClose={handleFormClose}
           supportsProxy={supportsProxy}
+        />
+      )}
+
+      {/* Wizard Dialog */}
+      {showWizard && (
+        <DnsRecordWizard
+          accountId={accountId}
+          domainId={domainId}
+          onClose={() => setShowWizard(false)}
+          onOpenAdvancedForm={() => setShowAddForm(true)}
         />
       )}
 

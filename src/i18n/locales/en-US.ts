@@ -13,6 +13,8 @@ export default {
     noData: "No data",
     total: "Total",
     records: "records",
+    perPage: "Per page",
+    items: "items",
     showing: "showing",
     search: "Search",
     filter: "Filter",
@@ -28,6 +30,7 @@ export default {
     deselectAll: "Deselect All",
     yes: "Yes",
     no: "No",
+    pageWithNumber: "Page {{page}}",
   },
   account: {
     title: "Accounts",
@@ -131,6 +134,7 @@ export default {
     batchDeleteConfirmDesc:
       "Are you sure you want to delete {{count}} selected record(s)? This action cannot be undone.",
     selectedCount: "{{count}} selected",
+    selectedCountShort: "{{count}} sel.",
     noRecords: "No DNS records",
     searchPlaceholder: "Search name...",
     // Fields
@@ -189,6 +193,99 @@ export default {
     deleteFailed: "Failed to delete record",
     batchDeleteSuccess: "Successfully deleted {{count}} records",
     batchDeletePartial: "Deleted {{success}} records, {{failed}} failed",
+    // Wizard mode
+    wizard: {
+      title: "Add DNS Record",
+      advancedMode: "Advanced Mode",
+      wizardMode: "Wizard Mode",
+      back: "Back",
+      next: "Next",
+      // Step names
+      steps: {
+        subdomain: "Subdomain",
+        target: "Target",
+        preset: "Service",
+        confirm: "Confirm",
+      },
+      // Purpose selection
+      purpose: {
+        title: "What do you want to do?",
+        subtitle: "Choose a scenario and we'll guide you through",
+        website: "Make website accessible",
+        websiteDesc: "Point domain to server IP address",
+        mail: "Set up email service",
+        mailDesc: "Configure mail server (MX record)",
+        subdomain: "Point to another domain",
+        subdomainDesc: "Create domain alias (CNAME record)",
+        verification: "Domain verification / TXT config",
+        verificationDesc: "Add TXT record for verification or config",
+      },
+      // Subdomain setup
+      subdomain: {
+        title: "Set up subdomain",
+        subtitle: "Choose the subdomain you want to configure",
+        label: "Subdomain",
+        hint: "Enter @ or leave empty for root domain",
+        common: "Common options",
+        preview: "Will configure {{fqdn}}",
+      },
+      // Target setup
+      target: {
+        label: "Target",
+        ipLabel: "Server IP Address",
+        domainLabel: "Target Domain",
+        txtLabel: "TXT Record Value",
+        ipv4Hint: "Enter your server IPv4 address",
+        ipv6Hint: "Enter your server IPv6 address",
+        cnameHint: "Enter target domain (without http://)",
+        txtHint: "Enter the TXT record value",
+        title: {
+          website: "Enter server address",
+          subdomain: "Enter target domain",
+          verification: "Enter TXT value",
+        },
+        subtitle: {
+          website: "Where should {{fqdn}} point to?",
+          subdomain: "Where should {{fqdn}} redirect to?",
+          verification: "What content to add for {{fqdn}}?",
+        },
+        preview: {
+          website: "{{fqdn}} will point to IP {{ip}}",
+          subdomain: "Accessing {{fqdn}} will redirect to {{target}}",
+          verification: "{{fqdn}} will have TXT record: {{value}}",
+        },
+      },
+      // Mail presets
+      mail: {
+        title: "Choose email service",
+        subtitle: "Select your email provider and we'll auto-configure MX records",
+        manual: "Manual configuration",
+        manualDesc: "Fill in MX record details yourself",
+        recordCount: "{{count}} record(s)",
+        presets: {
+          gmail: "Gmail / Google Workspace",
+          gmailDesc: "Google business email",
+          microsoft365: "Microsoft 365 / Outlook",
+          microsoft365Desc: "Microsoft business email",
+          aliyun: "Alibaba Enterprise Mail",
+          aliyunDesc: "Alibaba Cloud email service",
+          tencent: "Tencent Enterprise Mail",
+          tencentDesc: "Tencent email service",
+          netease: "NetEase Enterprise Mail",
+          neteaseDesc: "NetEase email service",
+        },
+      },
+      // Confirm
+      confirm: {
+        title: "Confirm configuration",
+        subtitle: "About to create {{count}} DNS record(s)",
+        manualMailSubtitle: "Will open advanced mode for manual config",
+        hint: "DNS records may take a few minutes to 48 hours to propagate",
+        manualMailHint: "You chose manual configuration, will open advanced form",
+        create: "Create {{count}} record(s)",
+        openAdvanced: "Open Advanced Mode",
+      },
+    },
   },
   domain: {
     title: "Domains",
@@ -263,6 +360,11 @@ export default {
       maxLength: "Note cannot exceed 500 characters",
     },
     selectedCount: "{{count}} domains selected",
+    // Batch mode
+    batch: {
+      enterMode: "Batch Select",
+      exitMode: "Exit Batch Mode",
+    },
   },
   domains: {
     selectTitle: "Select Domain",
