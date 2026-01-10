@@ -1,4 +1,14 @@
-import { CheckSquare, Filter, Plus, RefreshCw, Search, X } from "lucide-react"
+import {
+  CheckSquare,
+  ChevronDown,
+  Filter,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings,
+  Wand2,
+  X,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -6,6 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -47,8 +58,10 @@ interface DnsTableToolbarProps {
   onRefresh: () => void
   /** 切换选择模式 */
   onToggleSelectMode: () => void
-  /** 添加记录 */
+  /** 添加记录（高级模式） */
   onAdd: () => void
+  /** 添加记录（向导模式） */
+  onAddWizard: () => void
 }
 
 export function DnsTableToolbar({
@@ -66,6 +79,7 @@ export function DnsTableToolbar({
   onRefresh,
   onToggleSelectMode,
   onAdd,
+  onAddWizard,
 }: DnsTableToolbarProps) {
   const { t } = useTranslation()
   const hasActiveFilters = keyword || recordType
@@ -124,10 +138,32 @@ export function DnsTableToolbar({
             {isSelectMode ? t("common.cancel") : t("dns.batchSelect")}
           </Button>
           {!isSelectMode && (
-            <Button size="sm" onClick={onAdd}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t("dns.addRecord")}
-            </Button>
+            <div className="flex items-center">
+              <Button size="sm" onClick={onAdd} className="rounded-r-none">
+                <Plus className="mr-2 h-4 w-4" />
+                {t("dns.addRecord")}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="rounded-l-none border-l border-l-primary-foreground/20 px-2"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onAdd}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    {t("dns.wizard.advancedMode")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onAddWizard}>
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    {t("dns.wizard.wizardMode")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
         </div>
       </div>

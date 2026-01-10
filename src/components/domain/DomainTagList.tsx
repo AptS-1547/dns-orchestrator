@@ -14,6 +14,8 @@ interface DomainTagListProps {
   onClickTag?: (tag: string) => void
   /** 自定义样式 */
   className?: string
+  /** 最多显示几个标签，超出显示 +N */
+  maxDisplay?: number
 }
 
 export function DomainTagList({
@@ -22,15 +24,19 @@ export function DomainTagList({
   onRemoveTag,
   onClickTag,
   className,
+  maxDisplay,
 }: DomainTagListProps) {
   if (tags.length === 0) {
     return null
   }
 
+  const displayTags = maxDisplay ? tags.slice(0, maxDisplay) : tags
+  const remainingCount = maxDisplay ? Math.max(0, tags.length - maxDisplay) : 0
+
   return (
     <TooltipProvider>
       <div className={cn("flex flex-wrap gap-1.5", className)}>
-        {tags.map((tag) => {
+        {displayTags.map((tag) => {
           const isLongTag = tag.length > 15
 
           const BadgeContent = (
@@ -81,6 +87,18 @@ export function DomainTagList({
 
           return BadgeContent
         })}
+        {remainingCount > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="outline" className="text-xs">
+                +{remainingCount}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[300px]">
+              {tags.slice(maxDisplay).join(", ")}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </TooltipProvider>
   )

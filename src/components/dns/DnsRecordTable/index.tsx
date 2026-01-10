@@ -29,6 +29,7 @@ import { useDnsStore, useDomainStore, useSettingsStore } from "@/stores"
 import type { DnsRecord } from "@/types"
 import { DnsBatchActionBar } from "../DnsBatchActionBar"
 import { DnsRecordForm } from "../DnsRecordForm"
+import { DnsRecordWizard } from "../DnsRecordWizard"
 import { DnsTableToolbar } from "../DnsTableToolbar"
 import { useDnsTableSort } from "../useDnsTableSort"
 import { DesktopTable } from "./DesktopTable"
@@ -96,6 +97,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
   const batchDeleteRecords = useDnsStore((state) => state.batchDeleteRecords)
 
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
   const [editingRecord, setEditingRecord] = useState<DnsRecord | null>(null)
   const [deletingRecord, setDeletingRecord] = useState<DnsRecord | null>(null)
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false)
@@ -224,6 +226,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
         onRefresh={handleRefresh}
         onToggleSelectMode={toggleSelectMode}
         onAdd={() => setShowAddForm(true)}
+        onAddWizard={() => setShowWizard(true)}
       />
 
       {/* Table / Card List */}
@@ -364,6 +367,16 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
           record={editingRecord}
           onClose={handleFormClose}
           supportsProxy={supportsProxy}
+        />
+      )}
+
+      {/* Wizard Dialog */}
+      {showWizard && (
+        <DnsRecordWizard
+          accountId={accountId}
+          domainId={domainId}
+          onClose={() => setShowWizard(false)}
+          onOpenAdvancedForm={() => setShowAddForm(true)}
         />
       )}
 
