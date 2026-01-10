@@ -32,6 +32,9 @@ function migrateStorage(): void {
         localStorage.setItem(newStorageKey, oldValue)
         logger.debug(`[Storage] Migrated "${oldKey}" to "${newStorageKey}"`)
       }
+      // 迁移完成后移除旧 key，避免重复数据
+      localStorage.removeItem(oldKey)
+      logger.debug(`[Storage] Removed legacy key "${oldKey}"`)
     }
   }
 
