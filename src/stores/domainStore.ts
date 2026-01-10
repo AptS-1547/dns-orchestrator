@@ -34,12 +34,21 @@ function getInitialCache(): {
   try {
     const cached = storage.get("domainsCache")
     if (cached) {
-      // 兼容新旧格式
-      if (cached.domainsByAccount) {
+      // 兼容新旧格式，cached 可能是旧的 Record<string, AccountDomainCache> 或新的 DomainsCacheData
+      if ("domainsByAccount" in cached) {
+        // 新格式
         return {
-          domainsByAccount: cached.domainsByAccount as Record<string, AccountDomainCache>,
-          scrollPosition: cached.scrollPosition ?? 0,
+          domainsByAccount: (cached as DomainsCacheData).domainsByAccount as Record<
+            string,
+            AccountDomainCache
+          >,
+          scrollPosition: (cached as DomainsCacheData).scrollPosition ?? 0,
         }
+      }
+      // 旧格式：直接就是 domainsByAccount
+      return {
+        domainsByAccount: cached as unknown as Record<string, AccountDomainCache>,
+        scrollPosition: 0,
       }
     }
   } catch (err) {
@@ -369,11 +378,21 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     try {
       const cached = storage.get("domainsCache")
       if (cached) {
-        // 兼容旧格式（直接是 domainsByAccount）和新格式（包含 scrollPosition）
-        if (cached.domainsByAccount) {
+        // 兼容新旧格式
+        if ("domainsByAccount" in cached) {
+          // 新格式
           set({
-            domainsByAccount: cached.domainsByAccount as Record<string, AccountDomainCache>,
-            scrollPosition: cached.scrollPosition ?? 0,
+            domainsByAccount: (cached as DomainsCacheData).domainsByAccount as Record<
+              string,
+              AccountDomainCache
+            >,
+            scrollPosition: (cached as DomainsCacheData).scrollPosition ?? 0,
+          })
+        } else {
+          // 旧格式：直接就是 domainsByAccount
+          set({
+            domainsByAccount: cached as unknown as Record<string, AccountDomainCache>,
+            scrollPosition: 0,
           })
         }
       }
