@@ -101,6 +101,7 @@ export function DomainSelectorPage() {
   const batchAddTags = useDomainStore((state) => state.batchAddTags)
   const batchRemoveTags = useDomainStore((state) => state.batchRemoveTags)
   const batchSetTags = useDomainStore((state) => state.batchSetTags)
+  const getAllUsedTags = useDomainStore((state) => state.getAllUsedTags)
 
   const [searchQuery, setSearchQuery] = useState("")
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -208,6 +209,9 @@ export function DomainSelectorPage() {
     })
     return Array.from(tagsSet).sort()
   }, [selectedDomainKeys, getDomainsForAccount])
+
+  // 获取所有已使用的标签（用于下拉选择）
+  const allTags = getAllUsedTags()
 
   // 渲染域名项
   const renderDomainItem = (domain: Domain, accountId: string) => {
@@ -463,6 +467,7 @@ export function DomainSelectorPage() {
         onRemoveTags={batchRemoveTags}
         onSetTags={batchSetTags}
         selectedDomainsTags={selectedDomainsTags}
+        allTags={allTags}
       />
     </PageLayout>
   )

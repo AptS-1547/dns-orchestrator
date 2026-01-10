@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { changeLanguage, type LanguageCode, supportedLanguages } from "@/i18n"
-import { storage, STORAGE_DEFAULTS, type PaginationMode, type Theme } from "@/services/storage"
+import { type PaginationMode, STORAGE_DEFAULTS, storage, type Theme } from "@/services/storage"
 
 // 获取初始语言（与 i18n 逻辑保持一致）
 const getInitialLanguage = (): LanguageCode => {

@@ -238,6 +238,10 @@ export default {
       setForSelected: "Replace tags for {{count}} selected domains",
       batchSetSuccess: "Successfully replaced tags for {{count}} domains",
       batchSetPartial: "Completed: {{success}} succeeded, {{failed}} failed",
+      // Tag selection
+      searchExisting: "Search existing tags",
+      selectExisting: "Select existing tags",
+      noExistingTags: "No matching tags",
     },
     // Metadata editing (Phase 3)
     metadata: {

@@ -1,5 +1,5 @@
 import { LIMITS } from "@/constants"
-import { storage, type RecentDomain } from "@/services/storage"
+import { type RecentDomain, storage } from "@/services/storage"
 
 // 重新导出类型，保持向后兼容
 export type { RecentDomain } from "@/services/storage"

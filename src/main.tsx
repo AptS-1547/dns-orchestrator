@@ -1,7 +1,7 @@
 import React from "react"
 import ReactDOM from "react-dom/client"
 import { initEnv, isAndroid, isIOS } from "@/lib/env"
-import { storage, STORAGE_DEFAULTS } from "@/services/storage"
+import { STORAGE_DEFAULTS, storage } from "@/services/storage"
 import App from "./App"
 import "./index.css"
 import "./i18n" // 初始化 i18n

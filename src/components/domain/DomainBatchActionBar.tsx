@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { TagInputCombobox } from "./TagInputCombobox"
 
 interface DomainBatchActionBarProps {
   selectedCount: number
@@ -23,6 +23,7 @@ interface DomainBatchActionBarProps {
   onRemoveTags: (tags: string[]) => void
   onSetTags: (tags: string[]) => void
   selectedDomainsTags: string[] // 所有选中域名的标签并集
+  allTags: string[] // 所有已使用的标签（用于下拉选择）
 }
 
 export function DomainBatchActionBar({
@@ -33,6 +34,7 @@ export function DomainBatchActionBar({
   onRemoveTags,
   onSetTags,
   selectedDomainsTags,
+  allTags,
 }: DomainBatchActionBarProps) {
   const { t } = useTranslation()
   const [dialogType, setDialogType] = useState<"add" | "remove" | "set" | null>(null)
@@ -63,6 +65,13 @@ export function DomainBatchActionBar({
 
   const handleRemoveTag = (tag: string) => {
     setInputTags(inputTags.filter((t) => t !== tag))
+  }
+
+  // 从已有标签选择
+  const handleSelectTag = (tag: string) => {
+    if (inputTags.includes(tag)) return
+    if (inputTags.length >= 10) return
+    setInputTags([...inputTags, tag])
   }
 
   const handleConfirmAdd = () => {
@@ -157,23 +166,16 @@ export function DomainBatchActionBar({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>{t("domain.tags.inputLabel")}</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder={t("domain.tags.inputPlaceholder")}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddTag()
-                    }
-                  }}
-                  maxLength={50}
-                />
-                <Button onClick={handleAddTag} size="sm" disabled={!inputValue.trim()}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+              <TagInputCombobox
+                value={inputValue}
+                onChange={setInputValue}
+                onAddTag={handleAddTag}
+                onSelectTag={handleSelectTag}
+                currentTags={inputTags}
+                allTags={allTags}
+                placeholder={t("domain.tags.inputPlaceholder")}
+                maxLength={50}
+              />
               <p className="text-muted-foreground text-xs">{t("domain.tags.inputHint")}</p>
             </div>
 
@@ -277,23 +279,16 @@ export function DomainBatchActionBar({
 
             <div className="space-y-2">
               <Label>{t("domain.tags.inputLabel")}</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder={t("domain.tags.inputPlaceholder")}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddTag()
-                    }
-                  }}
-                  maxLength={50}
-                />
-                <Button onClick={handleAddTag} size="sm" disabled={!inputValue.trim()}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+              <TagInputCombobox
+                value={inputValue}
+                onChange={setInputValue}
+                onAddTag={handleAddTag}
+                onSelectTag={handleSelectTag}
+                currentTags={inputTags}
+                allTags={allTags}
+                placeholder={t("domain.tags.inputPlaceholder")}
+                maxLength={50}
+              />
               <p className="text-muted-foreground text-xs">{t("domain.tags.inputHint")}</p>
             </div>
 

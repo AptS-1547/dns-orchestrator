@@ -233,6 +233,10 @@ export default {
       setForSelected: "替换选中的 {{count}} 个域名的标签",
       batchSetSuccess: "成功替换 {{count}} 个域名的标签",
       batchSetPartial: "替换完成：{{success}} 成功，{{failed}} 失败",
+      // 标签选择
+      searchExisting: "搜索已有标签",
+      selectExisting: "选择已有标签",
+      noExistingTags: "无匹配标签",
     },
     // 元数据编辑 (Phase 3)
     metadata: {

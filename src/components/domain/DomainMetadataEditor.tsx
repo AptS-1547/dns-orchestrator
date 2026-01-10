@@ -1,7 +1,8 @@
-import { ChevronDown, Edit, Plus, X } from "lucide-react"
+import { ChevronDown, Edit, X } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
+import { useShallow } from "zustand/react/shallow"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -14,7 +15,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils"
 import { useDomainStore } from "@/stores"
 import type { DomainMetadata } from "@/types"
 import { DomainColorPicker } from "./DomainColorPicker"
+import { TagInputCombobox } from "./TagInputCombobox"
 
 interface DomainMetadataEditorProps {
   accountId: string
@@ -39,7 +40,12 @@ export function DomainMetadataEditor({
   children,
 }: DomainMetadataEditorProps) {
   const { t } = useTranslation()
-  const updateMetadata = useDomainStore((state) => state.updateMetadata)
+  const { updateMetadata, getAllUsedTags } = useDomainStore(
+    useShallow((state) => ({
+      updateMetadata: state.updateMetadata,
+      getAllUsedTags: state.getAllUsedTags,
+    }))
+  )
 
   const [open, setOpen] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
@@ -84,6 +90,19 @@ export function DomainMetadataEditor({
     setTags(merged)
     setTagInput("")
   }
+
+  // 从已有标签选择
+  const handleSelectTag = (tag: string) => {
+    if (tags.includes(tag)) return
+    if (tags.length >= 10) {
+      toast.error(t("domain.tags.maxTagsError"))
+      return
+    }
+    setTags([...tags, tag])
+  }
+
+  // 获取所有已使用的标签
+  const allTags = getAllUsedTags()
 
   // 移除标签
   const handleRemoveTag = (tag: string) => {
@@ -142,24 +161,17 @@ export function DomainMetadataEditor({
             {/* 标签编辑 */}
             <div className="space-y-2">
               <Label htmlFor="tag-input">{t("domain.tags.inputLabel")}</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="tag-input"
-                  placeholder={t("domain.tags.inputPlaceholder")}
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddTag()
-                    }
-                  }}
-                  maxLength={50}
-                />
-                <Button onClick={handleAddTag} size="sm" disabled={!tagInput.trim()}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+              <TagInputCombobox
+                inputId="tag-input"
+                value={tagInput}
+                onChange={setTagInput}
+                onAddTag={handleAddTag}
+                onSelectTag={handleSelectTag}
+                currentTags={tags}
+                allTags={allTags}
+                placeholder={t("domain.tags.inputPlaceholder")}
+                maxLength={50}
+              />
               <div className="flex items-center justify-between text-xs">
                 <p className="text-muted-foreground">{t("domain.tags.inputHint")}</p>
                 <div className="flex gap-3 text-muted-foreground">

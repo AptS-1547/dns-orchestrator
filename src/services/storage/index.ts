@@ -2,8 +2,8 @@
  * Storage 层统一导出
  */
 
-export { storage } from "./localStorage.storage"
 export { STORAGE_DEFAULTS, STORAGE_KEYS, STORAGE_PREFIX } from "./keys"
+export { storage } from "./localStorage.storage"
 export type {
   DomainsCacheData,
   IStorage,
