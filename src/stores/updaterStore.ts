@@ -2,24 +2,24 @@ import { create } from "zustand"
 import { TIMING } from "@/constants"
 import { ENV, getPlatform } from "@/lib/env"
 import { logger } from "@/lib/logger"
+import { storage } from "@/services/storage"
 
-const SKIPPED_VERSION_KEY = "dns-orchestrator-skipped-version"
 const GITHUB_RELEASES_API =
   "https://api.github.com/repos/AptS-1547/dns-orchestrator/releases/latest"
 
 // 获取被跳过的版本
 const getSkippedVersion = (): string | null => {
-  return localStorage.getItem(SKIPPED_VERSION_KEY)
+  return storage.get("skippedVersion")
 }
 
 // 设置被跳过的版本
 const setSkippedVersion = (version: string): void => {
-  localStorage.setItem(SKIPPED_VERSION_KEY, version)
+  storage.set("skippedVersion", version)
 }
 
 // 清除被跳过的版本
 const clearSkippedVersion = (): void => {
-  localStorage.removeItem(SKIPPED_VERSION_KEY)
+  storage.remove("skippedVersion")
 }
 
 const MAX_RETRIES = 3

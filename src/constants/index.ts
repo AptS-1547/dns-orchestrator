@@ -33,17 +33,6 @@ export const UI = {
   MAX_ERROR_MESSAGE_LENGTH: 300,
 } as const
 
-/** Storage Keys */
-export const STORAGE_KEYS = {
-  THEME: "theme",
-  RECENT_DOMAINS: "recent_domains",
-  SIDEBAR_COLLAPSED: "sidebarCollapsed",
-  DOMAINS_CACHE: "dns-orchestrator-domains-cache",
-  PAGINATION_MODE: "paginationMode",
-  SHOW_RECORD_HINTS: "showRecordHints",
-  OPERATION_NOTIFICATIONS: "operationNotifications",
-} as const
-
 /** 业务限制 */
 export const LIMITS = {
   MAX_RECENT_DOMAINS: 6,

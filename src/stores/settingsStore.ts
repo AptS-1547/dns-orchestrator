@@ -1,13 +1,10 @@
 import { create } from "zustand"
-import { STORAGE_KEYS } from "@/constants"
 import { changeLanguage, type LanguageCode, supportedLanguages } from "@/i18n"
-
-type Theme = "light" | "dark" | "system"
-type PaginationMode = "infinite" | "paginated"
+import { storage, STORAGE_DEFAULTS, type PaginationMode, type Theme } from "@/services/storage"
 
 // 获取初始语言（与 i18n 逻辑保持一致）
 const getInitialLanguage = (): LanguageCode => {
-  const saved = localStorage.getItem("language")
+  const saved = storage.get("language")
   if (saved && supportedLanguages.some((l) => l.code === saved)) {
     return saved as LanguageCode
   }
@@ -36,18 +33,20 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  theme: (localStorage.getItem(STORAGE_KEYS.THEME) as Theme) || "system",
+  theme: storage.getWithDefault("theme", STORAGE_DEFAULTS.theme),
   language: getInitialLanguage(),
-  debugMode: localStorage.getItem("debugMode") === "true",
-  sidebarCollapsed: localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === "true",
-  paginationMode:
-    (localStorage.getItem(STORAGE_KEYS.PAGINATION_MODE) as PaginationMode) || "infinite",
-  showRecordHints: localStorage.getItem(STORAGE_KEYS.SHOW_RECORD_HINTS) === "true",
-  operationNotifications: localStorage.getItem(STORAGE_KEYS.OPERATION_NOTIFICATIONS) !== "false",
+  debugMode: storage.getWithDefault("debugMode", STORAGE_DEFAULTS.debugMode),
+  sidebarCollapsed: storage.getWithDefault("sidebarCollapsed", STORAGE_DEFAULTS.sidebarCollapsed),
+  paginationMode: storage.getWithDefault("paginationMode", STORAGE_DEFAULTS.paginationMode),
+  showRecordHints: storage.getWithDefault("showRecordHints", STORAGE_DEFAULTS.showRecordHints),
+  operationNotifications: storage.getWithDefault(
+    "operationNotifications",
+    STORAGE_DEFAULTS.operationNotifications
+  ),
 
   setTheme: (theme) => {
     set({ theme })
-    localStorage.setItem(STORAGE_KEYS.THEME, theme)
+    storage.set("theme", theme)
 
     // 应用主题
     const root = document.documentElement
@@ -68,35 +67,35 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
   setDebugMode: (enabled) => {
     set({ debugMode: enabled })
-    localStorage.setItem("debugMode", String(enabled))
+    storage.set("debugMode", enabled)
   },
 
   setSidebarCollapsed: (collapsed) => {
     set({ sidebarCollapsed: collapsed })
-    localStorage.setItem(STORAGE_KEYS.SIDEBAR_COLLAPSED, String(collapsed))
+    storage.set("sidebarCollapsed", collapsed)
   },
 
   setPaginationMode: (mode) => {
     set({ paginationMode: mode })
-    localStorage.setItem(STORAGE_KEYS.PAGINATION_MODE, mode)
+    storage.set("paginationMode", mode)
   },
 
   setShowRecordHints: (enabled) => {
     set({ showRecordHints: enabled })
-    localStorage.setItem(STORAGE_KEYS.SHOW_RECORD_HINTS, String(enabled))
+    storage.set("showRecordHints", enabled)
   },
 
   setOperationNotifications: (enabled) => {
     set({ operationNotifications: enabled })
-    localStorage.setItem(STORAGE_KEYS.OPERATION_NOTIFICATIONS, String(enabled))
+    storage.set("operationNotifications", enabled)
   },
 }))
 
 // 初始化主题
 export function initTheme() {
-  const theme = (localStorage.getItem(STORAGE_KEYS.THEME) as Theme) || "system"
+  const theme = storage.getWithDefault("theme", STORAGE_DEFAULTS.theme)
 
-  // 同步更新 store 状态（确保 store 与 localStorage 一致）
+  // 同步更新 store 状态（确保 store 与 storage 一致）
   useSettingsStore.setState({ theme })
 
   const root = document.documentElement

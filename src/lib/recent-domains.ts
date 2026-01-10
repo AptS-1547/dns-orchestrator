@@ -1,18 +1,12 @@
-import { LIMITS, STORAGE_KEYS } from "@/constants"
+import { LIMITS } from "@/constants"
+import { storage, type RecentDomain } from "@/services/storage"
 
-export interface RecentDomain {
-  accountId: string
-  domainId: string
-  domainName: string
-  accountName: string
-  provider: string
-  timestamp: number
-}
+// 重新导出类型，保持向后兼容
+export type { RecentDomain } from "@/services/storage"
 
 export function getRecentDomains(): RecentDomain[] {
   try {
-    const stored = localStorage.getItem(STORAGE_KEYS.RECENT_DOMAINS)
-    return stored ? JSON.parse(stored) : []
+    return storage.get("recentDomains") ?? []
   } catch {
     return []
   }
@@ -25,19 +19,19 @@ export function addRecentDomain(domain: Omit<RecentDomain, "timestamp">) {
     0,
     LIMITS.MAX_RECENT_DOMAINS
   )
-  localStorage.setItem(STORAGE_KEYS.RECENT_DOMAINS, JSON.stringify(updated))
+  storage.set("recentDomains", updated)
 }
 
 export function removeRecentDomainsByAccount(accountId: string) {
   const recent = getRecentDomains()
   const filtered = recent.filter((d) => d.accountId !== accountId)
-  localStorage.setItem(STORAGE_KEYS.RECENT_DOMAINS, JSON.stringify(filtered))
+  storage.set("recentDomains", filtered)
 }
 
 export function cleanupInvalidRecentDomains(validAccountIds: string[]) {
   const recent = getRecentDomains()
   const filtered = recent.filter((d) => validAccountIds.includes(d.accountId))
   if (filtered.length !== recent.length) {
-    localStorage.setItem(STORAGE_KEYS.RECENT_DOMAINS, JSON.stringify(filtered))
+    storage.set("recentDomains", filtered)
   }
 }

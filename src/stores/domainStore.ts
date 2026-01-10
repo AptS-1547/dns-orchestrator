@@ -1,10 +1,11 @@
 import { toast } from "sonner"
 import { create } from "zustand"
-import { PAGINATION, STORAGE_KEYS, TIMING } from "@/constants"
+import { PAGINATION, TIMING } from "@/constants"
 import i18n from "@/i18n"
 import { extractErrorMessage, getErrorMessage, isCredentialError } from "@/lib/error"
 import { logger } from "@/lib/logger"
 import { domainMetadataService, domainService } from "@/services"
+import { type DomainsCacheData, storage } from "@/services/storage"
 import type { ApiResponse, BatchTagRequest, BatchTagResult, Domain, DomainMetadata } from "@/types"
 import { useAccountStore } from "./accountStore"
 
@@ -25,29 +26,26 @@ export interface FavoriteDomain {
   favoritedAt: number
 }
 
-// 从 localStorage 读取初始缓存数据
+// 从 storage 读取初始缓存数据
 function getInitialCache(): {
   domainsByAccount: Record<string, AccountDomainCache>
   scrollPosition: number
 } {
   try {
-    const cached = localStorage.getItem(STORAGE_KEYS.DOMAINS_CACHE)
+    const cached = storage.get("domainsCache")
     if (cached) {
-      const parsed = JSON.parse(cached)
       // 兼容新旧格式
-      if (parsed.domainsByAccount) {
+      if (cached.domainsByAccount) {
         return {
-          domainsByAccount: parsed.domainsByAccount,
-          scrollPosition: parsed.scrollPosition ?? 0,
+          domainsByAccount: cached.domainsByAccount as Record<string, AccountDomainCache>,
+          scrollPosition: cached.scrollPosition ?? 0,
         }
       }
-      // 旧格式
-      return { domainsByAccount: parsed, scrollPosition: 0 }
     }
   } catch (err) {
     // 解析错误时清空缓存
     logger.warn("Failed to load domain cache, clearing:", err)
-    localStorage.removeItem(STORAGE_KEYS.DOMAINS_CACHE)
+    storage.remove("domainsCache")
   }
   return { domainsByAccount: {}, scrollPosition: 0 }
 }
@@ -366,21 +364,17 @@ export const useDomainStore = create<DomainState>((set, get) => ({
   isBatchMode: false,
   isBatchOperating: false,
 
-  // 从 localStorage 加载缓存
+  // 从 storage 加载缓存
   loadFromStorage: () => {
     try {
-      const cached = localStorage.getItem(STORAGE_KEYS.DOMAINS_CACHE)
+      const cached = storage.get("domainsCache")
       if (cached) {
-        const parsed = JSON.parse(cached)
         // 兼容旧格式（直接是 domainsByAccount）和新格式（包含 scrollPosition）
-        if (parsed.domainsByAccount) {
+        if (cached.domainsByAccount) {
           set({
-            domainsByAccount: parsed.domainsByAccount as Record<string, AccountDomainCache>,
-            scrollPosition: parsed.scrollPosition ?? 0,
+            domainsByAccount: cached.domainsByAccount as Record<string, AccountDomainCache>,
+            scrollPosition: cached.scrollPosition ?? 0,
           })
-        } else {
-          // 旧格式
-          set({ domainsByAccount: parsed as Record<string, AccountDomainCache> })
         }
       }
     } catch (err) {
@@ -388,14 +382,11 @@ export const useDomainStore = create<DomainState>((set, get) => ({
     }
   },
 
-  // 保存到 localStorage
+  // 保存到 storage
   saveToStorage: () => {
     try {
       const { domainsByAccount, scrollPosition } = get()
-      localStorage.setItem(
-        STORAGE_KEYS.DOMAINS_CACHE,
-        JSON.stringify({ domainsByAccount, scrollPosition })
-      )
+      storage.set("domainsCache", { domainsByAccount, scrollPosition } as DomainsCacheData)
     } catch (err) {
       logger.error("Failed to save domain cache to storage:", err)
     }
@@ -542,7 +533,7 @@ export const useDomainStore = create<DomainState>((set, get) => ({
   // 清理所有缓存
   clearAllCache: () => {
     set({ domainsByAccount: {} })
-    localStorage.removeItem(STORAGE_KEYS.DOMAINS_CACHE)
+    storage.remove("domainsCache")
   },
 
   // 获取账户的域名列表
