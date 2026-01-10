@@ -13,6 +13,8 @@ export default {
     noData: "暂无数据",
     total: "共",
     records: "条记录",
+    perPage: "每页",
+    items: "条",
     showing: "显示",
     search: "搜索",
     filter: "筛选",
@@ -126,6 +128,7 @@ export default {
     batchDeleteConfirm: "确认批量删除",
     batchDeleteConfirmDesc: "确定要删除选中的 {{count}} 条记录吗？此操作无法撤销。",
     selectedCount: "已选择 {{count}} 条",
+    selectedCountShort: "已选 {{count}}",
     noRecords: "暂无 DNS 记录",
     searchPlaceholder: "搜索名称...",
     // Fields

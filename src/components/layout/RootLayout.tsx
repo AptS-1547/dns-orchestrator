@@ -12,6 +12,7 @@ import { UpdateDialog } from "@/components/ui/update-dialog"
 import { TIMING } from "@/constants"
 import { useIsMobile } from "@/hooks/useMediaQuery"
 import { initDebugMode } from "@/lib/debug"
+import { isDesktop } from "@/lib/env"
 import { logger } from "@/lib/logger"
 import { cleanupInvalidRecentDomains } from "@/lib/recent-domains"
 import { initTheme, useAccountStore, useDomainStore } from "@/stores"
@@ -70,9 +71,9 @@ export function RootLayout() {
     }
   }, [accounts, refreshAllAccounts])
 
-  // 检查更新（仅桌面端）
+  // 检查更新（仅桌面端，基于真实平台而非屏幕宽度）
   useEffect(() => {
-    if (isMobile) return
+    if (!isDesktop()) return
 
     const timer = setTimeout(async () => {
       try {
@@ -83,7 +84,7 @@ export function RootLayout() {
     }, TIMING.UPDATE_CHECK_DELAY)
 
     return () => clearTimeout(timer)
-  }, [checkForUpdates, isMobile])
+  }, [checkForUpdates])
 
   // 导航处理
   const handleNavigate = (view: NavItem) => {

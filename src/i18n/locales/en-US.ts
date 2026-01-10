@@ -13,6 +13,8 @@ export default {
     noData: "No data",
     total: "Total",
     records: "records",
+    perPage: "Per page",
+    items: "items",
     showing: "showing",
     search: "Search",
     filter: "Filter",
@@ -131,6 +133,7 @@ export default {
     batchDeleteConfirmDesc:
       "Are you sure you want to delete {{count}} selected record(s)? This action cannot be undone.",
     selectedCount: "{{count}} selected",
+    selectedCountShort: "{{count}} sel.",
     noRecords: "No DNS records",
     searchPlaceholder: "Search name...",
     // Fields

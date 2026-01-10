@@ -27,6 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import { useDnsStore, useSettingsStore } from "@/stores"
 import { RECORD_TYPES } from "@/types/dns"
@@ -82,6 +84,7 @@ export function DnsTableToolbar({
   onAddWizard,
 }: DnsTableToolbarProps) {
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const hasActiveFilters = keyword || recordType
   const paginationMode = useSettingsStore((state) => state.paginationMode)
   const pageSize = useDnsStore((state) => state.pageSize)
@@ -105,10 +108,10 @@ export function DnsTableToolbar({
           <Badge variant="secondary">{totalCount}</Badge>
           <span className="text-muted-foreground text-sm">{t("common.records")}</span>
 
-          {/* 分页大小选择器（仅传统分页模式显示） */}
+          {/* 分页大小选择器（仅传统分页模式 + 桌面端显示） */}
           {paginationMode === "paginated" && (
-            <div className="ml-4 flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">每页</span>
+            <div className="ml-4 hidden items-center gap-2 md:flex">
+              <span className="text-muted-foreground text-sm">{t("common.perPage")}</span>
               <Select
                 value={String(pageSize)}
                 onValueChange={(val) => setPageSize(accountId, domainId, Number(val))}
@@ -123,47 +126,100 @@ export function DnsTableToolbar({
                   <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="text-muted-foreground text-sm">条</span>
+              <span className="text-muted-foreground text-sm">{t("common.items")}</span>
             </div>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant={isSelectMode ? "secondary" : "outline"}
-            size="sm"
-            onClick={onToggleSelectMode}
-            disabled={!hasRecords}
-          >
-            <CheckSquare className="mr-2 h-4 w-4" />
-            {isSelectMode ? t("common.cancel") : t("dns.batchSelect")}
-          </Button>
-          {!isSelectMode && (
-            <div className="flex items-center">
-              <Button size="sm" onClick={onAdd} className="rounded-r-none">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("dns.addRecord")}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+          {/* Select 按钮：移动端纯图标 */}
+          {isMobile ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
-                    size="sm"
-                    className="rounded-l-none border-l border-l-primary-foreground/20 px-2"
+                    variant={isSelectMode ? "secondary" : "outline"}
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={onToggleSelectMode}
+                    disabled={!hasRecords}
                   >
-                    <ChevronDown className="h-4 w-4" />
+                    {isSelectMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={onAdd}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    {t("dns.wizard.advancedMode")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onAddWizard}>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    {t("dns.wizard.wizardMode")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isSelectMode ? t("common.cancel") : t("dns.batchSelect")}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button
+              variant={isSelectMode ? "secondary" : "outline"}
+              size="sm"
+              onClick={onToggleSelectMode}
+              disabled={!hasRecords}
+            >
+              <CheckSquare className="mr-2 h-4 w-4" />
+              {isSelectMode ? t("common.cancel") : t("dns.batchSelect")}
+            </Button>
+          )}
+
+          {/* Add Record 按钮：移动端纯图标 + 下拉 */}
+          {!isSelectMode && (
+            <>
+              {isMobile ? (
+                <DropdownMenu>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="icon" className="h-9 w-9">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("dns.addRecord")}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onAdd}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      {t("dns.wizard.advancedMode")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onAddWizard}>
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      {t("dns.wizard.wizardMode")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center">
+                  <Button size="sm" onClick={onAdd} className="rounded-r-none">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t("dns.addRecord")}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        className="rounded-l-none border-l border-l-primary-foreground/20 px-2"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={onAdd}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        {t("dns.wizard.advancedMode")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={onAddWizard}>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        {t("dns.wizard.wizardMode")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -192,9 +248,13 @@ export function DnsTableToolbar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8">
-              <Filter className="mr-2 h-4 w-4" />
-              {recordType || t("common.type")}
+            <Button
+              variant="outline"
+              size={isMobile ? "icon" : "sm"}
+              className={cn("h-8", isMobile && "w-8")}
+            >
+              <Filter className={cn("h-4 w-4", !isMobile && "mr-2")} />
+              {!isMobile && (recordType || t("common.type"))}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
@@ -210,12 +270,24 @@ export function DnsTableToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" className="h-8" onClick={onClearFilters}>
-            <X className="mr-1 h-4 w-4" />
-            {t("common.clearFilter")}
-          </Button>
-        )}
+        {hasActiveFilters &&
+          (isMobile ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClearFilters}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("common.clearFilter")}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button variant="ghost" size="sm" className="h-8" onClick={onClearFilters}>
+              <X className="mr-1 h-4 w-4" />
+              {t("common.clearFilter")}
+            </Button>
+          ))}
       </div>
     </div>
   )
