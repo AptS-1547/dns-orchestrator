@@ -41,7 +41,7 @@ export const DomainItemMobile = memo(function DomainItemMobile({
         <div
           className="absolute inset-x-0 top-0 h-1"
           style={{
-            backgroundColor: getDomainColor(domain.metadata!.color as DomainColorKey, isDark),
+            backgroundColor: getDomainColor(domain.metadata?.color as DomainColorKey, isDark),
           }}
         />
       )}

@@ -20,7 +20,7 @@ export function WizardProgress({ steps, currentStep }: WizardProgressProps) {
             <div className="flex flex-col items-center">
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors",
+                  "flex h-8 w-8 items-center justify-center rounded-full font-medium text-sm transition-colors",
                   isCompleted && "bg-primary text-primary-foreground",
                   isCurrent &&
                     "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2",

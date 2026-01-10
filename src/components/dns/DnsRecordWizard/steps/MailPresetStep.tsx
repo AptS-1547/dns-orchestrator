@@ -20,7 +20,7 @@ export function MailPresetStep({ state, onStateChange, onNext, onBack }: StepPro
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="text-center">
-        <h3 className="text-lg font-medium">{t("dns.wizard.mail.title")}</h3>
+        <h3 className="font-medium text-lg">{t("dns.wizard.mail.title")}</h3>
         <p className="mt-1 text-muted-foreground text-sm">{t("dns.wizard.mail.subtitle")}</p>
       </div>
 

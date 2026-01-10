@@ -69,7 +69,7 @@ export function ConfirmStep({ state, onBack, onSubmit, isLoading, domainName }: 
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <h3 className="text-lg font-medium">{t("dns.wizard.confirm.title")}</h3>
+        <h3 className="font-medium text-lg">{t("dns.wizard.confirm.title")}</h3>
         <p className="mt-1 text-muted-foreground text-sm">
           {isManualMail
             ? t("dns.wizard.confirm.manualMailSubtitle")
@@ -86,12 +86,12 @@ export function ConfirmStep({ state, onBack, onSubmit, isLoading, domainName }: 
               className="rounded-lg border bg-muted/30 p-3"
             >
               <div className="flex items-center gap-2">
-                <span className="rounded bg-primary/10 px-2 py-0.5 text-primary text-xs font-medium">
+                <span className="rounded bg-primary/10 px-2 py-0.5 font-medium text-primary text-xs">
                   {record.type}
                 </span>
                 <span className="font-mono text-sm">{record.name}</span>
               </div>
-              <div className="mt-2 font-mono text-muted-foreground text-sm break-all">
+              <div className="mt-2 break-all font-mono text-muted-foreground text-sm">
                 {record.priority !== undefined && (
                   <span className="mr-2 text-orange-600 dark:text-orange-400">
                     [{t("dns.priority")}: {record.priority}]

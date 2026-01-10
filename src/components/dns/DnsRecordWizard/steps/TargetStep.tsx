@@ -78,7 +78,7 @@ export function TargetStep({ state, onStateChange, onNext, onBack, domainName }:
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="text-center">
-        <h3 className="text-lg font-medium">{t(`dns.wizard.target.title.${state.purpose}`)}</h3>
+        <h3 className="font-medium text-lg">{t(`dns.wizard.target.title.${state.purpose}`)}</h3>
         <p className="mt-1 text-muted-foreground text-sm">
           {t(`dns.wizard.target.subtitle.${state.purpose}`, { fqdn })}
         </p>

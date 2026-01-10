@@ -164,22 +164,47 @@ export function DnsTableToolbar({
           )}
 
           {/* Add Record 按钮：移动端纯图标 + 下拉 */}
-          {!isSelectMode && (
-            <>
-              {isMobile ? (
+          {!isSelectMode &&
+            (isMobile ? (
+              <DropdownMenu>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" className="h-9 w-9">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>{t("dns.addRecord")}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onAdd}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    {t("dns.wizard.advancedMode")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onAddWizard}>
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    {t("dns.wizard.wizardMode")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center">
+                <Button size="sm" onClick={onAdd} className="rounded-r-none">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("dns.addRecord")}
+                </Button>
                 <DropdownMenu>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="icon" className="h-9 w-9">
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>{t("dns.addRecord")}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      className="rounded-l-none border-l border-l-primary-foreground/20 px-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={onAdd}>
                       <Settings className="mr-2 h-4 w-4" />
@@ -191,36 +216,8 @@ export function DnsTableToolbar({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <div className="flex items-center">
-                  <Button size="sm" onClick={onAdd} className="rounded-r-none">
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t("dns.addRecord")}
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="sm"
-                        className="rounded-l-none border-l border-l-primary-foreground/20 px-2"
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={onAdd}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        {t("dns.wizard.advancedMode")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={onAddWizard}>
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        {t("dns.wizard.wizardMode")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              )}
-            </>
-          )}
+              </div>
+            ))}
         </div>
       </div>
 
