@@ -331,7 +331,7 @@ export function DnsRecordTable({ accountId, domainId, supportsProxy }: DnsRecord
                     <SelectContent className="max-h-[240px]">
                       {Array.from({ length: Math.ceil(totalCount / pageSize) }, (_, i) => (
                         <SelectItem key={i + 1} value={String(i + 1)}>
-                          第 {i + 1} 页
+                          {t("common.pageWithNumber", { page: i + 1 })}
                         </SelectItem>
                       ))}
                     </SelectContent>

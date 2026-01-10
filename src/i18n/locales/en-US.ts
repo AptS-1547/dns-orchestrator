@@ -30,6 +30,7 @@ export default {
     deselectAll: "Deselect All",
     yes: "Yes",
     no: "No",
+    pageWithNumber: "Page {{page}}",
   },
   account: {
     title: "Accounts",

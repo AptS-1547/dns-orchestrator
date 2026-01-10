@@ -30,6 +30,7 @@ export default {
     deselectAll: "取消全选",
     yes: "是",
     no: "否",
+    pageWithNumber: "第 {{page}} 页",
   },
   account: {
     title: "账号",
