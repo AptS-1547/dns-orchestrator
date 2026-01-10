@@ -210,8 +210,8 @@ export function DomainSelectorPage() {
     return Array.from(tagsSet).sort()
   }, [selectedDomainKeys, getDomainsForAccount])
 
-  // 获取所有已使用的标签（用于下拉选择）
-  const allTags = getAllUsedTags()
+  // 获取所有已使用的标签（用于下拉选择，memoized）
+  const allTags = useMemo(() => getAllUsedTags(), [domainsByAccount, getAllUsedTags])
 
   // 渲染域名项
   const renderDomainItem = (domain: Domain, accountId: string) => {

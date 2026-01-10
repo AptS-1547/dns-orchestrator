@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Plus } from "lucide-react"
+import { ChevronDown, Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
@@ -76,14 +76,30 @@ export function TagInputCombobox({
         maxLength={maxLength}
         className="flex-1"
       />
-      <Button onClick={onAddTag} size="sm" disabled={!value.trim()}>
+      <Button
+        onClick={onAddTag}
+        size="sm"
+        disabled={!value.trim()}
+        aria-label={t("domain.tags.inputLabel")}
+      >
         <Plus className="h-4 w-4" />
       </Button>
 
       {hasAvailableTags && (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover
+          open={open}
+          onOpenChange={(newOpen) => {
+            setOpen(newOpen)
+            if (!newOpen) setSearchQuery("")
+          }}
+        >
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="px-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="px-2"
+              aria-label={t("domain.tags.selectExisting")}
+            >
               <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
             </Button>
           </PopoverTrigger>
@@ -100,9 +116,6 @@ export function TagInputCombobox({
                   {filteredTags.map((tag) => (
                     <CommandItem key={tag} onSelect={() => handleSelectTag(tag)}>
                       <span className="truncate">{tag}</span>
-                      {currentTags.includes(tag) && (
-                        <Check className="ml-auto h-4 w-4 text-muted-foreground" />
-                      )}
                     </CommandItem>
                   ))}
                 </CommandGroup>

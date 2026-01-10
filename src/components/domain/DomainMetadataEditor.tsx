@@ -1,5 +1,5 @@
 import { ChevronDown, Edit, X } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { useShallow } from "zustand/react/shallow"
@@ -40,10 +40,11 @@ export function DomainMetadataEditor({
   children,
 }: DomainMetadataEditorProps) {
   const { t } = useTranslation()
-  const { updateMetadata, getAllUsedTags } = useDomainStore(
+  const { updateMetadata, getAllUsedTags, domainsByAccount } = useDomainStore(
     useShallow((state) => ({
       updateMetadata: state.updateMetadata,
       getAllUsedTags: state.getAllUsedTags,
+      domainsByAccount: state.domainsByAccount,
     }))
   )
 
@@ -101,8 +102,8 @@ export function DomainMetadataEditor({
     setTags([...tags, tag])
   }
 
-  // 获取所有已使用的标签
-  const allTags = getAllUsedTags()
+  // 获取所有已使用的标签（memoized）
+  const allTags = useMemo(() => getAllUsedTags(), [domainsByAccount, getAllUsedTags])
 
   // 移除标签
   const handleRemoveTag = (tag: string) => {
