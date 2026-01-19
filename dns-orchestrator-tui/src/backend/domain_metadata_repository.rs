@@ -8,7 +8,7 @@ use dns_orchestrator_core::traits::DomainMetadataRepository;
 use dns_orchestrator_core::types::{DomainMetadata, DomainMetadataKey, DomainMetadataUpdate};
 use dns_orchestrator_core::CoreResult;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 /// 内存域名元数据仓库
 ///
@@ -35,7 +35,7 @@ impl Default for InMemoryDomainMetadataRepository {
 #[async_trait]
 impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
     async fn find_by_key(&self, key: &DomainMetadataKey) -> CoreResult<Option<DomainMetadata>> {
-        let store = self.store.lock().unwrap();
+        let store = self.store.lock().await;
         Ok(store.get(key).cloned())
     }
 
@@ -43,7 +43,7 @@ impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
         &self,
         keys: &[DomainMetadataKey],
     ) -> CoreResult<HashMap<DomainMetadataKey, DomainMetadata>> {
-        let store = self.store.lock().unwrap();
+        let store = self.store.lock().await;
         let mut result = HashMap::new();
         for key in keys {
             if let Some(metadata) = store.get(key) {
@@ -54,7 +54,7 @@ impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
     }
 
     async fn save(&self, key: &DomainMetadataKey, metadata: &DomainMetadata) -> CoreResult<()> {
-        let mut store = self.store.lock().unwrap();
+        let mut store = self.store.lock().await;
         if metadata.is_empty() {
             store.remove(key);
         } else {
@@ -64,7 +64,7 @@ impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
     }
 
     async fn batch_save(&self, entries: &[(DomainMetadataKey, DomainMetadata)]) -> CoreResult<()> {
-        let mut store = self.store.lock().unwrap();
+        let mut store = self.store.lock().await;
         for (key, metadata) in entries {
             if metadata.is_empty() {
                 store.remove(key);
@@ -80,7 +80,7 @@ impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
         key: &DomainMetadataKey,
         update: &DomainMetadataUpdate,
     ) -> CoreResult<()> {
-        let mut store = self.store.lock().unwrap();
+        let mut store = self.store.lock().await;
         let metadata = store.entry(key.clone()).or_insert_with(DomainMetadata::default);
 
         if let Some(is_favorite) = update.is_favorite {
@@ -100,13 +100,13 @@ impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
     }
 
     async fn delete(&self, key: &DomainMetadataKey) -> CoreResult<()> {
-        let mut store = self.store.lock().unwrap();
+        let mut store = self.store.lock().await;
         store.remove(key);
         Ok(())
     }
 
     async fn delete_by_account(&self, account_id: &str) -> CoreResult<()> {
-        let mut store = self.store.lock().unwrap();
+        let mut store = self.store.lock().await;
         store.retain(|k, _| k.account_id != account_id);
         Ok(())
     }
@@ -115,7 +115,7 @@ impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
         &self,
         account_id: &str,
     ) -> CoreResult<Vec<DomainMetadataKey>> {
-        let store = self.store.lock().unwrap();
+        let store = self.store.lock().await;
         Ok(store
             .iter()
             .filter(|(k, v)| k.account_id == account_id && v.is_favorite)
@@ -124,7 +124,7 @@ impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
     }
 
     async fn find_by_tag(&self, tag: &str) -> CoreResult<Vec<DomainMetadataKey>> {
-        let store = self.store.lock().unwrap();
+        let store = self.store.lock().await;
         Ok(store
             .iter()
             .filter(|(_, v)| v.tags.contains(&tag.to_string()))
@@ -133,7 +133,7 @@ impl DomainMetadataRepository for InMemoryDomainMetadataRepository {
     }
 
     async fn list_all_tags(&self) -> CoreResult<Vec<String>> {
-        let store = self.store.lock().unwrap();
+        let store = self.store.lock().await;
         let mut tags: Vec<String> = store
             .values()
             .flat_map(|m| m.tags.iter().cloned())

@@ -8,7 +8,7 @@ use dns_orchestrator_core::traits::{CredentialStore, CredentialsMap};
 use dns_orchestrator_core::{CoreError, CoreResult};
 use dns_orchestrator_provider::ProviderCredentials;
 use keyring::Entry;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 const SERVICE_NAME: &str = "dns-orchestrator-tui";
 const CREDENTIALS_KEY: &str = "__all_credentials__";
@@ -43,7 +43,7 @@ impl CredentialStore for KeyringCredentialStore {
     async fn load_all(&self) -> CoreResult<CredentialsMap> {
         // 尝试从缓存返回
         {
-            let cache = self.cache.lock().unwrap();
+            let cache = self.cache.lock().await;
             if !cache.is_empty() {
                 return Ok(cache.clone());
             }
@@ -59,7 +59,7 @@ impl CredentialStore for KeyringCredentialStore {
             .map_err(|e| CoreError::CredentialError(format!("Failed to deserialize: {e}")))?;
 
         // 更新缓存
-        *self.cache.lock().unwrap() = credentials.clone();
+        *self.cache.lock().await = credentials.clone();
 
         Ok(credentials)
     }
@@ -71,14 +71,14 @@ impl CredentialStore for KeyringCredentialStore {
         self.save_raw_json(&json).await?;
 
         // 更新缓存
-        *self.cache.lock().unwrap() = credentials.clone();
+        *self.cache.lock().await = credentials.clone();
 
         Ok(())
     }
 
     async fn get(&self, account_id: &str) -> CoreResult<Option<ProviderCredentials>> {
         // 先检查缓存
-        if let Some(creds) = self.cache.lock().unwrap().get(account_id) {
+        if let Some(creds) = self.cache.lock().await.get(account_id) {
             return Ok(Some(creds.clone()));
         }
 

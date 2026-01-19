@@ -13,6 +13,44 @@ use crate::model::state::{
 };
 use crate::model::App;
 
+/// 渲染带光标的输入框
+///
+/// - `value`: 输入的值
+/// - `placeholder`: 占位符文本
+/// - `is_focused`: 是否聚焦（显示光标）
+/// - `cursor_pos`: 光标位置（通常是 value.len()）
+fn render_input_with_cursor<'a>(
+    value: &'a str,
+    placeholder: &'a str,
+    is_focused: bool,
+) -> Vec<Span<'a>> {
+    let cursor_style = Style::default().bg(Color::White).fg(Color::Black);
+
+    if value.is_empty() {
+        if is_focused {
+            // 空输入框聚焦时：光标 + placeholder
+            vec![
+                Span::styled(" ", cursor_style),
+                Span::styled(placeholder, Style::default().fg(Color::DarkGray)),
+            ]
+        } else {
+            // 空输入框未聚焦：只显示 placeholder
+            vec![Span::styled(placeholder, Style::default().fg(Color::DarkGray))]
+        }
+    } else {
+        if is_focused {
+            // 有内容聚焦时：内容 + 光标
+            vec![
+                Span::styled(value, Style::default().fg(Color::White)),
+                Span::styled(" ", cursor_style),
+            ]
+        } else {
+            // 有内容未聚焦：只显示内容
+            vec![Span::styled(value, Style::default().fg(Color::White))]
+        }
+    }
+}
+
 /// 渲染弹窗（如果有活动弹窗）
 pub fn render(app: &App, frame: &mut Frame) {
     let Some(ref modal) = app.modal.active else {
@@ -43,7 +81,7 @@ fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
 }
 
 /// 渲染添加账号弹窗
-fn render_add_account(app: &App, frame: &mut Frame, modal: &Modal) {
+fn render_add_account(_app: &App, frame: &mut Frame, modal: &Modal) {
     let Modal::AddAccount {
         provider_index,
         name,
@@ -81,7 +119,6 @@ fn render_add_account(app: &App, frame: &mut Frame, modal: &Modal) {
     let inner = Rect::new(area.x + 2, area.y + 1, area.width - 4, area.height - 2);
 
     let mut lines = Vec::new();
-    let mut current_y = inner.y;
 
     // === 服务商选择 ===
     let provider_focused = *focus == 0;
@@ -395,23 +432,14 @@ fn render_dns_lookup(frame: &mut Frame, modal: &Modal) {
         Style::default()
     };
     lines.push(Line::from(vec![Span::styled("Domain: ", domain_style)]));
-    lines.push(Line::from(vec![
-        Span::styled("  ", Style::default()),
-        Span::styled(
-            if domain.is_empty() {
-                "Enter domain (e.g., example.com)"
-            } else {
-                domain
-            },
-            if domain.is_empty() {
-                Style::default().fg(Color::DarkGray)
-            } else if *focus == 0 {
-                Style::default().fg(Color::White).bg(Color::DarkGray)
-            } else {
-                Style::default().fg(Color::White)
-            },
-        ),
-    ]));
+
+    let mut domain_spans = vec![Span::styled("  ", Style::default())];
+    domain_spans.extend(render_input_with_cursor(
+        domain,
+        "Enter domain (e.g., example.com)",
+        *focus == 0,
+    ));
+    lines.push(Line::from(domain_spans));
     lines.push(Line::from(""));
 
     // 记录类型选择
@@ -512,21 +540,14 @@ fn render_whois_lookup(frame: &mut Frame, modal: &Modal) {
         "Domain: ",
         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )]));
-    lines.push(Line::from(vec![
-        Span::styled("  ", Style::default()),
-        Span::styled(
-            if domain.is_empty() {
-                "Enter domain (e.g., example.com)"
-            } else {
-                domain
-            },
-            if domain.is_empty() {
-                Style::default().fg(Color::DarkGray)
-            } else {
-                Style::default().fg(Color::White).bg(Color::DarkGray)
-            },
-        ),
-    ]));
+
+    let mut input_spans = vec![Span::styled("  ", Style::default())];
+    input_spans.extend(render_input_with_cursor(
+        domain,
+        "Enter domain (e.g., example.com)",
+        true, // WHOIS 弹窗只有一个输入框，始终聚焦
+    ));
+    lines.push(Line::from(input_spans));
     lines.push(Line::from(""));
 
     // 查询结果
@@ -583,21 +604,14 @@ fn render_ssl_check(frame: &mut Frame, modal: &Modal) {
         "Domain: ",
         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )]));
-    lines.push(Line::from(vec![
-        Span::styled("  ", Style::default()),
-        Span::styled(
-            if domain.is_empty() {
-                "Enter domain (e.g., example.com)"
-            } else {
-                domain
-            },
-            if domain.is_empty() {
-                Style::default().fg(Color::DarkGray)
-            } else {
-                Style::default().fg(Color::White).bg(Color::DarkGray)
-            },
-        ),
-    ]));
+
+    let mut input_spans = vec![Span::styled("  ", Style::default())];
+    input_spans.extend(render_input_with_cursor(
+        domain,
+        "Enter domain (e.g., example.com)",
+        true,
+    ));
+    lines.push(Line::from(input_spans));
     lines.push(Line::from(""));
 
     // 查询结果
@@ -654,21 +668,14 @@ fn render_ip_lookup(frame: &mut Frame, modal: &Modal) {
         "IP or Domain: ",
         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )]));
-    lines.push(Line::from(vec![
-        Span::styled("  ", Style::default()),
-        Span::styled(
-            if input.is_empty() {
-                "Enter IP or domain (e.g., 8.8.8.8 or google.com)"
-            } else {
-                input
-            },
-            if input.is_empty() {
-                Style::default().fg(Color::DarkGray)
-            } else {
-                Style::default().fg(Color::White).bg(Color::DarkGray)
-            },
-        ),
-    ]));
+
+    let mut input_spans = vec![Span::styled("  ", Style::default())];
+    input_spans.extend(render_input_with_cursor(
+        input,
+        "Enter IP or domain (e.g., 8.8.8.8 or google.com)",
+        true,
+    ));
+    lines.push(Line::from(input_spans));
     lines.push(Line::from(""));
 
     // 查询结果
@@ -731,23 +738,14 @@ fn render_http_header_check(frame: &mut Frame, modal: &Modal) {
         Style::default()
     };
     lines.push(Line::from(vec![Span::styled("URL: ", url_style)]));
-    lines.push(Line::from(vec![
-        Span::styled("  ", Style::default()),
-        Span::styled(
-            if url.is_empty() {
-                "Enter URL (e.g., https://example.com)"
-            } else {
-                url
-            },
-            if url.is_empty() {
-                Style::default().fg(Color::DarkGray)
-            } else if *focus == 0 {
-                Style::default().fg(Color::White).bg(Color::DarkGray)
-            } else {
-                Style::default().fg(Color::White)
-            },
-        ),
-    ]));
+
+    let mut url_spans = vec![Span::styled("  ", Style::default())];
+    url_spans.extend(render_input_with_cursor(
+        url,
+        "Enter URL (e.g., https://example.com)",
+        *focus == 0,
+    ));
+    lines.push(Line::from(url_spans));
     lines.push(Line::from(""));
 
     // HTTP 方法选择
@@ -832,23 +830,14 @@ fn render_dns_propagation(frame: &mut Frame, modal: &Modal) {
         Style::default()
     };
     lines.push(Line::from(vec![Span::styled("Domain: ", domain_style)]));
-    lines.push(Line::from(vec![
-        Span::styled("  ", Style::default()),
-        Span::styled(
-            if domain.is_empty() {
-                "Enter domain (e.g., example.com)"
-            } else {
-                domain
-            },
-            if domain.is_empty() {
-                Style::default().fg(Color::DarkGray)
-            } else if *focus == 0 {
-                Style::default().fg(Color::White).bg(Color::DarkGray)
-            } else {
-                Style::default().fg(Color::White)
-            },
-        ),
-    ]));
+
+    let mut domain_spans = vec![Span::styled("  ", Style::default())];
+    domain_spans.extend(render_input_with_cursor(
+        domain,
+        "Enter domain (e.g., example.com)",
+        *focus == 0,
+    ));
+    lines.push(Line::from(domain_spans));
     lines.push(Line::from(""));
 
     // 记录类型选择
@@ -927,21 +916,14 @@ fn render_dnssec_check(frame: &mut Frame, modal: &Modal) {
         "Domain: ",
         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )]));
-    lines.push(Line::from(vec![
-        Span::styled("  ", Style::default()),
-        Span::styled(
-            if domain.is_empty() {
-                "Enter domain (e.g., example.com)"
-            } else {
-                domain
-            },
-            if domain.is_empty() {
-                Style::default().fg(Color::DarkGray)
-            } else {
-                Style::default().fg(Color::White).bg(Color::DarkGray)
-            },
-        ),
-    ]));
+
+    let mut input_spans = vec![Span::styled("  ", Style::default())];
+    input_spans.extend(render_input_with_cursor(
+        domain,
+        "Enter domain (e.g., example.com)",
+        true,
+    ));
+    lines.push(Line::from(input_spans));
     lines.push(Line::from(""));
 
     // 查询结果

@@ -8,17 +8,30 @@ use ratatui::{
     Frame,
 };
 
-use crate::model::{App, ToolboxTab};
+use crate::model::{App, ToolboxTab, ToolboxState};
 
 /// 渲染工具箱页面
 pub fn render(app: &App, frame: &mut Frame, area: Rect) {
     let current_tab = app.toolbox.current_tab;
+    let visible_start = app.toolbox.visible_start;
+    let all_tabs = ToolboxTab::all();
+    let visible_count = ToolboxState::visible_tab_count();
 
     let mut lines = vec![Line::from("")];
 
-    // 渲染选项卡
+    // 渲染选项卡（带滚动指示器）
     let mut tab_spans = vec![Span::raw("  ")];
-    for (i, tab) in ToolboxTab::all().iter().enumerate() {
+
+    // 左侧滚动指示器
+    if visible_start > 0 {
+        tab_spans.push(Span::styled("◀ ", Style::default().fg(Color::Yellow)));
+    } else {
+        tab_spans.push(Span::styled("  ", Style::default().fg(Color::DarkGray)));
+    }
+
+    // 渲染可见的标签页
+    let visible_end = (visible_start + visible_count).min(all_tabs.len());
+    for (i, tab) in all_tabs[visible_start..visible_end].iter().enumerate() {
         if i > 0 {
             tab_spans.push(Span::raw(" | "));
         }
@@ -32,6 +45,14 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
         };
         tab_spans.push(Span::styled(tab.name(), style));
     }
+
+    // 右侧滚动指示器
+    if visible_end < all_tabs.len() {
+        tab_spans.push(Span::styled(" ▶", Style::default().fg(Color::Yellow)));
+    } else {
+        tab_spans.push(Span::styled("  ", Style::default().fg(Color::DarkGray)));
+    }
+
     lines.push(Line::from(tab_spans));
 
     lines.push(Line::from(""));

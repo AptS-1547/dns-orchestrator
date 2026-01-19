@@ -8,8 +8,8 @@ use dns_orchestrator_core::traits::AccountRepository;
 use dns_orchestrator_core::types::{Account, AccountStatus};
 use dns_orchestrator_core::{CoreError, CoreResult};
 use std::path::PathBuf;
-use std::sync::Mutex;
 use tokio::fs;
+use tokio::sync::Mutex;
 
 /// 获取配置目录路径
 fn get_config_dir() -> PathBuf {
@@ -92,7 +92,7 @@ impl AccountRepository for JsonAccountRepository {
     async fn find_all(&self) -> CoreResult<Vec<Account>> {
         // 尝试从缓存获取
         {
-            let cache = self.cache.lock().unwrap();
+            let cache = self.cache.lock().await;
             if !cache.is_empty() {
                 return Ok(cache.clone());
             }
@@ -102,7 +102,7 @@ impl AccountRepository for JsonAccountRepository {
         let accounts = self.load_from_file().await?;
 
         // 更新缓存
-        *self.cache.lock().unwrap() = accounts.clone();
+        *self.cache.lock().await = accounts.clone();
 
         Ok(accounts)
     }
@@ -125,7 +125,7 @@ impl AccountRepository for JsonAccountRepository {
         self.save_to_file(&accounts).await?;
 
         // 更新缓存
-        *self.cache.lock().unwrap() = accounts;
+        *self.cache.lock().await = accounts;
 
         Ok(())
     }
@@ -143,7 +143,7 @@ impl AccountRepository for JsonAccountRepository {
         self.save_to_file(&accounts).await?;
 
         // 更新缓存
-        *self.cache.lock().unwrap() = accounts;
+        *self.cache.lock().await = accounts;
 
         Ok(())
     }
@@ -162,7 +162,7 @@ impl AccountRepository for JsonAccountRepository {
         self.save_to_file(&existing).await?;
 
         // 更新缓存
-        *self.cache.lock().unwrap() = existing;
+        *self.cache.lock().await = existing;
 
         Ok(())
     }
@@ -183,7 +183,7 @@ impl AccountRepository for JsonAccountRepository {
             self.save_to_file(&accounts).await?;
 
             // 更新缓存
-            *self.cache.lock().unwrap() = accounts;
+            *self.cache.lock().await = accounts;
 
             Ok(())
         } else {
