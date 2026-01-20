@@ -1,0 +1,55 @@
+[package]
+name = "dns-orchestrator-tui"
+version = "0.1.0"
+edition = "2021"
+authors = ["AptS-1547"]
+description = "Terminal User Interface for DNS Orchestrator"
+license = "MIT"
+repository = "https://github.com/AptS-1547/dns-orchestrator"
+keywords = ["dns", "tui", "terminal", "cli"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+# TUI 框架
+ratatui = "0.29"
+crossterm = "0.28"
+
+# Unicode 字符宽度计算
+unicode-width = "0.2"
+
+# 异步运行时
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# 错误处理
+anyhow = "1.0"
+thiserror = "1.0"
+
+# 序列化（配置文件）
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# 时间处理
+chrono = { version = "0.4", features = ["serde"] }
+
+# 凭证存储
+keyring = "3"
+
+# 配置目录检测
+dirs = "5"
+
+# 日志
+log = "0.4"
+
+# DNS Orchestrator 核心库
+dns-orchestrator-core = { path = "../dns-orchestrator-core" }
+dns-orchestrator-provider = { path = "../dns-orchestrator-provider", default-features = false, features = ["all-providers", "rustls"] }
+
+[dev-dependencies]
+# 测试
+tokio-test = "0.4"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
