@@ -8,10 +8,26 @@ use ratatui::{
     Frame,
 };
 
+use crate::i18n::t;
+use crate::i18n::keys::ToolboxTabTexts;
 use crate::model::{App, ToolboxTab, ToolboxState};
+
+/// 获取工具箱标签页的翻译名称
+fn get_tab_name(tab: &ToolboxTab, tabs: &ToolboxTabTexts) -> &'static str {
+    match tab {
+        ToolboxTab::Whois => tabs.whois,
+        ToolboxTab::DnsLookup => tabs.dns_lookup,
+        ToolboxTab::IpLookup => tabs.ip_lookup,
+        ToolboxTab::SslCheck => tabs.ssl_check,
+        ToolboxTab::HttpHeaderCheck => tabs.http_headers,
+        ToolboxTab::DnsPropagation => tabs.dns_propagation,
+        ToolboxTab::DnssecCheck => tabs.dnssec_check,
+    }
+}
 
 /// 渲染工具箱页面
 pub fn render(app: &App, frame: &mut Frame, area: Rect) {
+    let texts = t();
     let current_tab = app.toolbox.current_tab;
     let visible_start = app.toolbox.visible_start;
     let all_tabs = ToolboxTab::all();
@@ -24,7 +40,7 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
 
     // 左侧滚动指示器
     if visible_start > 0 {
-        tab_spans.push(Span::styled("◀ ", Style::default().fg(Color::Yellow)));
+        tab_spans.push(Span::styled("< ", Style::default().fg(Color::Gray)));
     } else {
         tab_spans.push(Span::styled("  ", Style::default().fg(Color::DarkGray)));
     }
@@ -43,12 +59,12 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
         } else {
             Style::default().fg(Color::Gray)
         };
-        tab_spans.push(Span::styled(tab.name(), style));
+        tab_spans.push(Span::styled(get_tab_name(tab, &texts.toolbox.tabs), style));
     }
 
     // 右侧滚动指示器
     if visible_end < all_tabs.len() {
-        tab_spans.push(Span::styled(" ▶", Style::default().fg(Color::Yellow)));
+        tab_spans.push(Span::styled(" >", Style::default().fg(Color::Gray)));
     } else {
         tab_spans.push(Span::styled("  ", Style::default().fg(Color::DarkGray)));
     }
@@ -66,99 +82,102 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
     match current_tab {
         ToolboxTab::Whois => {
             lines.push(Line::styled(
-                "  WHOIS Lookup",
+                format!("  {}", texts.modal.tools.titles.whois),
                 Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
             ));
             lines.push(Line::from(""));
             lines.push(Line::styled(
-                "  Query domain registration information.",
+                format!("  {}", texts.modal.tools.placeholders.enter_domain),
                 Style::default().fg(Color::Gray),
             ));
         }
         ToolboxTab::DnsLookup => {
             lines.push(Line::styled(
-                "  DNS Lookup",
+                format!("  {}", texts.modal.tools.titles.dns_lookup),
                 Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
             ));
             lines.push(Line::from(""));
             lines.push(Line::styled(
-                "  Query DNS records for a domain.",
+                format!("  {}", texts.modal.tools.placeholders.enter_domain),
                 Style::default().fg(Color::Gray),
             ));
         }
         ToolboxTab::IpLookup => {
             lines.push(Line::styled(
-                "  IP Lookup",
+                format!("  {}", texts.modal.tools.titles.ip_lookup),
                 Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
             ));
             lines.push(Line::from(""));
             lines.push(Line::styled(
-                "  Get geolocation and ISP information for an IP.",
+                format!("  {}", texts.modal.tools.placeholders.enter_ip_or_domain),
                 Style::default().fg(Color::Gray),
             ));
         }
         ToolboxTab::SslCheck => {
             lines.push(Line::styled(
-                "  SSL Certificate Check",
+                format!("  {}", texts.modal.tools.titles.ssl_check),
                 Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
             ));
             lines.push(Line::from(""));
             lines.push(Line::styled(
-                "  Check SSL certificate status and expiry.",
+                format!("  {}", texts.modal.tools.placeholders.enter_domain),
                 Style::default().fg(Color::Gray),
             ));
         }
         ToolboxTab::HttpHeaderCheck => {
             lines.push(Line::styled(
-                "  HTTP Header Check",
+                format!("  {}", texts.modal.tools.titles.http_header),
                 Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
             ));
             lines.push(Line::from(""));
             lines.push(Line::styled(
-                "  Inspect HTTP response headers from a URL.",
+                format!("  {}", texts.modal.tools.placeholders.enter_url),
                 Style::default().fg(Color::Gray),
             ));
         }
         ToolboxTab::DnsPropagation => {
             lines.push(Line::styled(
-                "  DNS Propagation Check",
+                format!("  {}", texts.modal.tools.titles.dns_propagation),
                 Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
             ));
             lines.push(Line::from(""));
             lines.push(Line::styled(
-                "  Check DNS propagation across global DNS servers.",
+                format!("  {}", texts.modal.tools.placeholders.enter_domain),
                 Style::default().fg(Color::Gray),
             ));
         }
         ToolboxTab::DnssecCheck => {
             lines.push(Line::styled(
-                "  DNSSEC Validation",
+                format!("  {}", texts.modal.tools.titles.dnssec),
                 Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
             ));
             lines.push(Line::from(""));
             lines.push(Line::styled(
-                "  Verify DNSSEC configuration for a domain.",
+                format!("  {}", texts.modal.tools.placeholders.enter_domain),
                 Style::default().fg(Color::Gray),
             ));
         }
     }
 
     lines.push(Line::from(""));
-    lines.push(Line::styled(
-        format!("  Placeholder: {}", app.toolbox.placeholder()),
-        Style::default().fg(Color::DarkGray),
-    ));
-    lines.push(Line::from(""));
-    lines.push(Line::styled(
-        "  Press Tab to switch tools, Enter to execute.",
-        Style::default().fg(Color::DarkGray),
-    ));
+    lines.push(Line::from(vec![
+        Span::styled(format!("  {}", texts.hints.keys.arrows_lr), Style::default().fg(Color::Yellow)),
+        Span::styled(
+            format!(" {} | ", texts.hints.actions.switch_option),
+            Style::default().fg(Color::DarkGray),
+        ),
+        Span::styled(texts.hints.keys.enter, Style::default().fg(Color::Yellow)),
+        Span::styled(
+            format!(" {}", texts.common.confirm),
+            Style::default().fg(Color::DarkGray),
+        ),
+    ]));
 
     // 显示结果或错误
     if let Some(ref result) = app.toolbox.result {
         lines.push(Line::from(""));
         lines.push(Line::styled(
-            "  Result:",
+            format!("  {}:", texts.common.result),
             Style::default().fg(Color::Green),
         ));
         lines.push(Line::styled(
@@ -170,7 +189,7 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
     if let Some(ref error) = app.toolbox.error {
         lines.push(Line::from(""));
         lines.push(Line::styled(
-            format!("  Error: {}", error),
+            format!("  {}: {}", texts.common.error, error),
             Style::default().fg(Color::Red),
         ));
     }

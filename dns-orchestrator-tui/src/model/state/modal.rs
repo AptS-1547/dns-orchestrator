@@ -1,5 +1,6 @@
 //! 弹窗/对话框状态
 
+use crate::i18n::t;
 use crate::model::domain::ProviderType;
 
 /// DNS 记录类型（用于 DNS Lookup 工具）
@@ -101,52 +102,53 @@ pub struct CredentialField {
 
 /// 获取服务商的凭证字段定义
 pub fn get_credential_fields(provider: &ProviderType) -> Vec<CredentialField> {
+    let texts = t();
     match provider {
         ProviderType::Cloudflare => vec![CredentialField {
             key: "apiToken",
-            label: "API Token",
-            placeholder: "Enter the Cloudflare API Token",
+            label: texts.modal.add_account.api_token,
+            placeholder: texts.modal.add_account.api_token_hint,
             is_secret: true,
         }],
         ProviderType::Aliyun => vec![
             CredentialField {
                 key: "accessKeyId",
-                label: "AccessKey ID",
-                placeholder: "Enter the AccessKey ID",
+                label: texts.modal.add_account.accesskey_id,
+                placeholder: texts.modal.add_account.accesskey_id_hint,
                 is_secret: false,
             },
             CredentialField {
                 key: "accessKeySecret",
-                label: "AccessKey Secret",
-                placeholder: "Enter the AccessKey Secret",
+                label: texts.modal.add_account.accesskey_secret,
+                placeholder: texts.modal.add_account.accesskey_secret_hint,
                 is_secret: true,
             },
         ],
         ProviderType::Dnspod => vec![
             CredentialField {
                 key: "secretId",
-                label: "SecretId",
-                placeholder: "Enter the SecretId",
+                label: texts.modal.add_account.secretid,
+                placeholder: texts.modal.add_account.secretid_hint,
                 is_secret: false,
             },
             CredentialField {
                 key: "secretKey",
-                label: "SecretKey",
-                placeholder: "Enter the SecretKey",
+                label: texts.modal.add_account.secretkey,
+                placeholder: texts.modal.add_account.secretkey_hint,
                 is_secret: true,
             },
         ],
         ProviderType::Huaweicloud => vec![
             CredentialField {
                 key: "accessKeyId",
-                label: "Access Key ID",
-                placeholder: "Enter the Access Key ID",
+                label: texts.modal.add_account.access_key_id,
+                placeholder: texts.modal.add_account.access_key_id_hint,
                 is_secret: false,
             },
             CredentialField {
                 key: "secretAccessKey",
-                label: "Secret Access Key",
-                placeholder: "Enter the Secret Access Key",
+                label: texts.modal.add_account.secret_access_key,
+                placeholder: texts.modal.add_account.secret_access_key_hint,
                 is_secret: true,
             },
         ],

@@ -49,6 +49,7 @@
 mod app;
 mod backend;
 mod event;
+pub mod i18n;
 mod message;
 mod model;
 mod update;

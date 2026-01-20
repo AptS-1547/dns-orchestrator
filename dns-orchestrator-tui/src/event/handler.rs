@@ -53,8 +53,8 @@ fn handle_key_event(key: KeyEvent, app: &App) -> AppMessage {
         // Ctrl+C: 强制退出
         (KeyModifiers::CONTROL, KeyCode::Char('c')) => return AppMessage::Quit,
 
-        // ← →: 切换焦点面板
-        (KeyModifiers::NONE, KeyCode::Left) | (KeyModifiers::NONE, KeyCode::Right) => {
+        // Tab: 切换焦点面板
+        (KeyModifiers::NONE, KeyCode::Tab) => {
             return AppMessage::ToggleFocus;
         }
 
@@ -139,6 +139,7 @@ fn handle_content_keys(key: KeyEvent, app: &App) -> AppMessage {
     // 根据当前页面处理特定按键
     match &app.current_page {
         Page::Toolbox => handle_toolbox_keys(key),
+        Page::Settings => handle_settings_keys(key),
         _ => handle_list_keys(key),
     }
 }
@@ -173,20 +174,16 @@ fn handle_list_keys(key: KeyEvent) -> AppMessage {
 /// 处理工具箱页面的按键
 fn handle_toolbox_keys(key: KeyEvent) -> AppMessage {
     match key.code {
-        // Tab: 切换工具标签页
-        KeyCode::Tab => {
-            AppMessage::Content(ContentMessage::SwitchTab)
-        }
         // Enter: 执行工具
         KeyCode::Enter => {
             AppMessage::Content(ContentMessage::Execute)
         }
-        // ↑ 或 k: 上一项
-        KeyCode::Up | KeyCode::Char('k') => {
+        // ← 或 ↑ 或 k: 上一个工具
+        KeyCode::Left | KeyCode::Up | KeyCode::Char('k') => {
             AppMessage::Content(ContentMessage::SelectPrevious)
         }
-        // ↓ 或 j: 下一项
-        KeyCode::Down | KeyCode::Char('j') => {
+        // → 或 ↓ 或 j: 下一个工具
+        KeyCode::Right | KeyCode::Down | KeyCode::Char('j') => {
             AppMessage::Content(ContentMessage::SelectNext)
         }
         _ => AppMessage::Noop,
@@ -456,6 +453,29 @@ fn handle_dns_propagation_keys(key: KeyEvent, focus: usize) -> AppMessage {
             AppMessage::Modal(ModalMessage::Input(ch))
         }
 
+        _ => AppMessage::Noop,
+    }
+}
+
+/// 处理设置页面的按键
+fn handle_settings_keys(key: KeyEvent) -> AppMessage {
+    match key.code {
+        // ↑ 或 k: 上一个设置项
+        KeyCode::Up | KeyCode::Char('k') => {
+            AppMessage::Content(ContentMessage::SelectPrevious)
+        }
+        // ↓ 或 j: 下一个设置项
+        KeyCode::Down | KeyCode::Char('j') => {
+            AppMessage::Content(ContentMessage::SelectNext)
+        }
+        // ←: 切换到上一个值
+        KeyCode::Left => {
+            AppMessage::Content(ContentMessage::TogglePrev)
+        }
+        // →: 切换到下一个值
+        KeyCode::Right => {
+            AppMessage::Content(ContentMessage::ToggleNext)
+        }
         _ => AppMessage::Noop,
     }
 }

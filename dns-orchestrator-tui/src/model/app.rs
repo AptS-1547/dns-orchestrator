@@ -2,7 +2,7 @@
 
 use super::{
     AccountsState, DnsRecordsState, DomainsState, FocusPanel, ModalState, NavigationState, Page,
-    ToolboxState,
+    SettingsState, ToolboxState,
 };
 
 /// 应用主状态
@@ -31,6 +31,8 @@ pub struct App {
     pub dns_records: DnsRecordsState,
     /// 工具箱页面状态
     pub toolbox: ToolboxState,
+    /// 设置页面状态
+    pub settings: SettingsState,
 
     /// 弹窗状态
     pub modal: ModalState,
@@ -49,6 +51,7 @@ impl App {
             domains: DomainsState::new(),
             dns_records: DnsRecordsState::new(),
             toolbox: ToolboxState::new(),
+            settings: SettingsState::new(),
             modal: ModalState::new(),
         };
 

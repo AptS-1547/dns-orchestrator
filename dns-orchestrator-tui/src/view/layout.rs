@@ -7,6 +7,7 @@ use ratatui::{
     Frame,
 };
 
+use crate::i18n::t;
 use crate::model::{App, Page};
 
 use super::components;
@@ -68,6 +69,8 @@ fn render_title_bar(frame: &mut Frame, area: Rect) {
 
 /// 根据当前页面渲染内容
 fn render_page_content(app: &App, frame: &mut Frame, area: Rect) {
+    let texts = t();
+
     // 内容区域的边框
     let is_focused = app.focus.is_content();
     let border_style = if is_focused {
@@ -76,8 +79,18 @@ fn render_page_content(app: &App, frame: &mut Frame, area: Rect) {
         Styles::border()
     };
 
+    // 根据当前页面获取 i18n 标题
+    let page_title = match &app.current_page {
+        Page::Home => texts.nav.home,
+        Page::Domains => texts.nav.domains,
+        Page::DnsRecords { .. } => texts.dns_records.title,
+        Page::Accounts => texts.nav.accounts,
+        Page::Toolbox => texts.nav.toolbox,
+        Page::Settings => texts.nav.settings,
+    };
+
     let block = Block::default()
-        .title(format!(" {} ", app.current_page.title()))
+        .title(format!(" {} ", page_title))
         .title_style(Styles::title())
         .borders(Borders::ALL)
         .border_style(border_style);

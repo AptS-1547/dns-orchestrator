@@ -36,4 +36,10 @@ pub enum ContentMessage {
     SwitchTab,
     /// 执行工具
     Execute,
+
+    // ========== 设置页面专用 ==========
+    /// 切换到上一个值（用于设置项）
+    TogglePrev,
+    /// 切换到下一个值（用于设置项）
+    ToggleNext,
 }

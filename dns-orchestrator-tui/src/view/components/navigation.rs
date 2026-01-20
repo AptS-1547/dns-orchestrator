@@ -2,17 +2,20 @@
 
 use ratatui::{
     layout::Rect,
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState},
     Frame,
 };
 
+use crate::i18n::t;
+use crate::model::NavItemId;
 use crate::model::App;
 use crate::view::theme::Styles;
 
 /// 渲染导航面板
 pub fn render(app: &App, frame: &mut Frame, area: Rect) {
+    let texts = t();
     let is_focused = app.focus.is_navigation();
 
     // 边框样式
@@ -23,7 +26,7 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
     };
 
     let block = Block::default()
-        .title(" Navigation ")
+        .title(format!(" {} ", texts.nav.home))
         .title_style(Styles::title())
         .borders(Borders::ALL)
         .border_style(border_style);
@@ -38,7 +41,16 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
             let is_selected = i == app.navigation.selected;
             let prefix = if is_selected { "▶ " } else { "  " };
 
-            let content = format!("{}{} {}", prefix, nav_item.icon, nav_item.label);
+            // 根据导航项 ID 获取翻译后的标签
+            let label = match nav_item.id {
+                NavItemId::Home => texts.nav.home,
+                NavItemId::Domains => texts.nav.domains,
+                NavItemId::Accounts => texts.nav.accounts,
+                NavItemId::Toolbox => texts.nav.toolbox,
+                NavItemId::Settings => texts.nav.settings,
+            };
+
+            let content = format!("{}{} {}", prefix, nav_item.icon, label);
 
             let style = if is_selected {
                 Styles::selected()

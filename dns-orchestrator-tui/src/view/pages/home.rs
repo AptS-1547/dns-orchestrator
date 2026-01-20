@@ -8,10 +8,13 @@ use ratatui::{
     Frame,
 };
 
+use crate::i18n::t;
 use crate::model::App;
 
 /// 渲染首页
 pub fn render(_app: &App, frame: &mut Frame, area: Rect) {
+    let texts = t();
+
     // 首页布局：欢迎信息 + 统计信息
     let layout = Layout::default()
         .direction(Direction::Vertical)
@@ -25,14 +28,14 @@ pub fn render(_app: &App, frame: &mut Frame, area: Rect) {
     let welcome = vec![
         Line::from(""),
         Line::from(Span::styled(
-            "  Welcome to DNS Orchestrator",
+            format!("  {}", texts.home.welcome),
             Style::default()
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
         Line::from(Span::styled(
-            "  Manage your DNS records across multiple providers",
+            format!("  {}", texts.home.welcome_desc),
             Style::default().fg(Color::Gray),
         )),
         Line::from(""),
@@ -52,14 +55,14 @@ pub fn render(_app: &App, frame: &mut Frame, area: Rect) {
 
     // 账号统计
     let accounts_block = Block::default()
-        .title(" Accounts ")
+        .title(format!(" {} ", texts.nav.accounts))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::DarkGray));
 
     let accounts_content = Paragraph::new(vec![
         Line::from(""),
         Line::from(Span::styled("  0", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled("  accounts configured", Style::default().fg(Color::Gray))),
+        Line::from(Span::styled(format!("  {}", texts.home.manage_accounts), Style::default().fg(Color::Gray))),
     ])
     .block(accounts_block);
 
@@ -67,14 +70,14 @@ pub fn render(_app: &App, frame: &mut Frame, area: Rect) {
 
     // 域名统计
     let domains_block = Block::default()
-        .title(" Domains ")
+        .title(format!(" {} ", texts.nav.domains))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::DarkGray));
 
     let domains_content = Paragraph::new(vec![
         Line::from(""),
         Line::from(Span::styled("  0", Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled("  domains managed", Style::default().fg(Color::Gray))),
+        Line::from(Span::styled(format!("  {}", texts.home.manage_domains), Style::default().fg(Color::Gray))),
     ])
     .block(domains_block);
 

@@ -207,5 +207,5 @@ pub use focus::FocusPanel;
 pub use navigation::{NavItem, NavItemId, NavigationState};
 pub use page::Page;
 pub use state::{
-    AccountsState, DnsRecordsState, DomainsState, Modal, ModalState, ToolboxState, ToolboxTab,
+    AccountsState, DnsRecordsState, DomainsState, Modal, ModalState, SettingsState, ToolboxState, ToolboxTab,
 };

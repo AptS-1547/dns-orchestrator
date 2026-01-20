@@ -8,6 +8,7 @@ use ratatui::{
     Frame,
 };
 
+use crate::i18n::t;
 use crate::model::{App, FocusPanel, Page};
 use crate::view::theme::Styles;
 
@@ -23,9 +24,9 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
         if i > 0 {
             spans.push(Span::styled(" │ ", Style::default().fg(Color::DarkGray)));
         }
-        spans.push(Span::styled(*key, Styles::hint_key()));
+        spans.push(Span::styled(key.to_string(), Styles::hint_key()));
         spans.push(Span::raw(" "));
-        spans.push(Span::styled(*desc, Styles::hint_desc()));
+        spans.push(Span::styled(desc.to_string(), Styles::hint_desc()));
     }
 
     // 如果有状态消息，显示在右侧
@@ -43,50 +44,51 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
 
 /// 根据当前状态生成快捷键提示
 fn get_hints(app: &App) -> Vec<(&'static str, &'static str)> {
+    let texts = t();
     let mut hints = Vec::new();
 
-    // 全局快捷键
-    hints.push(("←→", "Switch Panels"));
+    // 全局快捷键 - 改为 Tab 切换面板
+    hints.push((texts.hints.keys.tab, texts.hints.actions.switch_panel));
 
     // 根据焦点位置显示不同的快捷键
     match app.focus {
         FocusPanel::Navigation => {
-            hints.push(("↑↓", "Navigation"));
-            hints.push(("Enter", "Enter"));
+            hints.push((texts.hints.keys.arrows_ud, texts.hints.actions.move_up_down));
+            hints.push((texts.hints.keys.enter, texts.common.confirm));
         }
         FocusPanel::Content => {
             match &app.current_page {
                 Page::Home => {
-                    hints.push(("↑↓", "Navigation"));
+                    hints.push((texts.hints.keys.arrows_ud, texts.hints.actions.move_up_down));
                 }
                 Page::Accounts => {
-                    hints.push(("↑↓", "Select"));
-                    hints.push(("Alt+a", "Add"));
-                    hints.push(("Alt+d", "Delete"));
+                    hints.push((texts.hints.keys.arrows_ud, texts.hints.actions.move_up_down));
+                    hints.push(("Alt+a", texts.common.add));
+                    hints.push(("Alt+d", texts.common.delete));
                 }
                 Page::Domains => {
-                    hints.push(("↑↓", "Select"));
-                    hints.push(("Enter", "Enter"));
+                    hints.push((texts.hints.keys.arrows_ud, texts.hints.actions.move_up_down));
+                    hints.push((texts.hints.keys.enter, texts.common.confirm));
                 }
                 Page::DnsRecords { .. } => {
-                    hints.push(("↑↓", "Select"));
-                    hints.push(("Alt+a", "Add"));
-                    hints.push(("Esc", "Back"));
+                    hints.push((texts.hints.keys.arrows_ud, texts.hints.actions.move_up_down));
+                    hints.push(("Alt+a", texts.common.add));
+                    hints.push((texts.hints.keys.esc, texts.common.back));
                 }
                 Page::Toolbox => {
-                    hints.push(("Tab", "Switch Tools"));
-                    hints.push(("Enter", "Execute"));
+                    hints.push((texts.hints.keys.arrows_lr, texts.hints.actions.switch_option));
+                    hints.push((texts.hints.keys.enter, texts.common.confirm));
                 }
                 Page::Settings => {
-                    hints.push(("↑↓", "Select"));
-                    hints.push(("Enter", "Modify"));
+                    hints.push((texts.hints.keys.arrows_ud, texts.hints.actions.move_up_down));
+                    hints.push((texts.hints.keys.arrows_lr, texts.hints.actions.switch_option));
                 }
             }
         }
     }
 
     // Quit
-    hints.push(("Alt+q", "Quit"));
+    hints.push(("Alt+q", texts.common.quit));
 
     hints
 }

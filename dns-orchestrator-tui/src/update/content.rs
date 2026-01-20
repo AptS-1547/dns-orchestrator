@@ -51,6 +51,14 @@ pub fn update(app: &mut App, msg: ContentMessage) {
         ContentMessage::Execute => {
             handle_execute(app);
         }
+
+        // ========== 设置页面专用 ==========
+        ContentMessage::TogglePrev => {
+            handle_toggle_prev(app);
+        }
+        ContentMessage::ToggleNext => {
+            handle_toggle_next(app);
+        }
     }
 }
 
@@ -70,6 +78,9 @@ fn handle_select_previous(app: &mut App) {
         Page::Toolbox => {
             app.toolbox.prev_tab();
         }
+        Page::Settings => {
+            app.settings.select_previous();
+        }
         _ => {}
     }
 }
@@ -87,6 +98,9 @@ fn handle_select_next(app: &mut App) {
         }
         Page::Toolbox => {
             app.toolbox.next_tab();
+        }
+        Page::Settings => {
+            app.settings.select_next();
         }
         _ => {}
     }
@@ -284,5 +298,19 @@ fn handle_execute(app: &mut App) {
                 app.modal.show_dnssec_check();
             }
         }
+    }
+}
+
+// ========== 设置页面处理 ==========
+
+fn handle_toggle_prev(app: &mut App) {
+    if matches!(app.current_page, Page::Settings) {
+        app.settings.toggle_prev();
+    }
+}
+
+fn handle_toggle_next(app: &mut App) {
+    if matches!(app.current_page, Page::Settings) {
+        app.settings.toggle_next();
     }
 }

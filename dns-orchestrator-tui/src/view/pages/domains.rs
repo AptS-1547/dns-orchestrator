@@ -8,6 +8,7 @@ use ratatui::{
     Frame,
 };
 
+use crate::i18n::t;
 use crate::model::App;
 
 /// 渲染域名列表页面
@@ -21,15 +22,16 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
 
 /// 渲染空状态
 fn render_empty(frame: &mut Frame, area: Rect) {
+    let texts = t();
     let content = vec![
         Line::from(""),
         Line::styled(
-            "  No domains available.",
+            format!("  {}", texts.domains.no_domains),
             Style::default().fg(Color::Gray),
         ),
         Line::from(""),
         Line::styled(
-            "  Add an account first to see your domains.",
+            format!("  {}", texts.accounts.add_account),
             Style::default().fg(Color::DarkGray),
         ),
     ];
@@ -40,6 +42,7 @@ fn render_empty(frame: &mut Frame, area: Rect) {
 
 /// 渲染域名列表
 fn render_list(app: &App, frame: &mut Frame, area: Rect) {
+    let texts = t();
     let items: Vec<ListItem> = app
         .domains
         .domains
@@ -59,7 +62,7 @@ fn render_list(app: &App, frame: &mut Frame, area: Rect) {
             };
             let record_count = domain
                 .record_count
-                .map(|c| format!(" ({} records)", c))
+                .map(|c| format!(" ({} {})", c, texts.domains.record_count))
                 .unwrap_or_default();
 
             let style = if is_selected {

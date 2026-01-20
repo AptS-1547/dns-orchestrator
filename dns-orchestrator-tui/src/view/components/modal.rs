@@ -1,13 +1,14 @@
 //! 弹窗组件
 
 use ratatui::{
-    layout::{Alignment, Constraint, Layout, Rect},
+    layout::{Alignment, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
 
+use crate::i18n::t;
 use crate::model::state::{
     get_all_dns_servers, get_all_providers, get_all_record_types, get_credential_fields, Modal,
 };
@@ -94,6 +95,7 @@ fn render_add_account(_app: &App, frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let providers = get_all_providers();
     let current_provider = &providers[*provider_index];
     let credential_fields = get_credential_fields(current_provider);
@@ -107,7 +109,7 @@ fn render_add_account(_app: &App, frame: &mut Frame, modal: &Modal) {
 
     // 弹窗边框
     let block = Block::default()
-        .title(" New Account ")
+        .title(format!(" {} ", texts.modal.add_account.title))
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan))
@@ -129,9 +131,9 @@ fn render_add_account(_app: &App, frame: &mut Frame, modal: &Modal) {
     };
 
     lines.push(Line::from(vec![
-        Span::styled("DNS Provider", Style::default().fg(Color::Gray)),
+        Span::styled(texts.modal.add_account.provider, Style::default().fg(Color::Gray)),
         if provider_focused {
-            Span::styled(" (←→ to Switch)", Style::default().fg(Color::DarkGray))
+            Span::styled(format!(" {}", texts.modal.add_account.provider_hint), Style::default().fg(Color::DarkGray))
         } else {
             Span::raw("")
         },
@@ -155,12 +157,12 @@ fn render_add_account(_app: &App, frame: &mut Frame, modal: &Modal) {
     };
 
     lines.push(Line::from(Span::styled(
-        "Account Name (Optional)",
+        texts.modal.add_account.account_name,
         Style::default().fg(Color::Gray),
     )));
 
     let name_display = if name.is_empty() && !name_focused {
-        format!("  Example: {} Main Account", current_provider.display_name())
+        format!("  {}{} {}", texts.modal.add_account.account_name_example, current_provider.display_name(), texts.modal.add_account.main_account)
     } else if name_focused {
         format!("  {}▎", name)
     } else {
@@ -226,12 +228,12 @@ fn render_add_account(_app: &App, frame: &mut Frame, modal: &Modal) {
     // === 操作提示 ===
     lines.push(Line::from(""));
     lines.push(Line::from(vec![
-        Span::styled("  Tab", Style::default().fg(Color::Yellow)),
-        Span::styled(" Next | ", Style::default().fg(Color::DarkGray)),
-        Span::styled("Enter", Style::default().fg(Color::Yellow)),
-        Span::styled(" Confirm | ", Style::default().fg(Color::DarkGray)),
-        Span::styled("Esc", Style::default().fg(Color::Yellow)),
-        Span::styled(" Cancel", Style::default().fg(Color::DarkGray)),
+        Span::styled(format!("  {}", texts.hints.keys.tab), Style::default().fg(Color::Yellow)),
+        Span::styled(format!(" {} | ", texts.common.next), Style::default().fg(Color::DarkGray)),
+        Span::styled(texts.hints.keys.enter, Style::default().fg(Color::Yellow)),
+        Span::styled(format!(" {} | ", texts.common.confirm), Style::default().fg(Color::DarkGray)),
+        Span::styled(texts.hints.keys.esc, Style::default().fg(Color::Yellow)),
+        Span::styled(format!(" {}", texts.common.cancel), Style::default().fg(Color::DarkGray)),
     ]));
 
     let paragraph = Paragraph::new(lines);
@@ -250,11 +252,12 @@ fn render_confirm_delete(frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let area = centered_rect(40, 9, frame.area());
     frame.render_widget(Clear, area);
 
     let block = Block::default()
-        .title(" Confirm Deletion ")
+        .title(format!(" {} ", texts.modal.confirm_delete.title))
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Red))
@@ -279,7 +282,7 @@ fn render_confirm_delete(frame: &mut Frame, modal: &Modal) {
     let lines = vec![
         Line::from(""),
         Line::styled(
-            format!("  Are you sure to delete {} ?", item_type),
+            format!("  {} {} ?", texts.modal.confirm_delete.message, item_type),
             Style::default().fg(Color::White),
         ),
         Line::styled(
@@ -289,9 +292,9 @@ fn render_confirm_delete(frame: &mut Frame, modal: &Modal) {
         Line::from(""),
         Line::from(vec![
             Span::raw("    "),
-            Span::styled(" Cancel ", cancel_style),
+            Span::styled(format!(" {} ", texts.modal.confirm_delete.cancel_button), cancel_style),
             Span::raw("    "),
-            Span::styled(" Delete ", confirm_style),
+            Span::styled(format!(" {} ", texts.modal.confirm_delete.confirm_button), confirm_style),
         ]),
     ];
 
@@ -301,6 +304,7 @@ fn render_confirm_delete(frame: &mut Frame, modal: &Modal) {
 
 /// 渲染错误弹窗
 fn render_error(frame: &mut Frame, title: &str, message: &str) {
+    let texts = t();
     let area = centered_rect(50, 8, frame.area());
     frame.render_widget(Clear, area);
 
@@ -319,7 +323,7 @@ fn render_error(frame: &mut Frame, title: &str, message: &str) {
         Line::styled(message, Style::default().fg(Color::White)),
         Line::from(""),
         Line::styled(
-            "Press Esc or Enter to close",
+            format!("{}/{}: {}", texts.hints.keys.esc, texts.hints.keys.enter, texts.common.close),
             Style::default().fg(Color::DarkGray),
         ),
     ];
@@ -330,11 +334,12 @@ fn render_error(frame: &mut Frame, title: &str, message: &str) {
 
 /// 渲染帮助弹窗
 fn render_help(frame: &mut Frame) {
+    let texts = t();
     let area = centered_rect(55, 18, frame.area());
     frame.render_widget(Clear, area);
 
     let block = Block::default()
-        .title(" Help ")
+        .title(format!(" {} ", texts.help.title))
         .title_alignment(Alignment::Center)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan))
@@ -345,45 +350,45 @@ fn render_help(frame: &mut Frame) {
     let inner = Rect::new(area.x + 2, area.y + 1, area.width - 4, area.height - 2);
 
     let lines = vec![
-        Line::styled("Global shortcuts", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Line::styled(texts.help.global_shortcuts, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
         Line::from(""),
         Line::from(vec![
             Span::styled("  ←→     ", Style::default().fg(Color::Yellow)),
-            Span::styled("Switch panel", Style::default().fg(Color::White)),
+            Span::styled(texts.help.actions.switch_panel, Style::default().fg(Color::White)),
         ]),
         Line::from(vec![
             Span::styled("  ↑↓/jk  ", Style::default().fg(Color::Yellow)),
-            Span::styled("Move Up/Down", Style::default().fg(Color::White)),
+            Span::styled(texts.help.actions.move_up_down, Style::default().fg(Color::White)),
         ]),
         Line::from(vec![
             Span::styled("  Enter  ", Style::default().fg(Color::Yellow)),
-            Span::styled("Confirm", Style::default().fg(Color::White)),
+            Span::styled(texts.help.actions.confirm, Style::default().fg(Color::White)),
         ]),
         Line::from(vec![
             Span::styled("  Esc    ", Style::default().fg(Color::Yellow)),
-            Span::styled("Back/Cancel", Style::default().fg(Color::White)),
+            Span::styled(texts.help.actions.back_cancel, Style::default().fg(Color::White)),
         ]),
         Line::from(vec![
             Span::styled("  q      ", Style::default().fg(Color::Yellow)),
-            Span::styled("Quit", Style::default().fg(Color::White)),
+            Span::styled(texts.help.actions.quit, Style::default().fg(Color::White)),
         ]),
         Line::from(""),
-        Line::styled("Operation shortcut", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Line::styled(texts.help.operation_shortcuts, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
         Line::from(""),
         Line::from(vec![
             Span::styled("  Alt+a  ", Style::default().fg(Color::Yellow)),
-            Span::styled("Add", Style::default().fg(Color::White)),
+            Span::styled(texts.help.actions.add, Style::default().fg(Color::White)),
         ]),
         Line::from(vec![
             Span::styled("  Alt+e  ", Style::default().fg(Color::Yellow)),
-            Span::styled("Edit", Style::default().fg(Color::White)),
+            Span::styled(texts.help.actions.edit, Style::default().fg(Color::White)),
         ]),
         Line::from(vec![
             Span::styled("  Alt+d  ", Style::default().fg(Color::Yellow)),
-            Span::styled("Delete", Style::default().fg(Color::White)),
+            Span::styled(texts.help.actions.delete, Style::default().fg(Color::White)),
         ]),
         Line::from(""),
-        Line::styled("Press Esc to close the help", Style::default().fg(Color::DarkGray)),
+        Line::styled(texts.help.close_hint, Style::default().fg(Color::DarkGray)),
     ];
 
     let paragraph = Paragraph::new(lines);
@@ -404,6 +409,7 @@ fn render_dns_lookup(frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let record_types = get_all_record_types();
     let dns_servers = get_all_dns_servers();
 
@@ -415,7 +421,7 @@ fn render_dns_lookup(frame: &mut Frame, modal: &Modal) {
 
     // 创建边框
     let block = Block::default()
-        .title(" DNS Lookup ")
+        .title(format!(" {} ", texts.modal.tools.titles.dns_lookup))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -431,12 +437,12 @@ fn render_dns_lookup(frame: &mut Frame, modal: &Modal) {
     } else {
         Style::default()
     };
-    lines.push(Line::from(vec![Span::styled("Domain: ", domain_style)]));
+    lines.push(Line::from(vec![Span::styled(texts.modal.tools.labels.domain, domain_style)]));
 
     let mut domain_spans = vec![Span::styled("  ", Style::default())];
     domain_spans.extend(render_input_with_cursor(
         domain,
-        "Enter domain (e.g., example.com)",
+        texts.modal.tools.placeholders.enter_domain,
         *focus == 0,
     ));
     lines.push(Line::from(domain_spans));
@@ -449,7 +455,7 @@ fn render_dns_lookup(frame: &mut Frame, modal: &Modal) {
     } else {
         Style::default()
     };
-    lines.push(Line::from(vec![Span::styled("Record Type: ", record_style)]));
+    lines.push(Line::from(vec![Span::styled(texts.modal.tools.labels.record_type, record_style)]));
     lines.push(Line::from(vec![
         Span::styled("  < ", if *focus == 1 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) }),
         Span::styled(
@@ -471,7 +477,7 @@ fn render_dns_lookup(frame: &mut Frame, modal: &Modal) {
     } else {
         Style::default()
     };
-    lines.push(Line::from(vec![Span::styled("DNS Server: ", server_style)]));
+    lines.push(Line::from(vec![Span::styled(texts.modal.tools.labels.dns_server, server_style)]));
     lines.push(Line::from(vec![
         Span::styled("  < ", if *focus == 2 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) }),
         Span::styled(
@@ -488,9 +494,9 @@ fn render_dns_lookup(frame: &mut Frame, modal: &Modal) {
 
     // 查询结果
     if *loading {
-        lines.push(Line::styled("Querying...", Style::default().fg(Color::Yellow)));
+        lines.push(Line::styled(texts.modal.tools.status.querying, Style::default().fg(Color::Yellow)));
     } else if let Some(ref res) = result {
-        lines.push(Line::styled("Result:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+        lines.push(Line::styled(format!("{}", texts.modal.tools.result_label), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
         for line in res.lines() {
             lines.push(Line::from(line));
         }
@@ -498,7 +504,17 @@ fn render_dns_lookup(frame: &mut Frame, modal: &Modal) {
 
     lines.push(Line::from(""));
     lines.push(Line::styled(
-        " Tab/↑↓: Navigate | ←→: Change selection | Enter: Query | Esc: Close ",
+        format!(" {}/{}: {} | {}: {} | {}: {} | {}: {} ",
+            texts.hints.keys.tab,
+            texts.hints.keys.arrows_ud,
+            texts.hints.actions.navigate,
+            texts.hints.keys.arrows_lr,
+            texts.hints.actions.switch_option,
+            texts.hints.keys.enter,
+            texts.common.query,
+            texts.hints.keys.esc,
+            texts.common.close
+        ),
         Style::default().fg(Color::DarkGray),
     ));
 
@@ -517,6 +533,7 @@ fn render_whois_lookup(frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let area = frame.area();
     let modal_area = centered_rect(70, 18, area);
 
@@ -525,7 +542,7 @@ fn render_whois_lookup(frame: &mut Frame, modal: &Modal) {
 
     // 创建边框
     let block = Block::default()
-        .title(" WHOIS Lookup ")
+        .title(format!(" {} ", texts.modal.tools.titles.whois))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -537,14 +554,14 @@ fn render_whois_lookup(frame: &mut Frame, modal: &Modal) {
 
     // 域名输入框
     lines.push(Line::from(vec![Span::styled(
-        "Domain: ",
+        texts.modal.tools.labels.domain,
         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )]));
 
     let mut input_spans = vec![Span::styled("  ", Style::default())];
     input_spans.extend(render_input_with_cursor(
         domain,
-        "Enter domain (e.g., example.com)",
+        texts.modal.tools.placeholders.enter_domain,
         true, // WHOIS 弹窗只有一个输入框，始终聚焦
     ));
     lines.push(Line::from(input_spans));
@@ -552,9 +569,15 @@ fn render_whois_lookup(frame: &mut Frame, modal: &Modal) {
 
     // 查询结果
     if *loading {
-        lines.push(Line::styled("Querying...", Style::default().fg(Color::Yellow)));
+        lines.push(Line::styled(
+            texts.modal.tools.status.querying,
+            Style::default().fg(Color::Yellow))
+        );
     } else if let Some(ref res) = result {
-        lines.push(Line::styled("Result:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+        lines.push(Line::styled(
+            format!("{}", texts.modal.tools.result_label),
+            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
+        );
         for line in res.lines() {
             lines.push(Line::from(line));
         }
@@ -562,7 +585,12 @@ fn render_whois_lookup(frame: &mut Frame, modal: &Modal) {
 
     lines.push(Line::from(""));
     lines.push(Line::styled(
-        "  Enter: Query | Esc: Close",
+        format!(" {}: {} | {}: {} ",
+            texts.hints.keys.enter,
+            texts.common.query,
+            texts.hints.keys.esc,
+            texts.common.close
+        ),
         Style::default().fg(Color::DarkGray),
     ));
 
@@ -581,6 +609,7 @@ fn render_ssl_check(frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let area = frame.area();
     let modal_area = centered_rect(70, 18, area);
 
@@ -589,7 +618,7 @@ fn render_ssl_check(frame: &mut Frame, modal: &Modal) {
 
     // 创建边框
     let block = Block::default()
-        .title(" SSL Certificate Check ")
+        .title(format!(" {} ", texts.modal.tools.titles.ssl_check))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -601,14 +630,14 @@ fn render_ssl_check(frame: &mut Frame, modal: &Modal) {
 
     // 域名输入框
     lines.push(Line::from(vec![Span::styled(
-        "Domain: ",
+        texts.modal.tools.labels.domain,
         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )]));
 
     let mut input_spans = vec![Span::styled("  ", Style::default())];
     input_spans.extend(render_input_with_cursor(
         domain,
-        "Enter domain (e.g., example.com)",
+        texts.modal.tools.placeholders.enter_domain,
         true,
     ));
     lines.push(Line::from(input_spans));
@@ -616,9 +645,9 @@ fn render_ssl_check(frame: &mut Frame, modal: &Modal) {
 
     // 查询结果
     if *loading {
-        lines.push(Line::styled("Checking...", Style::default().fg(Color::Yellow)));
+        lines.push(Line::styled(texts.modal.tools.status.checking, Style::default().fg(Color::Yellow)));
     } else if let Some(ref res) = result {
-        lines.push(Line::styled("Result:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+        lines.push(Line::styled(format!("{}", texts.modal.tools.result_label), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
         for line in res.lines() {
             lines.push(Line::from(line));
         }
@@ -626,7 +655,12 @@ fn render_ssl_check(frame: &mut Frame, modal: &Modal) {
 
     lines.push(Line::from(""));
     lines.push(Line::styled(
-        "Enter: Check | Esc: Close",
+        format!(" {}: {} | {}: {} ",
+            texts.hints.keys.enter,
+            texts.common.check,
+            texts.hints.keys.esc,
+            texts.common.close
+        ),
         Style::default().fg(Color::DarkGray),
     ));
 
@@ -645,6 +679,7 @@ fn render_ip_lookup(frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let area = frame.area();
     let modal_area = centered_rect(70, 18, area);
 
@@ -653,7 +688,7 @@ fn render_ip_lookup(frame: &mut Frame, modal: &Modal) {
 
     // 创建边框
     let block = Block::default()
-        .title(" IP Lookup ")
+        .title(format!(" {} ", texts.modal.tools.titles.ip_lookup))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -665,14 +700,14 @@ fn render_ip_lookup(frame: &mut Frame, modal: &Modal) {
 
     // IP 或域名输入框
     lines.push(Line::from(vec![Span::styled(
-        "IP or Domain: ",
+        texts.modal.tools.labels.ip_or_domain,
         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )]));
 
     let mut input_spans = vec![Span::styled("  ", Style::default())];
     input_spans.extend(render_input_with_cursor(
         input,
-        "Enter IP or domain (e.g., 8.8.8.8 or google.com)",
+        texts.modal.tools.placeholders.enter_ip_or_domain,
         true,
     ));
     lines.push(Line::from(input_spans));
@@ -680,9 +715,9 @@ fn render_ip_lookup(frame: &mut Frame, modal: &Modal) {
 
     // 查询结果
     if *loading {
-        lines.push(Line::styled("Looking up...", Style::default().fg(Color::Yellow)));
+        lines.push(Line::styled(texts.modal.tools.status.looking_up, Style::default().fg(Color::Yellow)));
     } else if let Some(ref res) = result {
-        lines.push(Line::styled("Result:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+        lines.push(Line::styled(format!("{}", texts.modal.tools.result_label), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
         for line in res.lines() {
             lines.push(Line::from(line));
         }
@@ -690,7 +725,12 @@ fn render_ip_lookup(frame: &mut Frame, modal: &Modal) {
 
     lines.push(Line::from(""));
     lines.push(Line::styled(
-        "Enter: Lookup | Esc: Close",
+        format!(" {}: {} | {}: {} ",
+            texts.hints.keys.enter,
+            texts.common.lookup,
+            texts.hints.keys.esc,
+            texts.common.close
+        ),
         Style::default().fg(Color::DarkGray),
     ));
 
@@ -711,6 +751,7 @@ fn render_http_header_check(frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let methods = ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"];
 
     let area = frame.area();
@@ -721,7 +762,7 @@ fn render_http_header_check(frame: &mut Frame, modal: &Modal) {
 
     // 创建边框
     let block = Block::default()
-        .title(" HTTP Header Check ")
+        .title(format!(" {} ", texts.modal.tools.titles.http_header))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -737,12 +778,12 @@ fn render_http_header_check(frame: &mut Frame, modal: &Modal) {
     } else {
         Style::default()
     };
-    lines.push(Line::from(vec![Span::styled("URL: ", url_style)]));
+    lines.push(Line::from(vec![Span::styled(texts.modal.tools.labels.url, url_style)]));
 
     let mut url_spans = vec![Span::styled("  ", Style::default())];
     url_spans.extend(render_input_with_cursor(
         url,
-        "Enter URL (e.g., https://example.com)",
+        texts.modal.tools.placeholders.enter_url,
         *focus == 0,
     ));
     lines.push(Line::from(url_spans));
@@ -755,7 +796,7 @@ fn render_http_header_check(frame: &mut Frame, modal: &Modal) {
     } else {
         Style::default()
     };
-    lines.push(Line::from(vec![Span::styled("Method: ", method_style)]));
+    lines.push(Line::from(vec![Span::styled(texts.modal.tools.labels.method, method_style)]));
     lines.push(Line::from(vec![
         Span::styled("  < ", if *focus == 1 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) }),
         Span::styled(
@@ -772,9 +813,9 @@ fn render_http_header_check(frame: &mut Frame, modal: &Modal) {
 
     // 查询结果
     if *loading {
-        lines.push(Line::styled("Checking...", Style::default().fg(Color::Yellow)));
+        lines.push(Line::styled(texts.modal.tools.status.checking, Style::default().fg(Color::Yellow)));
     } else if let Some(ref res) = result {
-        lines.push(Line::styled("Result:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+        lines.push(Line::styled(format!("{}", texts.modal.tools.result_label), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
         for line in res.lines() {
             lines.push(Line::from(line));
         }
@@ -782,7 +823,17 @@ fn render_http_header_check(frame: &mut Frame, modal: &Modal) {
 
     lines.push(Line::from(""));
     lines.push(Line::styled(
-        " Tab/↑↓: Navigate | ←→: Change method | Enter: Check | Esc: Close ",
+        format!(" {}/{}: {} | {}: {} | {}: {} | {}: {} ",
+            texts.hints.keys.tab,
+            texts.hints.keys.arrows_ud,
+            texts.hints.actions.move_up_down,
+            texts.hints.keys.arrows_lr,
+            texts.hints.actions.change_method,
+            texts.hints.keys.enter,
+            texts.common.check,
+            texts.hints.keys.esc,
+            texts.common.close
+        ),
         Style::default().fg(Color::DarkGray),
     ));
 
@@ -803,6 +854,7 @@ fn render_dns_propagation(frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let record_types = get_all_record_types();
 
     let area = frame.area();
@@ -813,7 +865,7 @@ fn render_dns_propagation(frame: &mut Frame, modal: &Modal) {
 
     // 创建边框
     let block = Block::default()
-        .title(" DNS Propagation Check ")
+        .title(format!(" {} ", texts.modal.tools.titles.dns_propagation))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -829,12 +881,12 @@ fn render_dns_propagation(frame: &mut Frame, modal: &Modal) {
     } else {
         Style::default()
     };
-    lines.push(Line::from(vec![Span::styled("Domain: ", domain_style)]));
+    lines.push(Line::from(vec![Span::styled(texts.modal.tools.labels.domain, domain_style)]));
 
     let mut domain_spans = vec![Span::styled("  ", Style::default())];
     domain_spans.extend(render_input_with_cursor(
         domain,
-        "Enter domain (e.g., example.com)",
+        texts.modal.tools.placeholders.enter_domain,
         *focus == 0,
     ));
     lines.push(Line::from(domain_spans));
@@ -847,7 +899,7 @@ fn render_dns_propagation(frame: &mut Frame, modal: &Modal) {
     } else {
         Style::default()
     };
-    lines.push(Line::from(vec![Span::styled("Record Type: ", record_style)]));
+    lines.push(Line::from(vec![Span::styled(texts.modal.tools.labels.record_type, record_style)]));
     lines.push(Line::from(vec![
         Span::styled("  < ", if *focus == 1 { Style::default().fg(Color::Yellow) } else { Style::default().fg(Color::DarkGray) }),
         Span::styled(
@@ -864,9 +916,9 @@ fn render_dns_propagation(frame: &mut Frame, modal: &Modal) {
 
     // 查询结果
     if *loading {
-        lines.push(Line::styled("Checking propagation...", Style::default().fg(Color::Yellow)));
+        lines.push(Line::styled(texts.modal.tools.status.checking_propagation, Style::default().fg(Color::Yellow)));
     } else if let Some(ref res) = result {
-        lines.push(Line::styled("Result:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+        lines.push(Line::styled(format!("{}", texts.modal.tools.result_label), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
         for line in res.lines() {
             lines.push(Line::from(line));
         }
@@ -874,7 +926,17 @@ fn render_dns_propagation(frame: &mut Frame, modal: &Modal) {
 
     lines.push(Line::from(""));
     lines.push(Line::styled(
-        " Tab/↑↓: Navigate | ←→: Change type | Enter: Check | Esc: Close ",
+        format!(" {}/{}: {} | {}: {} | {}: {} | {}: {} ",
+            texts.hints.keys.tab,
+            texts.hints.keys.arrows_ud,
+            texts.hints.actions.navigate,
+            texts.hints.keys.arrows_lr,
+            texts.hints.actions.change_type,
+            texts.hints.keys.enter,
+            texts.common.check,
+            texts.hints.keys.esc,
+            texts.common.close
+        ),
         Style::default().fg(Color::DarkGray),
     ));
 
@@ -893,6 +955,7 @@ fn render_dnssec_check(frame: &mut Frame, modal: &Modal) {
         return;
     };
 
+    let texts = t();
     let area = frame.area();
     let modal_area = centered_rect(70, 18, area);
 
@@ -901,7 +964,7 @@ fn render_dnssec_check(frame: &mut Frame, modal: &Modal) {
 
     // 创建边框
     let block = Block::default()
-        .title(" DNSSEC Check ")
+        .title(format!(" {} ", texts.modal.tools.titles.dnssec))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
@@ -913,14 +976,14 @@ fn render_dnssec_check(frame: &mut Frame, modal: &Modal) {
 
     // 域名输入框
     lines.push(Line::from(vec![Span::styled(
-        "Domain: ",
+        texts.modal.tools.labels.domain,
         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
     )]));
 
     let mut input_spans = vec![Span::styled("  ", Style::default())];
     input_spans.extend(render_input_with_cursor(
         domain,
-        "Enter domain (e.g., example.com)",
+        texts.modal.tools.placeholders.enter_domain,
         true,
     ));
     lines.push(Line::from(input_spans));
@@ -928,9 +991,9 @@ fn render_dnssec_check(frame: &mut Frame, modal: &Modal) {
 
     // 查询结果
     if *loading {
-        lines.push(Line::styled("Checking DNSSEC...", Style::default().fg(Color::Yellow)));
+        lines.push(Line::styled(texts.modal.tools.status.checking_dnssec, Style::default().fg(Color::Yellow)));
     } else if let Some(ref res) = result {
-        lines.push(Line::styled("Result:", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+        lines.push(Line::styled(format!("{}", texts.modal.tools.result_label), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
         for line in res.lines() {
             lines.push(Line::from(line));
         }
@@ -938,7 +1001,12 @@ fn render_dnssec_check(frame: &mut Frame, modal: &Modal) {
 
     lines.push(Line::from(""));
     lines.push(Line::styled(
-        "Enter: Check | Esc: Close",
+        format!(" {}: {} | {}: {} ",
+            texts.hints.keys.enter,
+            texts.common.check,
+            texts.hints.keys.esc,
+            texts.common.close
+        ),
         Style::default().fg(Color::DarkGray),
     ));
 

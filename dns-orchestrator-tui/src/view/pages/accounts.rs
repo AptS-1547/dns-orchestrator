@@ -4,10 +4,11 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, List, ListItem, ListState},
     Frame,
 };
 
+use crate::i18n::t;
 use crate::model::App;
 
 /// 渲染账号管理页面
@@ -21,15 +22,16 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
 
 /// 渲染空状态
 fn render_empty(frame: &mut Frame, area: Rect) {
+    let texts = t();
     let content = vec![
         Line::from(""),
         Line::styled(
-            "  No accounts configured yet.",
+            format!("  {}", texts.accounts.no_accounts),
             Style::default().fg(Color::Gray),
         ),
         Line::from(""),
         Line::styled(
-            "  Press Alt+a to add your first account.",
+            format!("  Alt+a: {}", texts.accounts.add_account),
             Style::default().fg(Color::DarkGray),
         ),
     ];

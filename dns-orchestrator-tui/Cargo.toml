@@ -14,6 +14,9 @@ categories = ["command-line-utilities"]
 ratatui = "0.29"
 crossterm = "0.28"
 
+# Unicode 字符宽度计算
+unicode-width = "0.2"
+
 # 异步运行时
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1"

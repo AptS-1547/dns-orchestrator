@@ -98,7 +98,7 @@ pub struct ToolboxState {
 }
 
 /// 可见标签页数量
-const VISIBLE_TAB_COUNT: usize = 5;
+const VISIBLE_TAB_COUNT: usize = 4;
 
 impl ToolboxState {
     /// 创建新的工具箱状态
