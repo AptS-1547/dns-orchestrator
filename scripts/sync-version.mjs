@@ -16,18 +16,18 @@ const version = packageJson.version;
 console.log(`同步版本号: ${version}`);
 
 // 更新 tauri.conf.json
-const tauriConfPath = resolve(root, 'src-tauri/tauri.conf.json');
+const tauriConfPath = resolve(root, 'dns-orchestrator-tauri/tauri.conf.json');
 const tauriConf = JSON.parse(readFileSync(tauriConfPath, 'utf-8'));
 tauriConf.version = version;
 writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + '\n');
-console.log('✓ src-tauri/tauri.conf.json');
+console.log('✓ dns-orchestrator-tauri/tauri.conf.json');
 
 // 更新 Tauri Cargo.toml
-const cargoTomlPath = resolve(root, 'src-tauri/Cargo.toml');
+const cargoTomlPath = resolve(root, 'dns-orchestrator-tauri/Cargo.toml');
 let tauriCargoToml = readFileSync(cargoTomlPath, 'utf-8');
 tauriCargoToml = tauriCargoToml.replace(/^version\s*=\s*"[^"]*"/m, `version = "${version}"`);
 writeFileSync(cargoTomlPath, tauriCargoToml);
-console.log('✓ src-tauri/Cargo.toml');
+console.log('✓ dns-orchestrator-tauri/Cargo.toml');
 
 // 更新 Actix-web Cargo.toml
 const actixCargoTomlPath = resolve(root, 'dns-orchestrator-web/Cargo.toml');
