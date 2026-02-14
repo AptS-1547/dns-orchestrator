@@ -402,11 +402,12 @@ impl ServerHandler for DnsOrchestratorMcp {
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             server_info: Implementation::from_build_env(),
             instructions: Some(
-                "DNS Orchestrator MCP Server - Manage DNS records across multiple providers \
+                "DNS Orchestrator MCP Server - Read-only access to DNS accounts and records across multiple providers \
                  (Cloudflare, Aliyun, DNSPod, Huaweicloud). \
+                 To modify DNS records, the user must manually open the DNS Orchestrator desktop application. \
                  Use list_accounts to see available accounts, list_domains to see domains, \
                  and list_records to view DNS records. \
-                 Toolbox tools (dns_lookup, whois_lookup, ip_lookup, dns_propagation_check, dnssec_check) \
+                 Network diagnostic tools (dns_lookup, whois_lookup, ip_lookup, dns_propagation_check, dnssec_check) \
                  work without any account configuration."
                     .into(),
             ),
