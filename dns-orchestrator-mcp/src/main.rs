@@ -82,7 +82,13 @@ async fn main() -> ExitCode {
     };
 
     // Check if all accounts failed (exit only if there were accounts and all failed)
-    let accounts = account_repository.find_all().await.unwrap_or_default();
+    let accounts = match account_repository.find_all().await {
+        Ok(accts) => accts,
+        Err(e) => {
+            tracing::error!("Failed to load accounts: {}", e);
+            Vec::new()
+        }
+    };
     if !accounts.is_empty() && restore_result.success_count == 0 {
         tracing::error!(
             "All {} account(s) failed to restore. Check credentials and try again.",

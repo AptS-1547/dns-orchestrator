@@ -9,6 +9,7 @@ use rmcp::{
     ErrorData as McpError, ServerHandler,
 };
 use std::sync::Arc;
+use tokio::time::{timeout, Duration};
 
 use dns_orchestrator_core::services::{AccountService, DnsService, DomainMetadataService, DomainService, ServiceContext};
 use dns_orchestrator_core::types::DnsRecordType;
@@ -18,6 +19,24 @@ use crate::schemas::{
     DnsLookupParams, DnsPropagationCheckParams, DnssecCheckParams, IpLookupParams,
     ListAccountsParams, ListDomainsParams, ListRecordsParams, WhoisLookupParams,
 };
+
+// Timeout constants for external service calls
+const DNS_LOOKUP_TIMEOUT_SECS: u64 = 30;
+const WHOIS_LOOKUP_TIMEOUT_SECS: u64 = 30;
+const IP_LOOKUP_TIMEOUT_SECS: u64 = 15;
+const DNS_PROPAGATION_TIMEOUT_SECS: u64 = 60;
+const DNSSEC_CHECK_TIMEOUT_SECS: u64 = 30;
+
+/// Sanitize error messages to prevent sensitive information leakage.
+///
+/// Logs the full error to stderr but returns a generic message to the client.
+fn sanitize_internal_error(error: impl std::fmt::Display, context: &str) -> McpError {
+    tracing::error!("{} error: {}", context, error);
+    McpError::internal_error(
+        format!("{} failed - check server logs for details", context),
+        None,
+    )
+}
 
 /// MCP Server for DNS Orchestrator.
 ///
@@ -67,10 +86,10 @@ impl DnsOrchestratorMcp {
             .account_service
             .list_accounts()
             .await
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "List accounts"))?;
 
         let json = serde_json::to_string_pretty(&accounts)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "Serialize accounts"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -81,14 +100,17 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<ListDomainsParams>,
     ) -> Result<CallToolResult, McpError> {
+        // Limit page_size to prevent resource exhaustion
+        let page_size = params.page_size.map(|s| s.min(100));
+
         let result = self
             .domain_service
-            .list_domains(&params.account_id, params.page, params.page_size)
+            .list_domains(&params.account_id, params.page, page_size)
             .await
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "List domains"))?;
 
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "Serialize domains"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -111,21 +133,24 @@ impl DnsOrchestratorMcp {
             _ => None,
         });
 
+        // Limit page_size to prevent resource exhaustion
+        let page_size = params.page_size.map(|s| s.min(100));
+
         let result = self
             .dns_service
             .list_records(
                 &params.account_id,
                 &params.domain_id,
                 params.page,
-                params.page_size,
+                page_size,
                 params.keyword,
                 record_type,
             )
             .await
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "List records"))?;
 
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "Serialize records"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -136,16 +161,23 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<DnsLookupParams>,
     ) -> Result<CallToolResult, McpError> {
-        let result = ToolboxService::dns_lookup(
-            &params.domain,
-            &params.record_type,
-            params.nameserver.as_deref(),
+        let result = timeout(
+            Duration::from_secs(DNS_LOOKUP_TIMEOUT_SECS),
+            ToolboxService::dns_lookup(
+                &params.domain,
+                &params.record_type,
+                params.nameserver.as_deref(),
+            ),
         )
         .await
-        .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        .map_err(|_| McpError::internal_error("DNS lookup timeout".to_string(), None))?
+        .map_err(|e| {
+            tracing::warn!("DNS lookup error: {}", e);
+            McpError::internal_error(e.to_string(), None)
+        })?;
 
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "Serialize DNS lookup result"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -156,12 +188,19 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<WhoisLookupParams>,
     ) -> Result<CallToolResult, McpError> {
-        let result = ToolboxService::whois_lookup(&params.domain)
-            .await
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let result = timeout(
+            Duration::from_secs(WHOIS_LOOKUP_TIMEOUT_SECS),
+            ToolboxService::whois_lookup(&params.domain),
+        )
+        .await
+        .map_err(|_| McpError::internal_error("WHOIS lookup timeout".to_string(), None))?
+        .map_err(|e| {
+            tracing::warn!("WHOIS lookup error: {}", e);
+            McpError::internal_error(e.to_string(), None)
+        })?;
 
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "Serialize WHOIS result"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -172,12 +211,19 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<IpLookupParams>,
     ) -> Result<CallToolResult, McpError> {
-        let result = ToolboxService::ip_lookup(&params.query)
-            .await
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let result = timeout(
+            Duration::from_secs(IP_LOOKUP_TIMEOUT_SECS),
+            ToolboxService::ip_lookup(&params.query),
+        )
+        .await
+        .map_err(|_| McpError::internal_error("IP lookup timeout".to_string(), None))?
+        .map_err(|e| {
+            tracing::warn!("IP lookup error: {}", e);
+            McpError::internal_error(e.to_string(), None)
+        })?;
 
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "Serialize IP lookup result"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -188,12 +234,19 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<DnsPropagationCheckParams>,
     ) -> Result<CallToolResult, McpError> {
-        let result = ToolboxService::dns_propagation_check(&params.domain, &params.record_type)
-            .await
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let result = timeout(
+            Duration::from_secs(DNS_PROPAGATION_TIMEOUT_SECS),
+            ToolboxService::dns_propagation_check(&params.domain, &params.record_type),
+        )
+        .await
+        .map_err(|_| McpError::internal_error("DNS propagation check timeout".to_string(), None))?
+        .map_err(|e| {
+            tracing::warn!("DNS propagation check error: {}", e);
+            McpError::internal_error(e.to_string(), None)
+        })?;
 
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "Serialize DNS propagation result"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
@@ -204,12 +257,19 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<DnssecCheckParams>,
     ) -> Result<CallToolResult, McpError> {
-        let result = ToolboxService::dnssec_check(&params.domain, params.nameserver.as_deref())
-            .await
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        let result = timeout(
+            Duration::from_secs(DNSSEC_CHECK_TIMEOUT_SECS),
+            ToolboxService::dnssec_check(&params.domain, params.nameserver.as_deref()),
+        )
+        .await
+        .map_err(|_| McpError::internal_error("DNSSEC check timeout".to_string(), None))?
+        .map_err(|e| {
+            tracing::warn!("DNSSEC check error: {}", e);
+            McpError::internal_error(e.to_string(), None)
+        })?;
 
         let json = serde_json::to_string_pretty(&result)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            .map_err(|e| sanitize_internal_error(e, "Serialize DNSSEC result"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }

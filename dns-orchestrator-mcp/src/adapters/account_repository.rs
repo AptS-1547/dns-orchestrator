@@ -14,6 +14,7 @@ use tokio::sync::RwLock;
 
 const STORE_FILE_NAME: &str = "accounts.json";
 const ACCOUNTS_KEY: &str = "accounts";
+const MAX_STORE_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB
 
 /// Account repository that reads from Tauri store files.
 ///
@@ -53,7 +54,7 @@ impl TauriStoreAccountRepository {
     /// Get the platform-specific Tauri store directory.
     fn get_store_path() -> PathBuf {
         dirs::data_local_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
+            .expect("Failed to determine data directory - unsupported platform or environment")
             .join("com.apts-1547.dns-orchestrator")
     }
 
@@ -69,6 +70,19 @@ impl TauriStoreAccountRepository {
         if !store_file.exists() {
             tracing::debug!("Store file does not exist: {:?}", store_file);
             return Ok(Vec::new());
+        }
+
+        // Check file size before reading
+        let metadata = tokio::fs::metadata(&store_file)
+            .await
+            .map_err(|e| CoreError::StorageError(format!("Failed to read store file metadata: {e}")))?;
+
+        if metadata.len() > MAX_STORE_FILE_SIZE {
+            return Err(CoreError::StorageError(format!(
+                "Store file too large: {} bytes (max: {} bytes)",
+                metadata.len(),
+                MAX_STORE_FILE_SIZE
+            )));
         }
 
         let content = tokio::fs::read_to_string(&store_file)
