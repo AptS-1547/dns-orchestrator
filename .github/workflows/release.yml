@@ -427,7 +427,7 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          pnpm tauri android build --apk true
+          pnpm tauri android build --apk
 
       - name: Rename APK
         if: github.event_name == 'push'
@@ -574,13 +574,7 @@ jobs:
   # 更新 latest.json 添加 Android 平台
   update-latest-json:
     if: github.event_name == 'push'
-    needs:
-      [
-        release-windows,
-        release-macos,
-        release-linux,
-        release-android,
-      ]
+    needs: [release-windows, release-macos, release-linux, release-android]
     permissions:
       contents: write
     runs-on: ubuntu-latest
