@@ -5,6 +5,16 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.9.1] - 2026-02-14
+
+### Fixed
+- Release 流水线 Android/iOS 构建输出路径修正（`src-tauri` → `dns-orchestrator-tauri`）
+- `pnpm tauri android build --apk` 参数修正（移除多余的 `true`）
+- 简化 `update-latest-json` job 的 `needs` 依赖语法
+
+### Changed
+- 升级 wry 依赖至 0.54.2
+
 ## [1.9.0] - 2026-02-14
 
 ### Added
@@ -288,6 +298,7 @@
 - DNS 记录 CRUD 操作
 - 跨平台支持（macOS、Windows、Linux、Android）
 
+[1.9.1]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.6.0...v1.7.0

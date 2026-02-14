@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-web"
-version = "1.9.0"
+version = "1.9.1"
 description = "DNS Orchestrator built with Actix-web"
 license = "MIT"
 authors = ["AptS-1547 <apts-1547@esaps.net>"]
