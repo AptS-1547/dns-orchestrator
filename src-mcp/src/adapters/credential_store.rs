@@ -1,6 +1,7 @@
-//! Keyring-based credential store
+//! Keyring-based credential store (Read-Only)
 //!
 //! Shares credentials with the desktop Tauri app via system keyring.
+//! This is a read-only implementation - all write operations are no-ops.
 
 use async_trait::async_trait;
 use dns_orchestrator_core::error::{CoreError, CoreResult};
@@ -16,13 +17,17 @@ const CREDENTIALS_KEY: &str = "all-credentials";
 ///
 /// Uses the system keychain (Keychain on macOS, Credential Manager on Windows,
 /// secret-service on Linux) to store credentials securely.
+///
+/// **Read-Only Mode**: All write operations (`save_all`, `set`, `remove`,
+/// `save_raw_json`) silently succeed without modifying the keyring.
+/// This prevents the MCP server from modifying the desktop app's credentials.
 pub struct KeyringCredentialStore {
     /// In-memory cache to reduce keyring access frequency.
     cache: Arc<RwLock<Option<CredentialsMap>>>,
 }
 
 impl KeyringCredentialStore {
-    /// Create a new credential store instance.
+    /// Create a new read-only credential store instance.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -46,15 +51,6 @@ impl KeyringCredentialStore {
         }
     }
 
-    /// Write raw JSON to keyring (synchronous).
-    fn write_raw_sync(json: &str) -> CoreResult<()> {
-        let entry = Self::get_entry()?;
-        entry
-            .set_password(json)
-            .map_err(|e| CoreError::CredentialError(e.to_string()))?;
-        Ok(())
-    }
-
     /// Read all credentials from keyring (synchronous).
     fn read_all_sync() -> CoreResult<CredentialsMap> {
         let json = Self::read_raw_sync()?;
@@ -64,13 +60,6 @@ impl KeyringCredentialStore {
         }
 
         serde_json::from_str(&json).map_err(|e| CoreError::SerializationError(e.to_string()))
-    }
-
-    /// Write all credentials to keyring (synchronous).
-    fn write_all_sync(credentials: &CredentialsMap) -> CoreResult<()> {
-        let json = serde_json::to_string(credentials)
-            .map_err(|e| CoreError::SerializationError(e.to_string()))?;
-        Self::write_raw_sync(&json)
     }
 
     /// Update cache (helper method).
@@ -117,16 +106,9 @@ impl CredentialStore for KeyringCredentialStore {
     }
 
     async fn save_all(&self, credentials: &CredentialsMap) -> CoreResult<()> {
-        let creds_clone = credentials.clone();
-        tokio::task::spawn_blocking(move || Self::write_all_sync(&creds_clone))
-            .await
-            .map_err(|e| CoreError::CredentialError(format!("Task join error: {e}")))??
-;
-
-        // Update cache
+        // Read-only mode: only update in-memory cache
         self.update_cache(credentials.clone()).await;
-
-        tracing::info!("Saved {} accounts to Keyring", credentials.len());
+        tracing::debug!("Saved {} accounts to cache (read-only mode)", credentials.len());
         Ok(())
     }
 
@@ -135,55 +117,15 @@ impl CredentialStore for KeyringCredentialStore {
         Ok(all_creds.get(account_id).cloned())
     }
 
-    async fn set(&self, account_id: &str, credentials: &ProviderCredentials) -> CoreResult<()> {
-        let mut cache = self.cache.write().await;
-
-        // Load from cache or keyring
-        let mut all_creds = match cache.take() {
-            Some(creds) => creds,
-            None => tokio::task::spawn_blocking(Self::read_all_sync)
-                .await
-                .map_err(|e| CoreError::CredentialError(format!("Task join error: {e}")))??
-,
-        };
-
-        all_creds.insert(account_id.to_string(), credentials.clone());
-
-        // Write to keyring
-        let creds_for_save = all_creds.clone();
-        tokio::task::spawn_blocking(move || Self::write_all_sync(&creds_for_save))
-            .await
-            .map_err(|e| CoreError::CredentialError(format!("Task join error: {e}")))??
-;
-
-        *cache = Some(all_creds);
-        tracing::info!("Credentials saved for account: {account_id}");
+    async fn set(&self, _account_id: &str, _credentials: &ProviderCredentials) -> CoreResult<()> {
+        // Read-only mode: silently succeed
+        tracing::debug!("Set operation ignored (read-only mode)");
         Ok(())
     }
 
-    async fn remove(&self, account_id: &str) -> CoreResult<()> {
-        let mut cache = self.cache.write().await;
-
-        // Load from cache or keyring
-        let mut all_creds = match cache.take() {
-            Some(creds) => creds,
-            None => tokio::task::spawn_blocking(Self::read_all_sync)
-                .await
-                .map_err(|e| CoreError::CredentialError(format!("Task join error: {e}")))??
-,
-        };
-
-        all_creds.remove(account_id);
-
-        // Write to keyring
-        let creds_for_save = all_creds.clone();
-        tokio::task::spawn_blocking(move || Self::write_all_sync(&creds_for_save))
-            .await
-            .map_err(|e| CoreError::CredentialError(format!("Task join error: {e}")))??
-;
-
-        *cache = Some(all_creds);
-        tracing::info!("Credentials deleted for account: {account_id}");
+    async fn remove(&self, _account_id: &str) -> CoreResult<()> {
+        // Read-only mode: silently succeed
+        tracing::debug!("Remove operation ignored (read-only mode)");
         Ok(())
     }
 
@@ -193,10 +135,9 @@ impl CredentialStore for KeyringCredentialStore {
             .map_err(|e| CoreError::CredentialError(format!("Task join error: {e}")))?
     }
 
-    async fn save_raw_json(&self, json: &str) -> CoreResult<()> {
-        let json_clone = json.to_string();
-        tokio::task::spawn_blocking(move || Self::write_raw_sync(&json_clone))
-            .await
-            .map_err(|e| CoreError::CredentialError(format!("Task join error: {e}")))?
+    async fn save_raw_json(&self, _json: &str) -> CoreResult<()> {
+        // Read-only mode: silently succeed
+        tracing::debug!("Save raw JSON operation ignored (read-only mode)");
+        Ok(())
     }
 }

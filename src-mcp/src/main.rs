@@ -1,6 +1,12 @@
-//! MCP Server entry point for DNS Orchestrator
+//! MCP Server entry point for DNS Orchestrator (Read-Only)
 //!
 //! Starts the MCP server with stdio transport, sharing credentials with the desktop app.
+//!
+//! # Read-Only Mode
+//!
+//! The MCP server operates in read-only mode - it can read accounts and domains
+//! from the desktop app's storage, but cannot modify them. This ensures the
+//! desktop app remains the single source of truth for data management.
 
 mod adapters;
 mod schemas;
@@ -29,7 +35,8 @@ async fn main() -> ExitCode {
         .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
         .init();
 
-    tracing::info!("Starting DNS Orchestrator MCP Server");
+    tracing::info!("Starting DNS Orchestrator MCP Server (read-only mode)");
+    tracing::info!("MCP server shares data with desktop app but will not modify it");
 
     // Create adapters
     let store = KeyringCredentialStore::new();

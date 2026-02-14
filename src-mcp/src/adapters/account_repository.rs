@@ -1,6 +1,8 @@
-//! Tauri Store-based account repository
+//! Tauri Store-based account repository (Read-Only)
 //!
 //! Reads account data from Tauri store files created by the desktop app.
+//! This is a read-only implementation - all write operations only update the
+//! in-memory cache without persisting to disk.
 
 use async_trait::async_trait;
 use dns_orchestrator_core::error::{CoreError, CoreResult};
@@ -18,6 +20,11 @@ const ACCOUNTS_KEY: &str = "accounts";
 /// This implementation reads account metadata from the same store files
 /// used by the Tauri desktop application, allowing the MCP server to
 /// share account information with the desktop app.
+///
+/// **Read-Only Mode**: All write operations (`save`, `delete`, `save_all`,
+/// `update_status`) only update the in-memory cache and do not persist
+/// changes to disk. This prevents the MCP server from modifying the
+/// desktop app's data.
 pub struct TauriStoreAccountRepository {
     /// Path to the Tauri store directory.
     store_path: PathBuf,
@@ -26,7 +33,7 @@ pub struct TauriStoreAccountRepository {
 }
 
 impl TauriStoreAccountRepository {
-    /// Create a new account repository instance.
+    /// Create a new read-only account repository instance.
     ///
     /// Automatically detects the platform-specific Tauri store location:
     /// - macOS: `~/Library/Application Support/com.apts-1547.dns-orchestrator/`
@@ -83,42 +90,6 @@ impl TauriStoreAccountRepository {
         serde_json::from_value(accounts_value)
             .map_err(|e| CoreError::SerializationError(format!("Invalid accounts format: {e}")))
     }
-
-    /// Save accounts to the store file.
-    async fn save_to_store(&self, accounts: &[Account]) -> CoreResult<()> {
-        // Ensure directory exists
-        if !self.store_path.exists() {
-            tokio::fs::create_dir_all(&self.store_path)
-                .await
-                .map_err(|e| CoreError::StorageError(format!("Failed to create store directory: {e}")))?;
-        }
-
-        let store_file = self.get_store_file_path();
-
-        // Load existing store to preserve other data
-        let mut store_value: serde_json::Value = if store_file.exists() {
-            let content = tokio::fs::read_to_string(&store_file)
-                .await
-                .unwrap_or_default();
-            serde_json::from_str(&content).unwrap_or(serde_json::json!({}))
-        } else {
-            serde_json::json!({})
-        };
-
-        // Update accounts
-        store_value[ACCOUNTS_KEY] = serde_json::to_value(accounts)
-            .map_err(|e| CoreError::SerializationError(e.to_string()))?;
-
-        let content = serde_json::to_string_pretty(&store_value)
-            .map_err(|e| CoreError::SerializationError(e.to_string()))?;
-
-        tokio::fs::write(&store_file, content)
-            .await
-            .map_err(|e| CoreError::StorageError(format!("Failed to write store file: {e}")))?;
-
-        tracing::debug!("Saved {} accounts to store", accounts.len());
-        Ok(())
-    }
 }
 
 impl Default for TauriStoreAccountRepository {
@@ -155,11 +126,14 @@ impl AccountRepository for TauriStoreAccountRepository {
     }
 
     async fn save(&self, account: &Account) -> CoreResult<()> {
+        // Read-only mode: only update in-memory cache
         let mut cache = self.cache.write().await;
 
         // Ensure cache is loaded
         if cache.is_none() {
+            drop(cache); // Release write lock before loading
             let loaded = self.load_from_store().await?;
+            cache = self.cache.write().await;
             *cache = Some(loaded);
         }
 
@@ -167,46 +141,28 @@ impl AccountRepository for TauriStoreAccountRepository {
             CoreError::StorageError("Failed to load accounts cache".to_string())
         })?;
 
-        // Find and update or insert
+        // Find and update or insert (in-memory only)
         if let Some(pos) = accounts.iter().position(|a| a.id == account.id) {
             accounts[pos] = account.clone();
         } else {
             accounts.push(account.clone());
         }
 
-        self.save_to_store(accounts).await
+        tracing::debug!("Account {} updated in cache (read-only mode)", account.id);
+        Ok(())
     }
 
-    async fn delete(&self, id: &str) -> CoreResult<()> {
-        let mut cache = self.cache.write().await;
-
-        // Ensure cache is loaded
-        if cache.is_none() {
-            let loaded = self.load_from_store().await?;
-            *cache = Some(loaded);
-        }
-
-        let accounts = cache.as_mut().ok_or_else(|| {
-            CoreError::StorageError("Failed to load accounts cache".to_string())
-        })?;
-
-        let initial_len = accounts.len();
-        accounts.retain(|a| a.id != id);
-
-        if accounts.len() == initial_len {
-            return Err(CoreError::AccountNotFound(id.to_string()));
-        }
-
-        self.save_to_store(accounts).await?;
-        tracing::info!("Deleted account {id} from store");
+    async fn delete(&self, _id: &str) -> CoreResult<()> {
+        // Read-only mode: silently succeed without deleting
+        tracing::debug!("Delete operation ignored (read-only mode)");
         Ok(())
     }
 
     async fn save_all(&self, accounts: &[Account]) -> CoreResult<()> {
-        self.save_to_store(accounts).await?;
-
+        // Read-only mode: only update in-memory cache
         let mut cache = self.cache.write().await;
         *cache = Some(accounts.to_vec());
+        tracing::debug!("Saved {} accounts to cache (read-only mode)", accounts.len());
         Ok(())
     }
 
@@ -216,11 +172,14 @@ impl AccountRepository for TauriStoreAccountRepository {
         status: AccountStatus,
         error: Option<String>,
     ) -> CoreResult<()> {
+        // Read-only mode: only update in-memory cache
         let mut cache = self.cache.write().await;
 
         // Ensure cache is loaded
         if cache.is_none() {
+            drop(cache); // Release write lock before loading
             let loaded = self.load_from_store().await?;
+            cache = self.cache.write().await;
             *cache = Some(loaded);
         }
 
@@ -237,6 +196,7 @@ impl AccountRepository for TauriStoreAccountRepository {
         account.error = error;
         account.updated_at = chrono::Utc::now();
 
-        self.save_to_store(accounts).await
+        tracing::debug!("Account {} status updated in cache (read-only mode)", id);
+        Ok(())
     }
 }
