@@ -7,7 +7,7 @@ members = [
     "dns-orchestrator-web/migration",
     "dns-orchestrator-tauri",
     "dns-orchestrator-tauri/tauri-plugin-apk-installer",
-    "src-mcp",
+    "dns-orchestrator-mcp",
 ]
 resolver = "2"
 
