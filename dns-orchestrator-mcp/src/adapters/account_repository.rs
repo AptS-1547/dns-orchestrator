@@ -29,6 +29,8 @@ const MAX_STORE_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB
 pub struct TauriStoreAccountRepository {
     /// Path to the Tauri store directory.
     store_path: PathBuf,
+    /// Maximum allowed store file size in bytes.
+    max_store_file_size: u64,
     /// In-memory cache.
     cache: Arc<RwLock<Option<Vec<Account>>>>,
 }
@@ -42,11 +44,14 @@ impl TauriStoreAccountRepository {
     /// - Linux: `~/.local/share/com.apts-1547.dns-orchestrator/`
     #[must_use]
     pub fn new() -> Self {
-        let store_path = Self::get_store_path();
-        tracing::debug!("Tauri store path: {:?}", store_path);
+        Self::new_with_limits(Self::get_store_path(), MAX_STORE_FILE_SIZE)
+    }
 
+    fn new_with_limits(store_path: PathBuf, max_store_file_size: u64) -> Self {
+        tracing::debug!("Tauri store path: {:?}", store_path);
         Self {
             store_path,
+            max_store_file_size,
             cache: Arc::new(RwLock::new(None)),
         }
     }
@@ -73,15 +78,15 @@ impl TauriStoreAccountRepository {
         }
 
         // Check file size before reading
-        let metadata = tokio::fs::metadata(&store_file)
-            .await
-            .map_err(|e| CoreError::StorageError(format!("Failed to read store file metadata: {e}")))?;
+        let metadata = tokio::fs::metadata(&store_file).await.map_err(|e| {
+            CoreError::StorageError(format!("Failed to read store file metadata: {e}"))
+        })?;
 
-        if metadata.len() > MAX_STORE_FILE_SIZE {
+        if metadata.len() > self.max_store_file_size {
             return Err(CoreError::StorageError(format!(
                 "Store file too large: {} bytes (max: {} bytes)",
                 metadata.len(),
-                MAX_STORE_FILE_SIZE
+                self.max_store_file_size
             )));
         }
 
@@ -151,9 +156,9 @@ impl AccountRepository for TauriStoreAccountRepository {
             *cache = Some(loaded);
         }
 
-        let accounts = cache.as_mut().ok_or_else(|| {
-            CoreError::StorageError("Failed to load accounts cache".to_string())
-        })?;
+        let accounts = cache
+            .as_mut()
+            .ok_or_else(|| CoreError::StorageError("Failed to load accounts cache".to_string()))?;
 
         // Find and update or insert (in-memory only)
         if let Some(pos) = accounts.iter().position(|a| a.id == account.id) {
@@ -176,7 +181,10 @@ impl AccountRepository for TauriStoreAccountRepository {
         // Read-only mode: only update in-memory cache
         let mut cache = self.cache.write().await;
         *cache = Some(accounts.to_vec());
-        tracing::debug!("Saved {} accounts to cache (read-only mode)", accounts.len());
+        tracing::debug!(
+            "Saved {} accounts to cache (read-only mode)",
+            accounts.len()
+        );
         Ok(())
     }
 
@@ -197,9 +205,9 @@ impl AccountRepository for TauriStoreAccountRepository {
             *cache = Some(loaded);
         }
 
-        let accounts = cache.as_mut().ok_or_else(|| {
-            CoreError::StorageError("Failed to load accounts cache".to_string())
-        })?;
+        let accounts = cache
+            .as_mut()
+            .ok_or_else(|| CoreError::StorageError("Failed to load accounts cache".to_string()))?;
 
         let account = accounts
             .iter_mut()
@@ -212,5 +220,203 @@ impl AccountRepository for TauriStoreAccountRepository {
 
         tracing::debug!("Account {} status updated in cache (read-only mode)", id);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::panic)]
+mod tests {
+    use super::*;
+
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use dns_orchestrator_core::types::ProviderType;
+
+    static TEST_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    fn test_account(account_id: &str) -> Account {
+        Account {
+            id: account_id.to_string(),
+            name: format!("Account {account_id}"),
+            provider: ProviderType::Cloudflare,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            status: Some(AccountStatus::Active),
+            error: None,
+        }
+    }
+
+    fn unique_test_dir() -> PathBuf {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let counter = TEST_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!("dns-orchestrator-mcp-account-repo-{timestamp}-{counter}"))
+    }
+
+    async fn write_store_json(store_dir: &Path, value: serde_json::Value) {
+        tokio::fs::create_dir_all(store_dir).await.unwrap();
+        let store_file = store_dir.join(STORE_FILE_NAME);
+        tokio::fs::write(store_file, serde_json::to_string(&value).unwrap())
+            .await
+            .unwrap();
+    }
+
+    async fn read_store_raw(store_dir: &Path) -> String {
+        let store_file = store_dir.join(STORE_FILE_NAME);
+        tokio::fs::read_to_string(store_file).await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn find_all_returns_empty_when_store_file_missing() {
+        let store_dir = unique_test_dir();
+        let repo =
+            TauriStoreAccountRepository::new_with_limits(store_dir.clone(), MAX_STORE_FILE_SIZE);
+
+        let accounts = repo.find_all().await.unwrap();
+        assert!(accounts.is_empty());
+
+        let _ = tokio::fs::remove_dir_all(store_dir).await;
+    }
+
+    #[tokio::test]
+    async fn find_all_returns_empty_when_accounts_key_missing() {
+        let store_dir = unique_test_dir();
+        write_store_json(&store_dir, serde_json::json!({ "other": [] })).await;
+
+        let repo =
+            TauriStoreAccountRepository::new_with_limits(store_dir.clone(), MAX_STORE_FILE_SIZE);
+        let accounts = repo.find_all().await.unwrap();
+        assert!(accounts.is_empty());
+
+        let _ = tokio::fs::remove_dir_all(store_dir).await;
+    }
+
+    #[tokio::test]
+    async fn find_all_returns_serialization_error_for_invalid_json() {
+        let store_dir = unique_test_dir();
+        tokio::fs::create_dir_all(&store_dir).await.unwrap();
+        tokio::fs::write(store_dir.join(STORE_FILE_NAME), "{invalid json")
+            .await
+            .unwrap();
+
+        let repo =
+            TauriStoreAccountRepository::new_with_limits(store_dir.clone(), MAX_STORE_FILE_SIZE);
+        let error = repo.find_all().await.unwrap_err();
+        assert!(matches!(error, CoreError::SerializationError(_)));
+
+        let _ = tokio::fs::remove_dir_all(store_dir).await;
+    }
+
+    #[tokio::test]
+    async fn find_all_rejects_oversized_store_file() {
+        let store_dir = unique_test_dir();
+        tokio::fs::create_dir_all(&store_dir).await.unwrap();
+        tokio::fs::write(store_dir.join(STORE_FILE_NAME), "0123456789ABCDEF")
+            .await
+            .unwrap();
+
+        let repo = TauriStoreAccountRepository::new_with_limits(store_dir.clone(), 8);
+        let error = repo.find_all().await.unwrap_err();
+        assert!(matches!(error, CoreError::StorageError(_)));
+
+        let _ = tokio::fs::remove_dir_all(store_dir).await;
+    }
+
+    #[tokio::test]
+    async fn find_all_uses_cache_after_first_read() {
+        let store_dir = unique_test_dir();
+
+        let first_account = test_account("acc-1");
+        write_store_json(
+            &store_dir,
+            serde_json::json!({ "accounts": [serde_json::to_value(&first_account).unwrap()] }),
+        )
+        .await;
+
+        let repo =
+            TauriStoreAccountRepository::new_with_limits(store_dir.clone(), MAX_STORE_FILE_SIZE);
+        let first = repo.find_all().await.unwrap();
+        assert_eq!(first.len(), 1);
+        assert_eq!(first[0].id, "acc-1");
+
+        let second_account = test_account("acc-2");
+        write_store_json(
+            &store_dir,
+            serde_json::json!({ "accounts": [serde_json::to_value(&second_account).unwrap()] }),
+        )
+        .await;
+
+        let second = repo.find_all().await.unwrap();
+        assert_eq!(second.len(), 1);
+        assert_eq!(second[0].id, "acc-1");
+
+        let _ = tokio::fs::remove_dir_all(store_dir).await;
+    }
+
+    #[tokio::test]
+    async fn save_updates_cache_without_persisting_to_disk() {
+        let store_dir = unique_test_dir();
+        write_store_json(&store_dir, serde_json::json!({ "accounts": [] })).await;
+
+        let repo =
+            TauriStoreAccountRepository::new_with_limits(store_dir.clone(), MAX_STORE_FILE_SIZE);
+        repo.save(&test_account("acc-1")).await.unwrap();
+
+        let accounts = repo.find_all().await.unwrap();
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(accounts[0].id, "acc-1");
+
+        let raw = read_store_raw(&store_dir).await;
+        let store_value: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(store_value[ACCOUNTS_KEY], serde_json::json!([]));
+
+        let _ = tokio::fs::remove_dir_all(store_dir).await;
+    }
+
+    #[tokio::test]
+    async fn save_all_and_update_status_only_change_cache() {
+        let store_dir = unique_test_dir();
+        write_store_json(&store_dir, serde_json::json!({ "accounts": [] })).await;
+
+        let repo =
+            TauriStoreAccountRepository::new_with_limits(store_dir.clone(), MAX_STORE_FILE_SIZE);
+        repo.save_all(&[test_account("acc-1")]).await.unwrap();
+
+        let updated_error = "provider auth failed".to_string();
+        repo.update_status("acc-1", AccountStatus::Error, Some(updated_error.clone()))
+            .await
+            .unwrap();
+
+        let accounts = repo.find_all().await.unwrap();
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(accounts[0].status, Some(AccountStatus::Error));
+        assert_eq!(accounts[0].error, Some(updated_error));
+
+        let raw = read_store_raw(&store_dir).await;
+        let store_value: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(store_value[ACCOUNTS_KEY], serde_json::json!([]));
+
+        let _ = tokio::fs::remove_dir_all(store_dir).await;
+    }
+
+    #[tokio::test]
+    async fn update_status_returns_not_found_for_missing_account() {
+        let store_dir = unique_test_dir();
+        write_store_json(&store_dir, serde_json::json!({ "accounts": [] })).await;
+
+        let repo =
+            TauriStoreAccountRepository::new_with_limits(store_dir.clone(), MAX_STORE_FILE_SIZE);
+        let error = repo
+            .update_status("missing", AccountStatus::Error, Some("oops".to_string()))
+            .await
+            .unwrap_err();
+
+        assert!(matches!(error, CoreError::AccountNotFound(_)));
+
+        let _ = tokio::fs::remove_dir_all(store_dir).await;
     }
 }
