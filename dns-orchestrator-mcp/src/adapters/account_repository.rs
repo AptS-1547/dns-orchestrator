@@ -15,6 +15,8 @@ use tokio::sync::RwLock;
 const STORE_FILE_NAME: &str = "accounts.json";
 const ACCOUNTS_KEY: &str = "accounts";
 const MAX_STORE_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB
+const PRIMARY_STORE_DIR_NAME: &str = "net.esaps.dns-orchestrator";
+const LEGACY_STORE_DIR_NAME: &str = "com.apts-1547.dns-orchestrator";
 
 /// Account repository that reads from Tauri store files.
 ///
@@ -39,12 +41,11 @@ impl TauriStoreAccountRepository {
     /// Create a new read-only account repository instance.
     ///
     /// Automatically detects the platform-specific Tauri store location:
-    /// - macOS: `~/Library/Application Support/com.apts-1547.dns-orchestrator/`
-    /// - Windows: `%APPDATA%/com.apts-1547.dns-orchestrator/`
-    /// - Linux: `~/.local/share/com.apts-1547.dns-orchestrator/`
+    /// - Preferred: app data dir + `net.esaps.dns-orchestrator/`
+    /// - Fallback: legacy `com.apts-1547.dns-orchestrator/`
     #[must_use]
     pub fn new() -> Self {
-        Self::new_with_limits(Self::get_store_path(), MAX_STORE_FILE_SIZE)
+        Self::new_with_limits(Self::resolve_store_path(), MAX_STORE_FILE_SIZE)
     }
 
     fn new_with_limits(store_path: PathBuf, max_store_file_size: u64) -> Self {
@@ -56,11 +57,43 @@ impl TauriStoreAccountRepository {
         }
     }
 
-    /// Get the platform-specific Tauri store directory.
-    fn get_store_path() -> PathBuf {
-        dirs::data_local_dir()
-            .expect("Failed to determine data directory - unsupported platform or environment")
-            .join("com.apts-1547.dns-orchestrator")
+    fn resolve_store_path() -> PathBuf {
+        let candidates = Self::candidate_store_paths();
+
+        for candidate in &candidates {
+            let store_file = candidate.join(STORE_FILE_NAME);
+            if store_file.exists() {
+                tracing::info!("Detected account store file: {:?}", store_file);
+                return candidate.clone();
+            }
+        }
+
+        if let Some(default_path) = candidates.into_iter().next() {
+            tracing::warn!(
+                "No account store file found in known locations, defaulting to {:?}",
+                default_path
+            );
+            return default_path;
+        }
+
+        panic!("Failed to determine data directory - unsupported platform or environment")
+    }
+
+    fn candidate_store_paths() -> Vec<PathBuf> {
+        let mut candidates = Vec::new();
+
+        if let Some(data_dir) = dirs::data_dir() {
+            candidates.push(data_dir.join(PRIMARY_STORE_DIR_NAME));
+            candidates.push(data_dir.join(LEGACY_STORE_DIR_NAME));
+        }
+
+        if let Some(data_local_dir) = dirs::data_local_dir() {
+            candidates.push(data_local_dir.join(PRIMARY_STORE_DIR_NAME));
+            candidates.push(data_local_dir.join(LEGACY_STORE_DIR_NAME));
+        }
+
+        candidates.dedup();
+        candidates
     }
 
     /// Get the full path to the accounts store file.

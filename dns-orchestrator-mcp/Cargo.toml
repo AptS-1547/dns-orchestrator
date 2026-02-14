@@ -32,7 +32,12 @@ schemars = "1.0"
 async-trait = "0.1"
 
 # Keyring for credential storage (shared with desktop)
-keyring = "3"
+keyring = { version = "3", features = [
+    "apple-native",        # macOS/iOS
+    "windows-native",      # Windows
+    "sync-secret-service",
+    "crypto-rust",         # Linux/FreeBSD/OpenBSD (DBus Secret Service)
+] }
 
 # Logging
 tracing = "0.1"
