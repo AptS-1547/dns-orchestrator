@@ -452,7 +452,7 @@ jobs:
           APK_DIR="dns-orchestrator-tauri/gen/android/app/build/outputs/apk/universal/release"
           APK_FILE="${APK_DIR}/DNS.Orchestrator_${VERSION}_android.apk"
           if [ -f "$APK_FILE" ]; then
-            pnpm tauri signer sign --key "$TAURI_SIGNING_PRIVATE_KEY" --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$APK_FILE"
+            pnpm tauri signer sign --private-key "$TAURI_SIGNING_PRIVATE_KEY" --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$APK_FILE"
             echo "APK signed, signature:"
             cat "${APK_FILE}.sig"
           else
