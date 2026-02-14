@@ -1,0 +1,51 @@
+[package]
+name = "dns-orchestrator-mcp"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "MCP Server for DNS Orchestrator - AI agent interface"
+authors = ["AptS-1547 <apts-1547@esaps.net>"]
+repository = "https://github.com/AptS-1547/dns-orchestrator"
+homepage = "https://github.com/AptS-1547/dns-orchestrator"
+keywords = ["dns", "mcp", "ai", "agent"]
+categories = ["web-programming"]
+rust-version = "1.89"
+
+[dependencies]
+# DNS Orchestrator crates
+dns-orchestrator-core = { path = "../dns-orchestrator-core", default-features = false, features = ["rustls"] }
+dns-orchestrator-provider = { path = "../dns-orchestrator-provider", default-features = false, features = ["all-providers", "rustls"] }
+dns-orchestrator-toolbox = { path = "../dns-orchestrator-toolbox" }
+
+# MCP SDK
+rmcp = { version = "0.15", features = ["server", "transport-io"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1.0"
+
+# Async trait
+async-trait = "0.1"
+
+# Keyring for credential storage (shared with desktop)
+keyring = "3"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+anyhow = "1"
+
+# Platform directories
+dirs = "6"
+
+# Time
+chrono.workspace = true
+
+[lints]
+workspace = true
