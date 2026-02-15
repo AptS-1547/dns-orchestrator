@@ -19,7 +19,7 @@ rustls = ["dns-orchestrator-provider/rustls"]
 
 [dependencies]
 # DNS Provider 抽象库
-dns-orchestrator-provider = { version = "0.1", features = ["all-providers"] }
+dns-orchestrator-provider = { workspace = true, features = ["all-providers"] }
 
 # 核心依赖
 async-trait.workspace = true

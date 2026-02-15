@@ -16,9 +16,9 @@ rust-version = "1.89"
 
 [dependencies]
 # DNS Orchestrator crates
-dns-orchestrator-core = { version = "0.1", features = ["rustls"] }
-dns-orchestrator-toolbox = { version = "0.1", features = ["schemars"] }
-dns-orchestrator-app = { version = "0.1", features = [
+dns-orchestrator-core = { workspace = true, features = ["rustls"] }
+dns-orchestrator-toolbox = { workspace = true, features = ["schemars"] }
+dns-orchestrator-app = { workspace = true, features = [
     "keyring-store",
     "sqlite-store",
 ] }
