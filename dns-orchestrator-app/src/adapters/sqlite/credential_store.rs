@@ -4,7 +4,7 @@
 //! Uses `dns_orchestrator_core::crypto::{encrypt, decrypt}`.
 
 use async_trait::async_trait;
-use sea_orm::{ActiveValue::Set, EntityTrait, ModelTrait};
+use sea_orm::{ActiveValue::Set, EntityTrait, ModelTrait, TransactionTrait};
 use std::collections::HashMap;
 
 use dns_orchestrator_core::crypto;
@@ -72,8 +72,14 @@ impl CredentialStore for SqliteStore {
     }
 
     async fn save_all(&self, credentials: &CredentialsMap) -> CoreResult<()> {
+        let txn = self
+            .db
+            .begin()
+            .await
+            .map_err(|e| CoreError::StorageError(format!("Failed to begin transaction: {e}")))?;
+
         credential::Entity::delete_many()
-            .exec(&self.db)
+            .exec(&txn)
             .await
             .map_err(|e| CoreError::StorageError(format!("Failed to clear credentials: {e}")))?;
 
@@ -87,10 +93,14 @@ impl CredentialStore for SqliteStore {
             };
 
             credential::Entity::insert(active_model)
-                .exec(&self.db)
+                .exec(&txn)
                 .await
                 .map_err(|e| CoreError::StorageError(format!("Failed to save credential: {e}")))?;
         }
+
+        txn.commit()
+            .await
+            .map_err(|e| CoreError::StorageError(format!("Failed to commit transaction: {e}")))?;
 
         log::info!("Saved {} credentials to SQLite", credentials.len());
         Ok(())

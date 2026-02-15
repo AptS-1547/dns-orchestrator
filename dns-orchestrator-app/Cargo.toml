@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-app"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 license = "MIT"
 description = "Platform-agnostic application bootstrap for DNS Orchestrator"

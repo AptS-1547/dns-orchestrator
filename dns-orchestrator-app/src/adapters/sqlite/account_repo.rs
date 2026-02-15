@@ -1,7 +1,7 @@
 //! `AccountRepository` implementation for `SqliteStore`.
 
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, ModelTrait};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait};
 
 use dns_orchestrator_core::error::{CoreError, CoreResult};
 use dns_orchestrator_core::traits::AccountRepository;
@@ -109,19 +109,15 @@ impl AccountRepository for SqliteStore {
     }
 
     async fn delete(&self, id: &str) -> CoreResult<()> {
-        let model = account::Entity::find_by_id(id)
-            .one(&self.db)
+        let res = account::Entity::delete_by_id(id)
+            .exec(&self.db)
             .await
-            .map_err(|e| CoreError::StorageError(format!("Failed to query account: {e}")))?;
+            .map_err(|e| CoreError::StorageError(format!("Failed to delete account: {e}")))?;
 
-        match model {
-            Some(m) => {
-                m.delete(&self.db).await.map_err(|e| {
-                    CoreError::StorageError(format!("Failed to delete account: {e}"))
-                })?;
-                Ok(())
-            }
-            None => Err(CoreError::AccountNotFound(id.to_string())),
+        if res.rows_affected == 0 {
+            Err(CoreError::AccountNotFound(id.to_string()))
+        } else {
+            Ok(())
         }
     }
 
