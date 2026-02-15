@@ -13,7 +13,7 @@ mod migration;
 use std::path::Path;
 
 use dns_orchestrator_core::error::{CoreError, CoreResult};
-use sea_orm::{Database, DatabaseConnection};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 
 use migration::Migrator;
@@ -51,7 +51,10 @@ impl SqliteStore {
         }
 
         let db_url = format!("sqlite://{}?mode=rwc", db_path.display());
-        let db = Database::connect(&db_url)
+        let mut opts = ConnectOptions::new(db_url);
+        opts.sqlx_logging(false);
+
+        let db = Database::connect(opts)
             .await
             .map_err(|e| CoreError::StorageError(format!("Failed to connect to SQLite: {e}")))?;
 
