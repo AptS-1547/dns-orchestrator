@@ -61,7 +61,7 @@ impl CredentialStore for SqliteStore {
                     map.insert(row.account_id.clone(), creds);
                 }
                 Err(e) => {
-                    errors.push(format!("account {}: {e}", row.account_id));
+                    errors.push(format!("credential decryption failed: {e}"));
                 }
             }
         }

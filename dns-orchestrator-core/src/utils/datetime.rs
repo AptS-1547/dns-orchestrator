@@ -102,8 +102,9 @@ pub mod option {
 
 /// Parses a Unix timestamp with second/millisecond auto-detection.
 fn parse_unix_timestamp(ts: i64) -> Option<DateTime<Utc>> {
-    // Values larger than 10^11 are interpreted as milliseconds.
-    if ts > 100_000_000_000 {
+    // Use absolute value to correctly handle negative timestamps (pre-epoch dates).
+    // Values whose magnitude exceeds 10^11 are interpreted as milliseconds.
+    if ts.unsigned_abs() > 100_000_000_000 {
         DateTime::from_timestamp_millis(ts)
     } else {
         // Otherwise treat the value as seconds.

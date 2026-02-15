@@ -101,7 +101,7 @@ The server auto-detects the database from the desktop app's data directory:
 | Linux | `~/.local/share/net.esaps.dns-orchestrator/data.db` |
 | Windows | `%APPDATA%\net.esaps.dns-orchestrator\data.db` |
 
-If the database doesn't exist, the server creates it automatically. Network diagnostic tools work without any database.
+If the database doesn't exist, the server creates and initializes it with the schema automatically. Network diagnostic tools work without any database.
 
 ## Logging
 
