@@ -33,19 +33,25 @@ use crate::schemas::{
     ListAccountsParams, ListDomainsParams, ListRecordsParams, WhoisLookupParams,
 };
 
-// Timeout constants for external service calls
+/// Timeout values in seconds for network-heavy toolbox operations.
 const DNS_LOOKUP_TIMEOUT_SECS: u64 = 30;
 const WHOIS_LOOKUP_TIMEOUT_SECS: u64 = 30;
 const IP_LOOKUP_TIMEOUT_SECS: u64 = 15;
 const DNS_PROPAGATION_TIMEOUT_SECS: u64 = 60;
 const DNSSEC_CHECK_TIMEOUT_SECS: u64 = 30;
 
+/// Per-tool timeout configuration used by the MCP handler.
 #[derive(Clone, Copy)]
 struct ToolTimeouts {
+    /// Timeout for `dns_lookup`.
     dns_lookup: Duration,
+    /// Timeout for `whois_lookup`.
     whois_lookup: Duration,
+    /// Timeout for `ip_lookup`.
     ip_lookup: Duration,
+    /// Timeout for `dns_propagation_check`.
     dns_propagation_check: Duration,
+    /// Timeout for `dnssec_check`.
     dnssec_check: Duration,
 }
 
@@ -61,8 +67,10 @@ impl Default for ToolTimeouts {
     }
 }
 
+/// Abstraction over toolbox calls so tests can inject deterministic behavior.
 #[async_trait]
 trait ToolboxGateway: Send + Sync {
+    /// Performs DNS lookup via the toolbox service.
     async fn dns_lookup(
         &self,
         domain: &str,
@@ -70,16 +78,20 @@ trait ToolboxGateway: Send + Sync {
         nameserver: Option<&str>,
     ) -> ToolboxResult<DnsLookupResult>;
 
+    /// Performs WHOIS lookup via the toolbox service.
     async fn whois_lookup(&self, domain: &str) -> ToolboxResult<WhoisResult>;
 
+    /// Performs IP geolocation lookup via the toolbox service.
     async fn ip_lookup(&self, query: &str) -> ToolboxResult<IpLookupResult>;
 
+    /// Performs DNS propagation checks via the toolbox service.
     async fn dns_propagation_check(
         &self,
         domain: &str,
         record_type: DnsQueryType,
     ) -> ToolboxResult<DnsPropagationResult>;
 
+    /// Performs DNSSEC validation via the toolbox service.
     async fn dnssec_check(
         &self,
         domain: &str,
@@ -87,6 +99,7 @@ trait ToolboxGateway: Send + Sync {
     ) -> ToolboxResult<DnssecResult>;
 }
 
+/// Production toolbox gateway that delegates to [`ToolboxService`].
 #[derive(Default)]
 struct DefaultToolboxGateway;
 
@@ -153,6 +166,9 @@ fn map_core_error(error: CoreError, context: &str) -> Result<CallToolResult, Mcp
     }
 }
 
+/// Converts toolbox errors into MCP errors.
+///
+/// Toolbox errors are already user-safe, so this keeps the message intact.
 fn map_toolbox_error(context: &str, error: &ToolboxError) -> McpError {
     log::warn!("{context} error: {error}");
     McpError::internal_error(error.to_string(), None)
@@ -221,6 +237,7 @@ impl DnsOrchestratorMcp {
         toolbox: Arc<dyn ToolboxGateway>,
         timeouts: ToolTimeouts,
     ) -> Self {
+        // Build dependent services using the same shared service context as the app.
         let domain_service = Arc::new(DomainService::new(Arc::clone(ctx), domain_metadata_service));
         let dns_service = Arc::new(DnsService::new(Arc::clone(ctx)));
 

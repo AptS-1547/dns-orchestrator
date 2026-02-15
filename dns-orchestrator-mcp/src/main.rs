@@ -17,8 +17,11 @@ use rmcp::ServiceExt;
 use server::DnsOrchestratorMcp;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
+/// Current desktop application data directory identifier.
 const PRIMARY_APP_DIR_NAME: &str = "net.esaps.dns-orchestrator";
+/// Legacy desktop application data directory identifier kept for migration.
 const LEGACY_APP_DIR_NAME: &str = "com.apts-1547.dns-orchestrator";
+/// Shared SQLite filename used by both desktop and MCP server processes.
 const DB_FILE_NAME: &str = "data.db";
 
 /// Detect the Tauri desktop app's data directory.
@@ -41,7 +44,7 @@ fn resolve_app_data_dir() -> Option<PathBuf> {
     let mut seen = std::collections::HashSet::new();
     candidates.retain(|c| seen.insert(c.clone()));
 
-    // Prefer a directory that already has data.db
+    // Prefer an existing directory that already contains `data.db`.
     for candidate in &candidates {
         if candidate.join(DB_FILE_NAME).exists() {
             tracing::info!("Detected app data directory: {:?}", candidate);
@@ -49,7 +52,7 @@ fn resolve_app_data_dir() -> Option<PathBuf> {
         }
     }
 
-    // Fall back to primary path (SqliteStore will create the DB)
+    // Fall back to the primary path and let `SqliteStore` create the database.
     if let Some(default) = candidates.first() {
         tracing::warn!("No existing database found, defaulting to {:?}", default);
         return Some(default.clone());
@@ -60,7 +63,7 @@ fn resolve_app_data_dir() -> Option<PathBuf> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    // Initialize tracing to stderr (MCP uses stdout for protocol)
+    // Initialize structured logs on stderr because MCP protocol frames use stdout.
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
@@ -73,14 +76,14 @@ async fn main() -> ExitCode {
 
     tracing::info!("Starting DNS Orchestrator MCP Server");
 
-    // Resolve database path (shared with desktop app)
+    // Resolve the database directory shared with the desktop app.
     let Some(data_dir) = resolve_app_data_dir() else {
         tracing::error!("Failed to determine app data directory");
         return ExitCode::FAILURE;
     };
     let db_path = data_dir.join(DB_FILE_NAME);
 
-    // Create adapters (same pattern as Tauri desktop)
+    // Create storage adapters using the same composition as the desktop app.
     let sqlite_store = match SqliteStore::new(&db_path, None).await {
         Ok(store) => Arc::new(store),
         Err(e) => {
@@ -91,7 +94,7 @@ async fn main() -> ExitCode {
 
     let credential_store = Arc::new(KeyringCredentialStore::new());
 
-    // Build AppState via AppStateBuilder
+    // Build the application state graph.
     let app_state = match AppStateBuilder::new()
         .credential_store(credential_store)
         .account_repository(sqlite_store.clone())
@@ -105,13 +108,13 @@ async fn main() -> ExitCode {
         }
     };
 
-    // Run startup (migration + account restore)
+    // Run startup routines (migrations and account restore).
     if let Err(e) = app_state.run_startup(&NoopStartupHooks).await {
         tracing::error!("Startup failed: {}", e);
-        // Continue anyway - toolbox tools still work
+        // Keep serving; toolbox-only tools can still run without account data.
     }
 
-    // Create MCP server from AppState
+    // Build the MCP server from shared application services.
     let mcp_server = DnsOrchestratorMcp::new(
         &app_state.ctx,
         Arc::clone(&app_state.account_service),
@@ -120,7 +123,7 @@ async fn main() -> ExitCode {
 
     tracing::info!("MCP server initialized");
 
-    // Start serving via stdio
+    // Serve MCP over stdio transport.
     let service = match mcp_server.serve(rmcp::transport::stdio()).await {
         Ok(s) => s,
         Err(e) => {

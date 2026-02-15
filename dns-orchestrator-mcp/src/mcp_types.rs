@@ -12,6 +12,7 @@ use serde::Serialize;
 
 use dns_orchestrator_core::types::{Account, DnsRecord, PaginatedResponse, RecordData};
 
+/// Returns `true` when a vector is empty so serde can omit the field.
 fn is_empty_vec<T>(v: &[T]) -> bool {
     v.is_empty()
 }
@@ -20,13 +21,19 @@ fn is_empty_vec<T>(v: &[T]) -> bool {
 // DNS Lookup
 // ---------------------------------------------------------------------------
 
+/// Compact DNS lookup record used by MCP responses.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpDnsLookupRecord {
+    /// DNS record type (for example: `A`, `AAAA`, `CNAME`).
     pub record_type: String,
+    /// Fully-qualified record name returned by the resolver.
     pub name: String,
+    /// Record value string in provider-neutral format.
     pub value: String,
+    /// Time to live in seconds.
     pub ttl: u32,
+    /// Optional priority value for record types such as `MX`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub priority: Option<u16>,
 }
@@ -43,10 +50,13 @@ impl From<DnsLookupRecord> for McpDnsLookupRecord {
     }
 }
 
+/// DNS lookup result returned to MCP clients.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpDnsLookupResult {
+    /// Resolver address actually used for the query.
     pub nameserver: String,
+    /// Flattened DNS records from the lookup response.
     pub records: Vec<McpDnsLookupRecord>,
 }
 
@@ -63,19 +73,27 @@ impl From<DnsLookupResult> for McpDnsLookupResult {
 // WHOIS
 // ---------------------------------------------------------------------------
 
+/// Compact WHOIS result without raw text payload.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpWhoisResult {
+    /// Queried domain name.
     pub domain: String,
+    /// Registrar name when available.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registrar: Option<String>,
+    /// Domain creation timestamp from WHOIS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub creation_date: Option<String>,
+    /// Domain expiration timestamp from WHOIS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expiration_date: Option<String>,
+    /// Last updated timestamp from WHOIS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_date: Option<String>,
+    /// Authoritative name servers listed in WHOIS.
     pub name_servers: Vec<String>,
+    /// WHOIS status values.
     pub status: Vec<String>,
     // `raw` field intentionally omitted — too verbose for LLM context.
 }
@@ -98,28 +116,40 @@ impl From<WhoisResult> for McpWhoisResult {
 // IP Lookup
 // ---------------------------------------------------------------------------
 
+/// Compact IP geolocation entry.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpIpGeoInfo {
+    /// Resolved IP address.
     pub ip: String,
+    /// IP version string (for example: `IPv4` or `IPv6`).
     pub ip_version: String,
+    /// Country name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
+    /// ISO country code.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country_code: Option<String>,
+    /// Region or state.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub region: Option<String>,
+    /// City name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub city: Option<String>,
     // latitude/longitude intentionally omitted — not useful for LLM.
+    /// Timezone identifier.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timezone: Option<String>,
+    /// Internet service provider.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub isp: Option<String>,
+    /// Organization associated with the IP block.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub org: Option<String>,
+    /// Autonomous system number.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub asn: Option<String>,
+    /// Autonomous system organization name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub as_name: Option<String>,
 }
@@ -142,11 +172,15 @@ impl From<dns_orchestrator_toolbox::IpGeoInfo> for McpIpGeoInfo {
     }
 }
 
+/// IP lookup result containing one or more geolocation entries.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpIpLookupResult {
+    /// Original user query (IP or domain).
     pub query: String,
+    /// Indicates whether the query input was a domain name.
     pub is_domain: bool,
+    /// Geolocation results after DNS/IP resolution.
     pub results: Vec<McpIpGeoInfo>,
 }
 
@@ -168,10 +202,14 @@ impl From<IpLookupResult> for McpIpLookupResult {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpPropagationServerEntry {
+    /// Compact server identity string in the form `name (ip, cc)`.
     pub server: String,
+    /// Result status reported by this server.
     pub status: PropagationStatus,
+    /// Record values observed on this server.
     #[serde(skip_serializing_if = "is_empty_vec")]
     pub values: Vec<String>,
+    /// Error detail when this server query failed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
@@ -190,10 +228,15 @@ pub struct McpPropagationServerEntry {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpDnsPropagationResult {
+    /// Queried domain name.
     pub domain: String,
+    /// DNS query type that was checked.
     pub record_type: DnsQueryType,
+    /// Cross-server consistency percentage in range `[0, 100]`.
     pub consistency_percentage: f32,
+    /// Total execution time across all checks.
     pub total_time_ms: u64,
+    /// Unique value set seen across all queried servers.
     pub unique_values: Vec<String>,
     /// Shared records — only when 100 % consistent.
     #[serde(skip_serializing_if = "is_empty_vec")]
@@ -206,6 +249,7 @@ pub struct McpDnsPropagationResult {
     pub server_results: Vec<McpPropagationServerEntry>,
 }
 
+/// Formats propagation server metadata into a compact display string.
 fn format_server(name: &str, ip: &str, country_code: &str) -> String {
     format!("{name} ({ip}, {country_code})")
 }
@@ -274,11 +318,15 @@ impl From<DnsPropagationResult> for McpDnsPropagationResult {
 // DNSSEC
 // ---------------------------------------------------------------------------
 
+/// Compact DNSKEY record used in DNSSEC responses.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpDnskeyRecord {
+    /// DNSKEY key tag.
     pub key_tag: u16,
+    /// Human-readable algorithm name.
     pub algorithm_name: String,
+    /// Key role (for example: `KSK` or `ZSK`).
     pub key_type: String,
     // flags, protocol, algorithm, publicKey intentionally omitted.
 }
@@ -293,11 +341,15 @@ impl From<dns_orchestrator_toolbox::DnskeyRecord> for McpDnskeyRecord {
     }
 }
 
+/// Compact DS record used in DNSSEC responses.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpDsRecord {
+    /// DS key tag.
     pub key_tag: u16,
+    /// Human-readable algorithm name.
     pub algorithm_name: String,
+    /// Human-readable digest type name.
     pub digest_type_name: String,
     // algorithm, digestType, digest intentionally omitted.
 }
@@ -312,12 +364,17 @@ impl From<dns_orchestrator_toolbox::DsRecord> for McpDsRecord {
     }
 }
 
+/// Compact RRSIG record used in DNSSEC responses.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpRrsigRecord {
+    /// Record type covered by this signature.
     pub type_covered: String,
+    /// Human-readable algorithm name.
     pub algorithm_name: String,
+    /// Key tag used to generate the signature.
     pub key_tag: u16,
+    /// Signer domain name.
     pub signer_name: String,
     // labels, originalTtl, signatureExpiration/Inception, signature, algorithm omitted.
 }
@@ -333,20 +390,30 @@ impl From<dns_orchestrator_toolbox::RrsigRecord> for McpRrsigRecord {
     }
 }
 
+/// Compact DNSSEC validation result for MCP clients.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpDnssecResult {
+    /// Queried domain name.
     pub domain: String,
+    /// Whether DNSSEC appears enabled for the domain.
     pub dnssec_enabled: bool,
+    /// Simplified DNSKEY records.
     #[serde(skip_serializing_if = "is_empty_vec")]
     pub dnskey_records: Vec<McpDnskeyRecord>,
+    /// Simplified DS records.
     #[serde(skip_serializing_if = "is_empty_vec")]
     pub ds_records: Vec<McpDsRecord>,
+    /// Simplified RRSIG records.
     #[serde(skip_serializing_if = "is_empty_vec")]
     pub rrsig_records: Vec<McpRrsigRecord>,
+    /// Validation status summary.
     pub validation_status: dns_orchestrator_toolbox::DnssecValidationStatus,
+    /// Nameserver used for validation.
     pub nameserver: String,
+    /// Total response time in milliseconds.
     pub response_time_ms: u64,
+    /// Optional error message from DNSSEC validation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
@@ -371,14 +438,20 @@ impl From<DnssecResult> for McpDnssecResult {
 // Service tools: Accounts / Domains / Records
 // ---------------------------------------------------------------------------
 
+/// Compact account model exposed by `list_accounts`.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpAccount {
+    /// Account identifier.
     pub id: String,
+    /// User-defined account display name.
     pub name: String,
+    /// DNS provider type.
     pub provider: dns_orchestrator_core::types::ProviderType,
+    /// Current account status when available.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<dns_orchestrator_core::types::AccountStatus>,
+    /// Last known error message for this account.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     // createdAt / updatedAt intentionally omitted.
@@ -396,13 +469,19 @@ impl From<Account> for McpAccount {
     }
 }
 
+/// Compact domain model exposed by `list_domains`.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpAppDomain {
+    /// Domain identifier.
     pub id: String,
+    /// Domain name.
     pub name: String,
+    /// Provider where this domain is managed.
     pub provider: dns_orchestrator_core::types::ProviderType,
+    /// Domain synchronization status in the application.
     pub status: dns_orchestrator_core::types::DomainStatus,
+    /// Optional number of DNS records known for this domain.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub record_count: Option<u32>,
     // accountId intentionally omitted — redundant with the query parameter.
@@ -422,6 +501,7 @@ impl From<dns_orchestrator_core::types::AppDomain> for McpAppDomain {
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref, clippy::ref_option)]
+/// Returns whether `proxied` should be omitted from serialized output.
 fn should_skip_proxied(v: &Option<bool>) -> bool {
     !matches!(v, Some(true))
 }
@@ -430,12 +510,18 @@ fn should_skip_proxied(v: &Option<bool>) -> bool {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpDnsRecord {
+    /// DNS record identifier.
     pub id: String,
+    /// Record name.
     pub name: String,
+    /// Time to live in seconds.
     pub ttl: u32,
+    /// Record type string (`A`, `AAAA`, `CNAME`, ...).
     #[serde(rename = "type")]
     pub record_type: String,
+    /// Flattened record value.
     pub value: String,
+    /// Proxy flag, only included when explicitly `true`.
     #[serde(skip_serializing_if = "should_skip_proxied")]
     pub proxied: Option<bool>,
     // domainId intentionally omitted — redundant with the query parameter.
@@ -481,10 +567,15 @@ impl From<DnsRecord> for McpDnsRecord {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpPaginatedResponse<T: Serialize> {
+    /// Page items converted to compact MCP types.
     pub items: Vec<T>,
+    /// Current page number (1-indexed).
     pub page: u32,
+    /// Requested page size.
     pub page_size: u32,
+    /// Total matching item count.
     pub total_count: u32,
+    /// Whether there are more pages after this one.
     pub has_more: bool,
 }
 
