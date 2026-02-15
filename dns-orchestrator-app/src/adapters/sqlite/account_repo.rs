@@ -145,8 +145,12 @@ impl AccountRepository for SqliteStore {
         error: Option<String>,
     ) -> CoreResult<()> {
         let status_str = serde_json::to_value(&status)
-            .ok()
-            .and_then(|v| v.as_str().map(String::from));
+            .map_err(|e| CoreError::SerializationError(e.to_string()))?
+            .as_str()
+            .map(String::from)
+            .ok_or_else(|| {
+                CoreError::SerializationError("Status did not serialize to a string".into())
+            })?;
 
         let model = account::Entity::find_by_id(id)
             .one(&self.db)
@@ -157,7 +161,7 @@ impl AccountRepository for SqliteStore {
             Some(_) => {
                 let active = account::ActiveModel {
                     id: Set(id.to_string()),
-                    status: Set(status_str),
+                    status: Set(Some(status_str)),
                     error: Set(error),
                     updated_at: Set(chrono::Utc::now().to_rfc3339()),
                     ..Default::default()

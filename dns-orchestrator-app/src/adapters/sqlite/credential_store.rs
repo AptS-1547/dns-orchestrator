@@ -54,18 +54,23 @@ impl CredentialStore for SqliteStore {
             .map_err(|e| CoreError::StorageError(format!("Failed to query credentials: {e}")))?;
 
         let mut map = HashMap::new();
+        let mut errors = Vec::new();
         for row in &rows {
             match self.decrypt_credentials(row) {
                 Ok(creds) => {
                     map.insert(row.account_id.clone(), creds);
                 }
                 Err(e) => {
-                    log::warn!(
-                        "Failed to decrypt credentials for account {}: {e}",
-                        row.account_id
-                    );
+                    errors.push(format!("account {}: {e}", row.account_id));
                 }
             }
+        }
+
+        if !errors.is_empty() {
+            return Err(CoreError::CredentialError(format!(
+                "Failed to decrypt credentials: {}",
+                errors.join("; ")
+            )));
         }
 
         Ok(map)
