@@ -14,6 +14,7 @@ use rmcp::{
 use std::sync::Arc;
 use tokio::time::{Duration, timeout};
 
+use dns_orchestrator_core::error::CoreError;
 use dns_orchestrator_core::services::{
     AccountService, DnsService, DomainMetadataService, DomainService, ServiceContext,
 };
@@ -136,6 +137,22 @@ fn sanitize_internal_error(error: impl std::fmt::Display, context: &str) -> McpE
     )
 }
 
+/// Map a [`CoreError`] to either a user-facing tool error or a sanitized MCP error.
+///
+/// Expected errors (bad input, not found) are returned as `CallToolResult` with
+/// `is_error = true` so the LLM can read the message and self-correct.
+/// Unexpected errors (storage, network) are sanitized to prevent information leakage.
+fn map_core_error(error: CoreError, context: &str) -> Result<CallToolResult, McpError> {
+    if error.is_expected() {
+        log::warn!("{context} expected error: {error}");
+        Ok(CallToolResult::error(vec![Content::text(
+            error.to_string(),
+        )]))
+    } else {
+        Err(sanitize_internal_error(error, context))
+    }
+}
+
 fn map_toolbox_error(context: &str, error: &ToolboxError) -> McpError {
     log::warn!("{context} error: {error}");
     McpError::internal_error(error.to_string(), None)
@@ -228,11 +245,10 @@ impl DnsOrchestratorMcp {
         &self,
         _params: Parameters<ListAccountsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let accounts = self
-            .account_service
-            .list_accounts()
-            .await
-            .map_err(|e| sanitize_internal_error(e, "List accounts"))?;
+        let accounts = match self.account_service.list_accounts().await {
+            Ok(v) => v,
+            Err(e) => return map_core_error(e, "List accounts"),
+        };
 
         let compact: Vec<McpAccount> = accounts.into_iter().map(Into::into).collect();
         let json = serde_json::to_string(&compact)
@@ -250,11 +266,14 @@ impl DnsOrchestratorMcp {
         // Limit page_size to prevent resource exhaustion
         let page_size = params.page_size.map(|s| s.min(100));
 
-        let result = self
+        let result = match self
             .domain_service
             .list_domains(&params.account_id, params.page, page_size)
             .await
-            .map_err(|e| sanitize_internal_error(e, "List domains"))?;
+        {
+            Ok(v) => v,
+            Err(e) => return map_core_error(e, "List domains"),
+        };
 
         let compact: McpPaginatedResponse<McpAppDomain> = result.into();
         let json = serde_json::to_string(&compact)
@@ -288,7 +307,7 @@ impl DnsOrchestratorMcp {
         // Limit page_size to prevent resource exhaustion
         let page_size = params.page_size.map(|s| s.min(100));
 
-        let result = self
+        let result = match self
             .dns_service
             .list_records(
                 &params.account_id,
@@ -299,7 +318,10 @@ impl DnsOrchestratorMcp {
                 record_type,
             )
             .await
-            .map_err(|e| sanitize_internal_error(e, "List records"))?;
+        {
+            Ok(v) => v,
+            Err(e) => return map_core_error(e, "List records"),
+        };
 
         let compact: McpPaginatedResponse<McpDnsRecord> = result.into();
         let json = serde_json::to_string(&compact)
