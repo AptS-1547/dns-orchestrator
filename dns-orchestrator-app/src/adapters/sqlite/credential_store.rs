@@ -72,11 +72,10 @@ impl CredentialStore for SqliteStore {
     }
 
     async fn save_all(&self, credentials: &CredentialsMap) -> CoreResult<()> {
-        let txn = self
-            .db
-            .begin()
-            .await
-            .map_err(|e| CoreError::StorageError(format!("Failed to begin transaction: {e}")))?;
+        let txn =
+            self.db.begin().await.map_err(|e| {
+                CoreError::StorageError(format!("Failed to begin transaction: {e}"))
+            })?;
 
         credential::Entity::delete_many()
             .exec(&txn)

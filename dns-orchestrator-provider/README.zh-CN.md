@@ -138,7 +138,7 @@ for failure in &result.failures {
 
 ## 架构
 
-```
+```text
 Consumer (core/tauri/web)
   -> create_provider(credentials)
   -> Arc<dyn DnsProvider>

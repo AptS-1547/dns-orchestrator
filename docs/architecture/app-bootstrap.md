@@ -95,7 +95,7 @@ pub trait StartupHooks: Send + Sync {
 
 ## 启动流程
 
-```
+```text
 AppStateBuilder::build()
         │
         ▼
@@ -176,7 +176,7 @@ state.run_startup(&NoopStartupHooks).await?;
 
 ## Crate 依赖关系
 
-```
+```text
 dns-orchestrator-provider    (零内部依赖)
 │  DnsProvider trait, ProviderCredentials, 工厂函数
 │

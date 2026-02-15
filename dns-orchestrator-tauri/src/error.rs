@@ -51,7 +51,7 @@ mod tests {
     fn test_from_core_error() {
         let core_err = CoreError::AccountNotFound("test-id".into());
         let app_err = AppError::from(core_err);
-        matches!(app_err.0, CoreError::AccountNotFound(_));
+        assert!(matches!(app_err.0, CoreError::AccountNotFound(_)));
     }
 
     #[test]

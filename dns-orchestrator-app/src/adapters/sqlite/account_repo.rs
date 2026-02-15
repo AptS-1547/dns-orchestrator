@@ -46,14 +46,24 @@ fn account_to_active_model(account: &Account) -> CoreResult<account::ActiveModel
     let provider_str = serde_json::to_value(&account.provider)
         .map_err(|e| CoreError::SerializationError(e.to_string()))?
         .as_str()
-        .unwrap_or("unknown")
-        .to_string();
+        .map(String::from)
+        .ok_or_else(|| {
+            CoreError::SerializationError("Provider did not serialize to a string".into())
+        })?;
 
     let status_str = account
         .status
         .as_ref()
-        .and_then(|s| serde_json::to_value(s).ok())
-        .and_then(|v| v.as_str().map(String::from));
+        .map(|s| {
+            serde_json::to_value(s)
+                .map_err(|e| CoreError::SerializationError(e.to_string()))
+                .and_then(|v| {
+                    v.as_str().map(String::from).ok_or_else(|| {
+                        CoreError::SerializationError("Status did not serialize to a string".into())
+                    })
+                })
+        })
+        .transpose()?;
 
     Ok(account::ActiveModel {
         id: Set(account.id.clone()),

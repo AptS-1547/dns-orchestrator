@@ -2,7 +2,7 @@
 
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for [DNS Orchestrator](https://github.com/AptS-1547/dns-orchestrator), exposing DNS management and network diagnostic tools to AI agents.
 
-Shares account data with the DNS Orchestrator desktop app via SQLite database and system keyring, operating in **read-only mode**.
+Shares account data with the DNS Orchestrator desktop app via SQLite database and system keyring. The MCP server itself performs **read-only** operations on existing data; however, if the database file does not exist, it will be created and initialized with the schema on first start.
 
 ## Install
 

@@ -50,7 +50,9 @@ impl SqliteStore {
                 .map_err(|e| CoreError::StorageError(format!("Failed to create directory: {e}")))?;
         }
 
-        let db_url = format!("sqlite://{}?mode=rwc", db_path.display());
+        // Normalize path separators for the SQLite URL (Windows uses backslashes).
+        let db_path_str = db_path.to_string_lossy().replace('\\', "/");
+        let db_url = format!("sqlite://{db_path_str}?mode=rwc");
         let mut opts = ConnectOptions::new(db_url);
         opts.sqlx_logging(false);
 

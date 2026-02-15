@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 use sea_orm::{
-    ActiveValue::Set, Condition,
-    ColumnTrait, EntityTrait, FromQueryResult, ModelTrait, QueryFilter, QueryTrait,
+    ActiveValue::Set,
+    ColumnTrait, Condition, EntityTrait, FromQueryResult, ModelTrait, QueryFilter, QueryTrait,
     sea_query::{Alias, Expr, ExprTrait, Func, IntoIden, Query, TableRef},
 };
 
