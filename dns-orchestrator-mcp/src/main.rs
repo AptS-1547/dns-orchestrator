@@ -63,6 +63,32 @@ fn resolve_app_data_dir() -> Option<PathBuf> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    // Handle --version / -v flag
+    if std::env::args().any(|a| a == "--version" || a == "-v") {
+        println!("dns-orchestrator-mcp {}", env!("CARGO_PKG_VERSION"));
+        return ExitCode::SUCCESS;
+    }
+
+    // Handle --help / -h flag
+    if std::env::args().any(|a| a == "--help" || a == "-h") {
+        println!("dns-orchestrator-mcp {}", env!("CARGO_PKG_VERSION"));
+        println!();
+        println!("MCP (Model Context Protocol) server for DNS Orchestrator.");
+        println!("Provides AI agents with DNS management capabilities across");
+        println!("multiple cloud providers (Cloudflare, Aliyun, DNSPod, Huaweicloud)");
+        println!("and network diagnostic tools (DNS lookup, WHOIS, DNSSEC, etc.).");
+        println!();
+        println!("This server communicates over stdio using the MCP protocol.");
+        println!("It shares the desktop app's SQLite database and system keyring.");
+        println!();
+        println!("Usage: dns-orchestrator-mcp");
+        println!();
+        println!("Options:");
+        println!("  -v, --version  Print version information");
+        println!("  -h, --help     Print this help message");
+        return ExitCode::SUCCESS;
+    }
+
     // Initialize structured logs on stderr because MCP protocol frames use stdout.
     tracing_subscriber::registry()
         .with(

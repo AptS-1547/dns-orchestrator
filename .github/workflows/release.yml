@@ -19,6 +19,7 @@ on:
           - linux
           - ios-testflight
           - android
+          - mcp
 
 jobs:
   # 准备 release body（只在 tag push 时运行）
@@ -571,6 +572,85 @@ jobs:
           path: dns-orchestrator-tauri/gen/apple/build/**/*.ipa
           if-no-files-found: ignore
 
+  # MCP Server 跨平台编译
+  release-mcp:
+    needs: [prepare-release]
+    if: always() && (github.event_name == 'push' || inputs.platform == 'mcp' || inputs.platform == 'all')
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - platform: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+          - platform: windows-latest
+            target: aarch64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdbus-1-dev libssl-dev pkg-config
+
+      - name: Build MCP binary
+        run: cargo build --release --target ${{ matrix.target }} -p dns-orchestrator-mcp
+
+      - name: Rename binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          VERSION="${{ github.ref_name }}"
+          cp "target/${{ matrix.target }}/release/dns-orchestrator-mcp" \
+             "dns-orchestrator-mcp-${VERSION}-${{ matrix.target }}"
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          VERSION="${{ github.ref_name }}"
+          cp "target/${{ matrix.target }}/release/dns-orchestrator-mcp.exe" \
+             "dns-orchestrator-mcp-${VERSION}-${{ matrix.target }}.exe"
+
+      - name: Upload to Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dns-orchestrator-mcp-*
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-${{ matrix.target }}
+          path: dns-orchestrator-mcp-*
+
   # 更新 latest.json 添加 Android 平台
   update-latest-json:
     if: github.event_name == 'push'
@@ -746,10 +826,128 @@ jobs:
               sha: fileSha
             });
 
+  # 更新 Homebrew Formula (MCP CLI)
+  update-homebrew-formula:
+    if: github.event_name == 'push'
+    needs: [release-mcp]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download MCP binaries and calculate SHA256
+        id: sha256
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ github.ref_name }}"
+
+          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
+            FILE="dns-orchestrator-mcp-${VERSION}-${target}"
+            gh release download "${VERSION}" --repo "${{ github.repository }}" \
+              --pattern "$FILE" --output "$FILE"
+            SHA=$(sha256sum "$FILE" | cut -d' ' -f1)
+            # target triple 里的 - 替换成 _ 作为 output key
+            KEY=$(echo "$target" | tr '-' '_')
+            echo "${KEY}=$SHA" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Update Homebrew Formula
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          script: |
+            const version = '${{ github.ref_name }}'.replace(/^v/, '');
+            const tag = '${{ github.ref_name }}';
+            const repo = '${{ github.repository }}';
+            const sha256 = {
+              macos_arm64: '${{ steps.sha256.outputs.aarch64_apple_darwin }}',
+              macos_intel: '${{ steps.sha256.outputs.x86_64_apple_darwin }}',
+              linux_arm64: '${{ steps.sha256.outputs.aarch64_unknown_linux_gnu }}',
+              linux_intel: '${{ steps.sha256.outputs.x86_64_unknown_linux_gnu }}'
+            };
+
+            const formula = `# typed: false
+            # frozen_string_literal: true
+
+            class DnsOrchestratorMcp < Formula
+              desc "MCP Server for DNS Orchestrator - AI agent interface"
+              homepage "https://github.com/${repo}"
+              version "${version}"
+              license "MIT"
+
+              on_macos do
+                on_arm do
+                  url "https://github.com/${repo}/releases/download/${tag}/dns-orchestrator-mcp-${tag}-aarch64-apple-darwin"
+                  sha256 "${sha256.macos_arm64}"
+
+                  def install
+                    bin.install "dns-orchestrator-mcp-${tag}-aarch64-apple-darwin" => "dns-orchestrator-mcp"
+                  end
+                end
+
+                on_intel do
+                  url "https://github.com/${repo}/releases/download/${tag}/dns-orchestrator-mcp-${tag}-x86_64-apple-darwin"
+                  sha256 "${sha256.macos_intel}"
+
+                  def install
+                    bin.install "dns-orchestrator-mcp-${tag}-x86_64-apple-darwin" => "dns-orchestrator-mcp"
+                  end
+                end
+              end
+
+              on_linux do
+                on_arm do
+                  url "https://github.com/${repo}/releases/download/${tag}/dns-orchestrator-mcp-${tag}-aarch64-unknown-linux-gnu"
+                  sha256 "${sha256.linux_arm64}"
+
+                  def install
+                    bin.install "dns-orchestrator-mcp-${tag}-aarch64-unknown-linux-gnu" => "dns-orchestrator-mcp"
+                  end
+                end
+
+                on_intel do
+                  url "https://github.com/${repo}/releases/download/${tag}/dns-orchestrator-mcp-${tag}-x86_64-unknown-linux-gnu"
+                  sha256 "${sha256.linux_intel}"
+
+                  def install
+                    bin.install "dns-orchestrator-mcp-${tag}-x86_64-unknown-linux-gnu" => "dns-orchestrator-mcp"
+                  end
+                end
+              end
+
+              test do
+                assert_match version.to_s, shell_output("#{bin}/dns-orchestrator-mcp --version")
+              end
+            end
+            `;
+
+            // Remove leading whitespace from template literal indentation
+            const cleanFormula = formula.replace(/^            /gm, '');
+
+            let fileSha;
+            try {
+              const { data } = await github.rest.repos.getContent({
+                owner: 'AptS-1547',
+                repo: 'homebrew-tap',
+                path: 'Formula/dns-orchestrator-mcp.rb'
+              });
+              fileSha = data.sha;
+            } catch (e) {
+              fileSha = undefined;
+            }
+
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: 'AptS-1547',
+              repo: 'homebrew-tap',
+              path: 'Formula/dns-orchestrator-mcp.rb',
+              message: `chore: bump dns-orchestrator-mcp to v${version}`,
+              content: Buffer.from(cleanFormula).toString('base64'),
+              sha: fileSha
+            });
+
   # 发布 Release（所有构建完成后将 draft 改为正式发布）
   publish-release:
     if: github.event_name == 'push'
-    needs: [update-latest-json, update-homebrew-cask]
+    needs: [update-latest-json, update-homebrew-cask, update-homebrew-formula]
     runs-on: ubuntu-latest
 
     steps:
