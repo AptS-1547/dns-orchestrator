@@ -9,7 +9,7 @@ use hickory_resolver::{
 };
 
 use crate::error::{ToolboxError, ToolboxResult};
-use crate::types::{DnsLookupRecord, DnsLookupResult};
+use crate::types::{DnsLookupRecord, DnsLookupResult, DnsQueryType};
 
 use super::resolver::{DEFAULT_RESOLVER, SYSTEM_DNS_LABEL};
 
@@ -24,7 +24,7 @@ fn first_record_ttl(lookup: &hickory_resolver::lookup::Lookup) -> u32 {
 /// Resolve DNS records for a domain.
 pub async fn dns_lookup(
     domain: &str,
-    record_type: &str,
+    record_type: DnsQueryType,
     nameserver: Option<&str>,
 ) -> ToolboxResult<DnsLookupResult> {
     // Use custom nameserver if provided, otherwise fall back to cached default
@@ -51,20 +51,19 @@ pub async fn dns_lookup(
     };
 
     let mut records: Vec<DnsLookupRecord> = Vec::new();
-    let record_type_upper = record_type.to_uppercase();
 
-    match record_type_upper.as_str() {
-        "A" => lookup_a(&resolver, domain, &mut records).await,
-        "AAAA" => lookup_aaaa(&resolver, domain, &mut records).await,
-        "MX" => lookup_mx(&resolver, domain, &mut records).await,
-        "TXT" => lookup_txt(&resolver, domain, &mut records).await,
-        "NS" => lookup_ns(&resolver, domain, &mut records).await,
-        "CNAME" => lookup_cname(&resolver, domain, &mut records).await,
-        "SOA" => lookup_soa(&resolver, domain, &mut records).await,
-        "SRV" => lookup_srv(&resolver, domain, &mut records).await,
-        "CAA" => lookup_caa(&resolver, domain, &mut records).await,
-        "PTR" => lookup_ptr(&resolver, domain, &mut records).await,
-        "ALL" => {
+    match record_type {
+        DnsQueryType::A => lookup_a(&resolver, domain, &mut records).await,
+        DnsQueryType::Aaaa => lookup_aaaa(&resolver, domain, &mut records).await,
+        DnsQueryType::Mx => lookup_mx(&resolver, domain, &mut records).await,
+        DnsQueryType::Txt => lookup_txt(&resolver, domain, &mut records).await,
+        DnsQueryType::Ns => lookup_ns(&resolver, domain, &mut records).await,
+        DnsQueryType::Cname => lookup_cname(&resolver, domain, &mut records).await,
+        DnsQueryType::Soa => lookup_soa(&resolver, domain, &mut records).await,
+        DnsQueryType::Srv => lookup_srv(&resolver, domain, &mut records).await,
+        DnsQueryType::Caa => lookup_caa(&resolver, domain, &mut records).await,
+        DnsQueryType::Ptr => lookup_ptr(&resolver, domain, &mut records).await,
+        DnsQueryType::All => {
             // Call internal lookup functions directly to reuse the resolver
             lookup_a(&resolver, domain, &mut records).await;
             lookup_aaaa(&resolver, domain, &mut records).await;
@@ -76,11 +75,6 @@ pub async fn dns_lookup(
             lookup_srv(&resolver, domain, &mut records).await;
             lookup_caa(&resolver, domain, &mut records).await;
             lookup_ptr(&resolver, domain, &mut records).await;
-        }
-        _ => {
-            return Err(ToolboxError::ValidationError(format!(
-                "Unsupported record type: {record_type}"
-            )));
         }
     }
 
@@ -327,17 +321,8 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_dns_lookup_invalid_record_type() {
-        let result = dns_lookup("example.com", "INVALID", None).await;
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(matches!(err, ToolboxError::ValidationError(_)));
-        assert!(err.to_string().contains("INVALID"));
-    }
-
-    #[tokio::test]
     async fn test_dns_lookup_invalid_nameserver() {
-        let result = dns_lookup("example.com", "A", Some("not-an-ip")).await;
+        let result = dns_lookup("example.com", DnsQueryType::A, Some("not-an-ip")).await;
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(matches!(err, ToolboxError::ValidationError(_)));
@@ -346,32 +331,36 @@ mod tests {
     #[tokio::test]
     async fn test_dns_lookup_empty_nameserver_uses_system_default() {
         // Empty nameserver should fall back to system default, not error
-        let result = dns_lookup("example.com", "A", Some("")).await;
+        let result = dns_lookup("example.com", DnsQueryType::A, Some("")).await;
         assert!(result.is_ok());
         let lookup = result.unwrap();
         assert!(!lookup.nameserver.is_empty());
     }
 
-    #[tokio::test]
-    async fn test_dns_lookup_record_type_case_insensitive() {
-        // Record type should be case-insensitive
-        let result_lower = dns_lookup("example.com", "a", None).await;
-        let result_upper = dns_lookup("example.com", "A", None).await;
-        // Both should succeed (or both fail due to network), neither should return ValidationError
-        assert!(
-            result_lower.is_ok()
-                || !matches!(result_lower.unwrap_err(), ToolboxError::ValidationError(_))
+    #[test]
+    fn test_dns_query_type_from_str() {
+        assert_eq!("A".parse::<DnsQueryType>().unwrap(), DnsQueryType::A);
+        assert_eq!("aaaa".parse::<DnsQueryType>().unwrap(), DnsQueryType::Aaaa);
+        assert_eq!(
+            "Cname".parse::<DnsQueryType>().unwrap(),
+            DnsQueryType::Cname
         );
-        assert!(
-            result_upper.is_ok()
-                || !matches!(result_upper.unwrap_err(), ToolboxError::ValidationError(_))
-        );
+        assert_eq!("all".parse::<DnsQueryType>().unwrap(), DnsQueryType::All);
+        assert!("INVALID".parse::<DnsQueryType>().is_err());
+    }
+
+    #[test]
+    fn test_dns_query_type_display() {
+        assert_eq!(DnsQueryType::A.to_string(), "A");
+        assert_eq!(DnsQueryType::Aaaa.to_string(), "AAAA");
+        assert_eq!(DnsQueryType::Soa.to_string(), "SOA");
+        assert_eq!(DnsQueryType::All.to_string(), "ALL");
     }
 
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_dns_lookup_a_record_real() {
-        let result = dns_lookup("google.com", "A", None).await;
+        let result = dns_lookup("google.com", DnsQueryType::A, None).await;
         assert!(result.is_ok());
         let lookup = result.unwrap();
         assert!(!lookup.records.is_empty());
@@ -381,7 +370,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_dns_lookup_mx_record_real() {
-        let result = dns_lookup("google.com", "MX", None).await;
+        let result = dns_lookup("google.com", DnsQueryType::Mx, None).await;
         assert!(result.is_ok());
         let lookup = result.unwrap();
         assert!(!lookup.records.is_empty());
@@ -394,7 +383,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_dns_lookup_ns_record_real() {
-        let result = dns_lookup("google.com", "NS", None).await;
+        let result = dns_lookup("google.com", DnsQueryType::Ns, None).await;
         assert!(result.is_ok());
         let lookup = result.unwrap();
         assert!(!lookup.records.is_empty());
@@ -403,14 +392,14 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_dns_lookup_txt_record_real() {
-        let result = dns_lookup("google.com", "TXT", None).await;
+        let result = dns_lookup("google.com", DnsQueryType::Txt, None).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_dns_lookup_soa_record_real() {
-        let result = dns_lookup("google.com", "SOA", None).await;
+        let result = dns_lookup("google.com", DnsQueryType::Soa, None).await;
         assert!(result.is_ok());
         let lookup = result.unwrap();
         assert!(!lookup.records.is_empty());
@@ -420,7 +409,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_dns_lookup_with_custom_nameserver() {
-        let result = dns_lookup("google.com", "A", Some("8.8.8.8")).await;
+        let result = dns_lookup("google.com", DnsQueryType::A, Some("8.8.8.8")).await;
         assert!(result.is_ok());
         let lookup = result.unwrap();
         assert_eq!(lookup.nameserver, "8.8.8.8");
@@ -430,7 +419,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_dns_lookup_all_types_real() {
-        let result = dns_lookup("google.com", "ALL", None).await;
+        let result = dns_lookup("google.com", DnsQueryType::All, None).await;
         assert!(result.is_ok());
         let lookup = result.unwrap();
         // ALL should return multiple record types

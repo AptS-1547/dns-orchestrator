@@ -8,6 +8,7 @@ This document provides an in-depth look at the architectural design of DNS Orche
 - [Architecture Diagram](#architecture-diagram)
 - [Project Structure](#project-structure)
 - [Frontend Architecture](#frontend-architecture)
+- [App Bootstrap Layer](#app-bootstrap-layer)
 - [Core Library](#core-library)
 - [Backend Architecture](#backend-architecture)
 - [Provider Library](#provider-library)
@@ -18,14 +19,15 @@ This document provides an in-depth look at the architectural design of DNS Orche
 
 ## Overview
 
-DNS Orchestrator is a cross-platform application built with a **four-layer architecture**:
+DNS Orchestrator is a cross-platform application built with a **five-layer architecture**:
 
 ```
-Frontend → Backend → Core Library → Provider Library → DNS APIs
+Frontend → Backend → App Bootstrap → Core Library → Provider Library → DNS APIs
 ```
 
 - **Frontend**: React-based UI with TypeScript, Tailwind CSS, and Zustand for state management
 - **Backend**: Rust-based Tauri commands (desktop/mobile), with actix-web backend for web
+- **App Bootstrap**: Platform-agnostic service assembly and startup (`dns-orchestrator-app` crate)
 - **Core Library**: Platform-agnostic business logic (`dns-orchestrator-core` crate)
 - **Provider Library**: Standalone `dns-orchestrator-provider` crate for DNS provider integrations
 - **Communication**: Transport abstraction layer supports both Tauri IPC and HTTP
@@ -77,7 +79,7 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
         ▼ Tauri IPC                         ▼ HTTP REST
 ┌───────────────────────────┐    ┌───────────────────────────┐
 │   TAURI BACKEND           │    │   ACTIX-WEB BACKEND       │
-│   (src-tauri/)            │    │   (src-actix-web/)        │
+│   (dns-orchestrator-tauri)│    │   (dns-orchestrator-web)  │
 │                           │    │                           │
 │  ┌─────────────────────┐  │    │  ┌─────────────────────┐  │
 │  │  Commands Layer     │  │    │  │  HTTP Handlers      │  │
@@ -88,13 +90,31 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
 │  └──────────┬──────────┘  │    │  ┌──────────▼──────────┐  │
 │             │             │    │  │  SeaORM Database    │  │
 │  ┌──────────▼──────────┐  │    │  │  (MySQL/PG/SQLite)  │  │
-│  │  AppState           │  │    │  └─────────────────────┘  │
-│  │  (9 services)       │  │    │                           │
-│  └──────────┬──────────┘  │    └───────────┬───────────────┘
-│             │             │                │
+│  │  Adapters           │  │    │  └─────────────────────┘  │
+│  │  - TauriCredStore   │  │    │                           │
+│  │  - TauriAccountRepo │  │    └───────────┬───────────────┘
+│  │  - TauriMetadataRepo│  │                │
+│  └──────────┬──────────┘  │                │
 └─────────────┼─────────────┘                │
               │                              │
               └──────────────┬───────────────┘
+                             │
+              ┌──────────────▼───────────────┐
+              │  APP BOOTSTRAP               │
+              │  (dns-orchestrator-app)      │
+              │                              │
+              │  ┌────────────────────────┐  │
+              │  │  AppStateBuilder      │  │
+              │  │  + StartupHooks       │  │
+              │  └───────────┬────────────┘  │
+              │              │               │
+              │  ┌───────────▼────────────┐  │
+              │  │  AppState             │  │
+              │  │  (service container)  │  │
+              │  │  + run_migration()    │  │
+              │  │  + run_account_restore│  │
+              │  └───────────┬────────────┘  │
+              └──────────────┼───────────────┘
                              │
               ┌──────────────▼───────────────┐
               │  CORE LIBRARY                │
@@ -105,15 +125,17 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
               │  │  + CredentialStore     │  │
               │  │  + AccountRepository   │  │
               │  │  + ProviderRegistry    │  │
+              │  │  + DomainMetadataRepo  │  │
               │  └───────────┬────────────┘  │
               │              │               │
               │  ┌───────────▼────────────┐  │
               │  │  Business Services     │  │
-              │  │  - AccountLifecycle    │  │
-              │  │  - CredentialManagement│  │
+              │  │  - AccountService      │  │
               │  │  - DnsService          │  │
               │  │  - DomainService       │  │
-              │  │  - ImportExport        │  │
+              │  │  - DomainMetadataSvc   │  │
+              │  │  - ImportExportSvc     │  │
+              │  │  - MigrationService    │  │
               │  └───────────┬────────────┘  │
               └──────────────┼───────────────┘
                              │
@@ -152,101 +174,51 @@ Frontend → Backend → Core Library → Provider Library → DNS APIs
 dns-orchestrator/
 ├── src/                              # Frontend (React + TypeScript)
 │   ├── components/                   # React components by feature
-│   │   ├── ui/                       # Radix UI wrappers (shadcn/ui)
-│   │   ├── account/                  # Account management
-│   │   ├── accounts/                 # Accounts page
-│   │   ├── dns/                      # DNS record management
-│   │   ├── domain/                   # Domain components
-│   │   ├── domains/                  # Domain selector page
-│   │   ├── toolbox/                  # Network utilities
-│   │   ├── settings/                 # Settings page
-│   │   ├── layout/                   # Layout components
-│   │   ├── navigation/               # Navigation components
-│   │   ├── titlebar/                 # Window title bar
-│   │   └── error/                    # Error boundary
-│   ├── services/                     # Service layer
-│   │   ├── transport/                # Transport abstraction
-│   │   │   ├── types.ts              # ITransport interface, CommandMap
-│   │   │   ├── tauri.transport.ts    # Tauri IPC implementation
-│   │   │   └── http.transport.ts     # HTTP REST implementation
-│   │   ├── account.service.ts
-│   │   ├── dns.service.ts
-│   │   ├── domain.service.ts
-│   │   ├── toolbox.service.ts
-│   │   └── file.service.ts
+│   ├── services/                     # Service layer + Transport abstraction
 │   ├── stores/                       # Zustand state management
-│   │   ├── accountStore.ts           # Account state + providers
-│   │   ├── dnsStore.ts               # DNS records + pagination
-│   │   ├── domainStore.ts            # Domains by account
-│   │   ├── settingsStore.ts          # Theme, language, debug
-│   │   ├── toolboxStore.ts           # Toolbox history
-│   │   └── updaterStore.ts           # Auto-update state
 │   ├── types/                        # TypeScript type definitions
-│   ├── i18n/                         # Internationalization (en, zh-CN)
+│   ├── i18n/                         # Internationalization
 │   ├── hooks/                        # Custom React hooks
-│   ├── lib/                          # Utility functions
-│   └── constants/                    # Constants
+│   └── lib/                          # Utility functions
+│
+├── dns-orchestrator-provider/        # DNS Provider Library (零内部依赖)
+│   └── src/
+│       ├── traits.rs                 # DnsProvider trait
+│       ├── types.rs                  # ProviderCredentials, DnsRecord, etc.
+│       ├── factory.rs                # create_provider(), metadata
+│       └── providers/                # Cloudflare, Aliyun, DNSPod, HuaweiCloud
 │
 ├── dns-orchestrator-core/            # Core Business Logic Library
-│   ├── src/
-│   │   ├── lib.rs                    # Library entry, re-exports
-│   │   ├── error.rs                  # CoreError, CoreResult
-│   │   ├── services/                 # Business services
-│   │   │   ├── mod.rs                # ServiceContext
-│   │   │   ├── account_metadata_service.rs
-│   │   │   ├── credential_management_service.rs
-│   │   │   ├── account_lifecycle_service.rs
-│   │   │   ├── account_bootstrap_service.rs
-│   │   │   ├── provider_metadata_service.rs
-│   │   │   ├── import_export_service.rs
-│   │   │   ├── domain_service.rs
-│   │   │   ├── dns_service.rs
-│   │   │   └── toolbox/              # Toolbox services
-│   │   ├── traits/                   # Platform abstraction traits
-│   │   │   ├── credential_store.rs   # CredentialStore trait
-│   │   │   ├── account_repository.rs # AccountRepository trait
-│   │   │   └── provider_registry.rs  # ProviderRegistry trait
-│   │   ├── types/                    # Internal types
-│   │   ├── crypto/                   # AES-GCM encryption
-│   │   └── utils/                    # Utilities
-│   └── Cargo.toml
+│   └── src/
+│       ├── services/                 # ServiceContext + 7 Services
+│       │   ├── mod.rs                # ServiceContext (DI container)
+│       │   ├── account_service.rs    # Unified account service
+│       │   ├── dns_service.rs        # DNS record operations
+│       │   ├── domain_service.rs     # Domain listing
+│       │   ├── domain_metadata_service.rs
+│       │   ├── import_export_service.rs
+│       │   ├── migration_service.rs
+│       │   └── provider_metadata_service.rs
+│       └── traits/                   # 4 storage traits
+│           ├── credential_store.rs   # CredentialStore
+│           ├── account_repository.rs # AccountRepository
+│           ├── provider_registry.rs  # ProviderRegistry + InMemory impl
+│           └── domain_metadata_repository.rs
 │
-├── dns-orchestrator-provider/        # DNS Provider Library
-│   ├── src/
-│   │   ├── lib.rs                    # Library entry, re-exports
-│   │   ├── traits.rs                 # DnsProvider trait
-│   │   ├── types.rs                  # RecordData, ProviderCredentials, etc.
-│   │   ├── error.rs                  # ProviderError enum (13 variants)
-│   │   ├── factory.rs                # create_provider(), metadata
-│   │   ├── http_client.rs            # HTTP client wrapper
-│   │   └── providers/                # Provider implementations
-│   │       ├── cloudflare/           # Cloudflare (mod, provider, http, types, error)
-│   │       ├── aliyun/               # Aliyun DNS
-│   │       ├── dnspod/               # Tencent DNSPod
-│   │       └── huaweicloud/          # Huawei Cloud DNS
-│   ├── tests/                        # Integration tests
-│   └── Cargo.toml                    # Feature flags
+├── dns-orchestrator-app/             # App Bootstrap Layer
+│   └── src/lib.rs                    # AppState, AppStateBuilder, StartupHooks
 │
-├── src-tauri/                        # Tauri Backend (Desktop/Mobile)
-│   ├── src/
-│   │   ├── lib.rs                    # AppState, run()
-│   │   ├── commands/                 # Tauri command handlers
-│   │   │   ├── account.rs            # 10 commands
-│   │   │   ├── domain.rs             # 2 commands
-│   │   │   ├── dns.rs                # 5 commands
-│   │   │   ├── toolbox.rs            # 4 commands
-│   │   │   └── updater.rs            # Android-only (3 commands)
-│   │   ├── adapters/                 # Core trait implementations
-│   │   │   ├── credential_store.rs   # TauriCredentialStore
-│   │   │   └── account_repository.rs # TauriAccountRepository
-│   │   ├── types.rs                  # Frontend-facing types
-│   │   └── error.rs                  # Error conversions
-│   ├── capabilities/                 # Tauri 2 permissions
-│   └── Cargo.toml                    # Platform-specific deps
+├── dns-orchestrator-toolbox/         # Network Diagnostic Tools (独立)
+│   └── src/services/                 # WHOIS, DNS, IP, SSL, HTTP, DNSSEC
 │
-├── src-actix-web/                    # Web Backend (WIP)
-│   ├── src/main.rs                   # Actix-web server entry
-│   └── migration/                    # SeaORM database migrations
+├── dns-orchestrator-tauri/           # Tauri Frontend (Desktop/Mobile)
+│   └── src/
+│       ├── lib.rs                    # TauriStartupHooks, run()
+│       ├── commands/                 # Tauri command handlers (thin wrappers)
+│       └── adapters/                 # TauriCredentialStore, TauriAccountRepo, etc.
+│
+├── dns-orchestrator-web/             # Web Frontend (Actix-web, WIP)
+│   └── src/main.rs
 │
 └── vite.config.ts                    # Platform-aware build config
 ```
@@ -364,6 +336,26 @@ const { records, hasMore } = useDnsStore(useShallow(state => ({
 })))
 ```
 
+## App Bootstrap Layer
+
+> See [App Bootstrap Layer Design](./app-bootstrap.md) for full documentation.
+
+The `dns-orchestrator-app` crate provides platform-agnostic service assembly and startup:
+
+```rust
+// Any frontend can build a fully-wired AppState:
+let state = AppStateBuilder::new()
+    .credential_store(platform_credential_store)
+    .account_repository(platform_account_repo)
+    .domain_metadata_repository(platform_metadata_repo)
+    .build()?;
+
+// Run startup sequence (migration + account restoration):
+state.run_startup(&platform_hooks).await?;
+```
+
+This layer sits between the frontend backends and the Core library, eliminating duplicated service assembly code across frontends.
+
 ## Core Library
 
 The `dns-orchestrator-core` crate provides **platform-agnostic business logic** through trait-based dependency injection.
@@ -378,6 +370,7 @@ pub struct ServiceContext {
     credential_store: Arc<dyn CredentialStore>,
     account_repository: Arc<dyn AccountRepository>,
     provider_registry: Arc<dyn ProviderRegistry>,
+    domain_metadata_repository: Arc<dyn DomainMetadataRepository>,
 }
 
 impl ServiceContext {
@@ -403,16 +396,18 @@ Platform-specific implementations injected via traits:
 ```rust
 // dns-orchestrator-core/src/traits/credential_store.rs
 
-/// Map of account_id -> credential key-value pairs
-pub type CredentialsMap = HashMap<String, HashMap<String, String>>;
+/// Map of account_id -> type-safe provider credentials
+pub type CredentialsMap = HashMap<String, ProviderCredentials>;
 
 #[async_trait]
 pub trait CredentialStore: Send + Sync {
     async fn load_all(&self) -> CoreResult<CredentialsMap>;
-    async fn save(&self, account_id: &str, credentials: &HashMap<String, String>) -> CoreResult<()>;
-    async fn load(&self, account_id: &str) -> CoreResult<HashMap<String, String>>;
-    async fn delete(&self, account_id: &str) -> CoreResult<()>;
-    async fn exists(&self, account_id: &str) -> CoreResult<bool>;
+    async fn save_all(&self, credentials: &CredentialsMap) -> CoreResult<()>;
+    async fn get(&self, account_id: &str) -> CoreResult<Option<ProviderCredentials>>;
+    async fn set(&self, account_id: &str, credentials: &ProviderCredentials) -> CoreResult<()>;
+    async fn remove(&self, account_id: &str) -> CoreResult<()>;
+    async fn load_raw_json(&self) -> CoreResult<String>;
+    async fn save_raw_json(&self, json: &str) -> CoreResult<()>;
 }
 
 // dns-orchestrator-core/src/traits/account_repository.rs
@@ -420,17 +415,29 @@ pub trait CredentialStore: Send + Sync {
 pub trait AccountRepository: Send + Sync {
     async fn find_all(&self) -> CoreResult<Vec<Account>>;
     async fn find_by_id(&self, id: &str) -> CoreResult<Option<Account>>;
-    async fn save(&self, account: Account) -> CoreResult<()>;
+    async fn save(&self, account: &Account) -> CoreResult<()>;
     async fn delete(&self, id: &str) -> CoreResult<()>;
-    async fn update_status(&self, id: &str, status: AccountStatus, error: Option<&str>) -> CoreResult<()>;
+    async fn save_all(&self, accounts: &[Account]) -> CoreResult<()>;
+    async fn update_status(&self, id: &str, status: AccountStatus, error: Option<String>) -> CoreResult<()>;
 }
 
 // dns-orchestrator-core/src/traits/provider_registry.rs
 #[async_trait]
 pub trait ProviderRegistry: Send + Sync {
     async fn register(&self, account_id: String, provider: Arc<dyn DnsProvider>);
+    async fn unregister(&self, account_id: &str);
     async fn get(&self, account_id: &str) -> Option<Arc<dyn DnsProvider>>;
-    async fn remove(&self, account_id: &str);
+    async fn list_account_ids(&self) -> Vec<String>;
+}
+
+// dns-orchestrator-core/src/traits/domain_metadata_repository.rs
+#[async_trait]
+pub trait DomainMetadataRepository: Send + Sync {
+    async fn find_by_key(&self, key: &DomainMetadataKey) -> CoreResult<Option<DomainMetadata>>;
+    async fn save(&self, key: &DomainMetadataKey, metadata: &DomainMetadata) -> CoreResult<()>;
+    async fn update(&self, key: &DomainMetadataKey, update: &DomainMetadataUpdate) -> CoreResult<()>;
+    async fn delete(&self, key: &DomainMetadataKey) -> CoreResult<()>;
+    // ... batch operations, favorites, tags
 }
 ```
 
@@ -440,57 +447,53 @@ Business logic split into focused services:
 
 | Service | Responsibility |
 |---------|---------------|
-| `AccountMetadataService` | Account CRUD (metadata only, no credentials) |
-| `CredentialManagementService` | Validate, store, delete credentials |
-| `AccountLifecycleService` | Full account lifecycle (combines metadata + credentials) |
-| `AccountBootstrapService` | Restore accounts on app startup |
+| `AccountService` | Unified account CRUD, credential management, provider registration, account restoration |
+| `DnsService` | DNS record CRUD, batch delete |
+| `DomainService` | List domains, get domain details |
+| `DomainMetadataService` | Favorites, tags, domain metadata CRUD |
 | `ProviderMetadataService` | Query provider metadata (stateless) |
 | `ImportExportService` | Encrypted account backup/restore |
-| `DomainService` | List domains, get domain details |
-| `DnsService` | DNS record CRUD, batch delete |
-| `ToolboxService` | WHOIS, DNS, IP, SSL lookups |
+| `MigrationService` | Credential format migration (v1.7.0) |
 
 ```rust
-// Example: AccountLifecycleService composition
-pub struct AccountLifecycleService {
-    metadata_service: Arc<AccountMetadataService>,
-    credential_service: Arc<CredentialManagementService>,
+// Example: AccountService (unified, replaces 4 old services)
+pub struct AccountService {
+    ctx: Arc<ServiceContext>,
 }
 
-impl AccountLifecycleService {
+impl AccountService {
     pub async fn create_account(&self, request: CreateAccountRequest) -> CoreResult<Account> {
-        // 1. Validate credentials with the provider's API.
-        // 2. Save credentials securely using CredentialStore.
-        // 3. Register the new provider instance in ProviderRegistry.
-        // 4. Save account metadata using AccountRepository.
-        // ...
+        // 1. Validate credentials with the provider's API
+        // 2. Save credentials securely via CredentialStore
+        // 3. Register provider instance in ProviderRegistry
+        // 4. Save account metadata via AccountRepository
+    }
+
+    pub async fn restore_accounts(&self) -> CoreResult<RestoreResult> {
+        // Load all accounts + credentials, recreate provider instances
     }
 }
 ```
 
 ## Backend Architecture
 
-### Tauri Application State
+### Tauri Application Setup
 
 ```rust
-// src-tauri/src/lib.rs
-pub struct AppState {
-    /// Service context (DI container)
-    pub ctx: Arc<ServiceContext>,
+// dns-orchestrator-tauri/src/lib.rs
+// AppState is imported from dns-orchestrator-app (shared across all frontends)
+use dns_orchestrator_app::{AppState, AppStateBuilder, StartupHooks};
 
-    /// Fine-grained services
-    pub account_metadata_service: Arc<AccountMetadataService>,
-    pub credential_management_service: Arc<CredentialManagementService>,
-    pub account_lifecycle_service: Arc<AccountLifecycleService>,
-    pub account_bootstrap_service: Arc<AccountBootstrapService>,
-    pub provider_metadata_service: ProviderMetadataService,
-    pub import_export_service: ImportExportService,
-    pub domain_service: DomainService,
-    pub dns_service: DnsService,
+// Platform adapters are Tauri-specific
+let state = AppStateBuilder::new()
+    .credential_store(Arc::new(TauriCredentialStore::new()))
+    .account_repository(Arc::new(TauriAccountRepository::new(app_handle.clone())))
+    .domain_metadata_repository(Arc::new(TauriDomainMetadataRepository::new(app_handle)))
+    .build()?;
 
-    /// Account restoration flag
-    pub restore_completed: AtomicBool,
-}
+// Migration (blocking) + account restore (background)
+state.run_migration(&TauriStartupHooks { app_handle }).await;
+tokio::spawn(async move { state.run_account_restore().await });
 ```
 
 ### Adapter Implementations
@@ -501,12 +504,13 @@ The Tauri backend implements core traits:
 |-------|---------|---------|
 | `CredentialStore` | `TauriCredentialStore` | keyring (Desktop) / Stronghold (Android) |
 | `AccountRepository` | `TauriAccountRepository` | tauri-plugin-store (JSON file) |
-| `ProviderRegistry` | `InMemoryProviderRegistry` | HashMap in memory |
+| `DomainMetadataRepository` | `TauriDomainMetadataRepository` | tauri-plugin-store (JSON file) |
+| `ProviderRegistry` | `InMemoryProviderRegistry` | HashMap in memory (from core) |
 
 ```rust
-// src-tauri/src/adapters/credential_store.rs
+// dns-orchestrator-tauri/src/adapters/credential_store.rs
 pub struct TauriCredentialStore {
-    cache: Arc<RwLock<HashMap<String, ProviderCredentials>>>,
+    cache: Arc<RwLock<Option<CredentialsMap>>>,
     #[cfg(target_os = "android")]
     app_handle: AppHandle,
 }
@@ -514,23 +518,13 @@ pub struct TauriCredentialStore {
 #[async_trait]
 impl CredentialStore for TauriCredentialStore {
     async fn get(&self, account_id: &str) -> CoreResult<Option<ProviderCredentials>> {
-        // Check cache first
-        if let Some(cred) = self.cache.read().await.get(account_id) {
-            return Ok(Some(cred.clone()));
-        }
-
-        // Load from system keychain
-        #[cfg(not(target_os = "android"))]
-        {
-            let entry = Entry::new("dns-orchestrator", account_id)?;
-            // ... load and deserialize
-        }
-
-        #[cfg(target_os = "android")]
-        {
-            // Use Stronghold
-        }
+        // Load all credentials (with cache), then look up by account_id
+        let all = self.load_all().await?;
+        Ok(all.get(account_id).cloned())
     }
+
+    // Desktop: system keychain via `keyring` crate
+    // Android: tauri-plugin-store with app sandbox
 }
 ```
 
@@ -756,12 +750,13 @@ Create Account
      │
      ▼
 ┌─────────────────────────────────────┐
-│ CredentialManagementService         │
+│ AccountService                      │
 │                                     │
 │ 1. Create provider instance         │
 │ 2. Validate credentials (API call)  │
 │ 3. Store in CredentialStore         │
 │ 4. Register in ProviderRegistry     │
+│ 5. Save account in AccountRepository│
 └─────────────────────────────────────┘
 ```
 
@@ -810,25 +805,16 @@ Frontend                           Backend                          Core
    │                                  │                               │
    │ createAccount(request)           │                               │
    ├─────────────────────────────────►│                               │
-   │                                  │ AccountLifecycleService       │
+   │                                  │ AccountService                │
    │                                  │      .create_account()        │
    │                                  ├──────────────────────────────►│
    │                                  │                               │
-   │                                  │ CredentialManagementService   │
-   │                                  │   .validate_and_register()    │
-   │                                  │         │                     │
-   │                                  │         │ create_provider()   │
-   │                                  │         │ provider.validate() │
-   │                                  │         │ CredentialStore.set │
-   │                                  │         │ ProviderRegistry    │
-   │                                  │         │    .register()      │
-   │                                  │         ▼                     │
-   │                                  │ AccountMetadataService        │
-   │                                  │   .create()                   │
-   │                                  │         │                     │
-   │                                  │         │ AccountRepository   │
-   │                                  │         │   .save()           │
-   │                                  │         ▼                     │
+   │                                  │  1. create_provider()         │
+   │                                  │  2. provider.validate()       │
+   │                                  │  3. CredentialStore.set()     │
+   │                                  │  4. ProviderRegistry.register │
+   │                                  │  5. AccountRepository.save()  │
+   │                                  │                               │
    │◄─────────────────────────────────┤◄──────────────────────────────┤
    │        Account                   │                               │
 ```
@@ -861,7 +847,16 @@ Frontend                           Backend                          Core
 | **Type Safety** | CommandMap enforces correct args/return types |
 | **Testability** | Mock transport for frontend testing |
 
-### Why Fine-grained Services?
+### Why App Bootstrap Layer?
+
+| Benefit | Description |
+|---------|-------------|
+| **No Duplication** | Service assembly and startup logic shared across all frontends |
+| **Easy Onboarding** | New frontend only needs 3 adapter implementations |
+| **Consistent Startup** | Migration and account restoration work the same everywhere |
+| **Platform Hooks** | `StartupHooks` trait allows platform-specific backup without coupling |
+
+### Why Focused Services?
 
 | Benefit | Description |
 |---------|-------------|

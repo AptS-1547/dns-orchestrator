@@ -1,8 +1,8 @@
+use dns_orchestrator_app::AppState;
 use tauri::State;
 
 use crate::error::AppError;
 use crate::types::{ApiResponse, Domain, PaginatedResponse};
-use crate::AppState;
 
 /// 列出账号下的所有域名（分页）
 #[tauri::command]

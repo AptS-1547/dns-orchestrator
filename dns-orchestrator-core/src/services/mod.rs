@@ -1,4 +1,4 @@
-//! Business logic service layer
+//! Core business service layer.
 
 mod account_service;
 mod dns_service;
@@ -28,10 +28,10 @@ use crate::traits::{
 };
 use crate::types::AccountStatus;
 
-/// Service context - holds all dependencies
+/// Service context that holds all runtime dependencies.
 ///
-/// The platform layer needs to create this context and inject the platform-specific storage implementation.
-/// Fields are accessed through getter methods, ensuring that external crates cannot bypass the service layer and directly manipulate the storage.
+/// The platform layer creates this context and injects platform-specific implementations.
+/// Fields are intentionally accessed through getters so callers do not bypass service orchestration.
 pub struct ServiceContext {
     pub(crate) credential_store: Arc<dyn CredentialStore>,
     pub(crate) account_repository: Arc<dyn AccountRepository>,
@@ -40,7 +40,7 @@ pub struct ServiceContext {
 }
 
 impl ServiceContext {
-    /// Create service context
+    /// Creates a new service context.
     #[must_use]
     pub fn new(
         credential_store: Arc<dyn CredentialStore>,
@@ -56,27 +56,27 @@ impl ServiceContext {
         }
     }
 
-    /// Get a reference to the credential store
+    /// Returns the credential store.
     pub fn credential_store(&self) -> &Arc<dyn CredentialStore> {
         &self.credential_store
     }
 
-    /// Get a reference to the account repository
+    /// Returns the account repository.
     pub fn account_repository(&self) -> &Arc<dyn AccountRepository> {
         &self.account_repository
     }
 
-    /// Get a reference to the Provider registry
+    /// Returns the provider registry.
     pub fn provider_registry(&self) -> &Arc<dyn ProviderRegistry> {
         &self.provider_registry
     }
 
-    /// Get a reference to the domain name metadata repository
+    /// Returns the domain metadata repository.
     pub fn domain_metadata_repository(&self) -> &Arc<dyn DomainMetadataRepository> {
         &self.domain_metadata_repository
     }
 
-    /// Get Provider instance
+    /// Returns the provider instance for an account.
     pub async fn get_provider(&self, account_id: &str) -> CoreResult<Arc<dyn DnsProvider>> {
         self.provider_registry
             .get(account_id)
@@ -84,9 +84,9 @@ impl ServiceContext {
             .ok_or_else(|| CoreError::AccountNotFound(account_id.to_string()))
     }
 
-    /// Mark account as inactive
+    /// Marks an account as invalid.
     ///
-    /// This method is called to update the account status when an invalid credential is detected.
+    /// Called when invalid credentials are detected during provider operations.
     pub async fn mark_account_invalid(&self, account_id: &str, error_msg: &str) {
         if let Err(e) = self
             .account_repository
@@ -103,10 +103,11 @@ impl ServiceContext {
         log::warn!("Account {account_id} marked as invalid: {error_msg}");
     }
 
-    /// Handle Provider errors and update account status if the credentials are invalid.
+    /// Maps provider errors to `CoreError` and updates account status when needed.
     pub async fn handle_provider_error(&self, account_id: &str, err: ProviderError) -> CoreError {
         if let ProviderError::InvalidCredentials { .. } = &err {
-            self.mark_account_invalid(account_id, "凭证已失效").await;
+            self.mark_account_invalid(account_id, "Credentials have expired")
+                .await;
         }
         CoreError::Provider(err)
     }

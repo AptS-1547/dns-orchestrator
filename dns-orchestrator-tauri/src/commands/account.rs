@@ -1,3 +1,4 @@
+use dns_orchestrator_app::AppState;
 use tauri::State;
 
 use crate::error::AppError;
@@ -6,7 +7,6 @@ use crate::types::{
     ExportAccountsResponse, ImportAccountsRequest, ImportPreview, ImportResult, ProviderMetadata,
     UpdateAccountRequest,
 };
-use crate::AppState;
 
 /// 列出所有账号
 #[tauri::command]

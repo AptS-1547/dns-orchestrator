@@ -1,144 +1,124 @@
 # dns-orchestrator-toolbox
 
-Async network diagnostic toolkit providing WHOIS, DNS lookup, IP geolocation, SSL certificate inspection, HTTP header analysis, DNS propagation checking, and DNSSEC validation.
+Async network diagnostic toolkit for DNS and domain analysis.
 
-All functions are stateless and independent -- no shared state, no business logic dependencies.
+[简体中文](./README.zh-CN.md) | English
 
 ## Features
 
-- **WHOIS Lookup** -- Query domain registration info with structured field parsing
-- **DNS Lookup** -- Resolve any record type (A, AAAA, MX, TXT, NS, CNAME, SOA, SRV, CAA, PTR) with custom nameserver support
-- **DNS Propagation Check** -- Test record consistency across 13 global DNS servers (Google, Cloudflare, Quad9, Alibaba, Tencent, etc.)
-- **DNSSEC Validation** -- Verify DNSSEC deployment (DNSKEY, DS, RRSIG records) and validation status
-- **IP Geolocation** -- Look up country, region, city, ISP, ASN for IPs or domains
-- **SSL Certificate Check** -- Inspect certificate chain, validity, SAN, expiration via rustls
-- **HTTP Header Analysis** -- Send requests with any method/headers and get security header recommendations
+- **WHOIS Lookup** - Query registration data with structured output
+- **DNS Lookup** - Resolve A/AAAA/MX/TXT/NS/CNAME/SOA/SRV/CAA/PTR with optional custom nameserver (strongly-typed `DnsQueryType` enum)
+- **DNS Propagation Check** - Compare answers across 13 global resolvers
+- **DNSSEC Validation** - Inspect DNSKEY/DS/RRSIG and validation status
+- **IP Geolocation** - Geolocate IP or domain-resolved addresses
+- **SSL Certificate Inspection** - Read certificate details, validity, SAN, chain
+- **HTTP Header Analysis** - Check response headers and security recommendations
 
-## Usage
+## Core API
 
-Add to your `Cargo.toml`:
+All capabilities are exposed as async associated functions on `ToolboxService` (stateless, no instance required).
+
+| Method | Description |
+|--------|-------------|
+| `ToolboxService::whois_lookup` | WHOIS query |
+| `ToolboxService::dns_lookup` | DNS record lookup |
+| `ToolboxService::dns_propagation_check` | Multi-resolver propagation check |
+| `ToolboxService::dnssec_check` | DNSSEC validation |
+| `ToolboxService::ip_lookup` | IP geolocation |
+| `ToolboxService::ssl_check` | SSL/TLS certificate inspection |
+| `ToolboxService::http_header_check` | HTTP security header analysis |
+
+## Quick Start
+
+### Install
 
 ```toml
 [dependencies]
 dns-orchestrator-toolbox = "0.1"
 ```
 
-### WHOIS Lookup
+### Usage
 
-```rust
-use dns_orchestrator_toolbox::ToolboxService;
+```rust,no_run
+use dns_orchestrator_toolbox::{DnsQueryType, ToolboxResult, ToolboxService};
 
-let result = ToolboxService::whois_lookup("example.com").await?;
-println!("Registrar: {:?}", result.registrar);
-println!("Expires: {:?}", result.expiration_date);
-println!("Name servers: {:?}", result.name_servers);
-```
+async fn run() -> ToolboxResult<()> {
+    let whois = ToolboxService::whois_lookup("example.com").await?;
+    println!("registrar: {:?}", whois.registrar);
 
-### DNS Lookup
+    let dns = ToolboxService::dns_lookup("example.com", DnsQueryType::A, None).await?;
+    println!("records: {}", dns.records.len());
 
-```rust
-// Query A records using system default nameserver
-let result = ToolboxService::dns_lookup("example.com", "A", None).await?;
-for record in &result.records {
-    println!("{} {} TTL={}", record.record_type, record.value, record.ttl);
-}
+    let propagation = ToolboxService::dns_propagation_check("example.com", DnsQueryType::A).await?;
+    println!("consistency: {:.1}%", propagation.consistency_percentage);
 
-// Query all record types using a custom nameserver
-let result = ToolboxService::dns_lookup("example.com", "ALL", Some("8.8.8.8")).await?;
-```
+    let dnssec = ToolboxService::dnssec_check("example.com", None).await?;
+    println!("dnssec: {}", dnssec.validation_status);
 
-### DNS Propagation Check
+    let ip = ToolboxService::ip_lookup("1.1.1.1").await?;
+    println!("geo results: {}", ip.results.len());
 
-```rust
-let result = ToolboxService::dns_propagation_check("example.com", "A").await?;
-println!("Consistency: {:.1}%", result.consistency_percentage);
-for server_result in &result.results {
-    println!("  {} ({}): {}", server_result.server.name, server_result.server.region, server_result.status);
+    let ssl = ToolboxService::ssl_check("example.com", None).await?;
+    println!("connection: {}", ssl.connection_status);
+
+    Ok(())
 }
 ```
 
-### DNSSEC Validation
+### HTTP Header Check
 
-```rust
-let result = ToolboxService::dnssec_check("example.com", None).await?;
-println!("DNSSEC enabled: {}", result.dnssec_enabled);
-println!("Status: {}", result.validation_status); // "secure", "insecure", or "indeterminate"
-for key in &result.dnskey_records {
-    println!("  {} key: {} ({})", key.key_type, key.algorithm_name, key.key_tag);
-}
-```
-
-### IP Geolocation
-
-```rust
-// Look up an IP address
-let result = ToolboxService::ip_lookup("1.1.1.1").await?;
-
-// Look up a domain (resolves A/AAAA first, then geolocates each IP)
-let result = ToolboxService::ip_lookup("example.com").await?;
-for info in &result.results {
-    println!("{} -- {} {} ({})", info.ip, info.country.as_deref().unwrap_or("?"), info.city.as_deref().unwrap_or("?"), info.isp.as_deref().unwrap_or("?"));
-}
-```
-
-### SSL Certificate Check
-
-```rust
-let result = ToolboxService::ssl_check("example.com", None).await?;
-println!("Connection: {}", result.connection_status); // "https", "http", or "failed"
-if let Some(cert) = &result.cert_info {
-    println!("Issuer: {}", cert.issuer);
-    println!("Valid: {} -> {}", cert.valid_from, cert.valid_to);
-    println!("Days remaining: {}", cert.days_remaining);
-    println!("SAN: {:?}", cert.san);
-}
-```
-
-### HTTP Header Analysis
-
-```rust
-use dns_orchestrator_toolbox::{HttpHeaderCheckRequest, HttpMethod};
-
-let request = HttpHeaderCheckRequest {
-    url: "https://example.com".to_string(),
-    method: HttpMethod::GET,
-    custom_headers: vec![],
-    body: None,
-    content_type: None,
+```rust,no_run
+use dns_orchestrator_toolbox::{
+    HttpHeaderCheckRequest, HttpMethod, ToolboxResult, ToolboxService,
 };
 
-let result = ToolboxService::http_header_check(&request).await?;
-println!("Status: {} {}", result.status_code, result.status_text);
-println!("Response time: {}ms", result.response_time_ms);
+async fn check_headers() -> ToolboxResult<()> {
+    let request = HttpHeaderCheckRequest {
+        url: "https://example.com".to_string(),
+        method: HttpMethod::GET,
+        custom_headers: vec![],
+        body: None,
+        content_type: None,
+    };
 
-// Security header analysis
-for analysis in &result.security_analysis {
-    println!("  {} [{}]: {:?}", analysis.name, analysis.status, analysis.recommendation);
+    let result = ToolboxService::http_header_check(&request).await?;
+    println!("status: {} {}", result.status_code, result.status_text);
+
+    for item in &result.security_analysis {
+        println!("{}: {:?}", item.name, item.status);
+    }
+
+    Ok(())
 }
 ```
 
-## Checked Security Headers
+## Architecture
 
-The HTTP header analysis evaluates these security headers:
+```
+ToolboxService (stateless facade)
+  -> whois / dns / dns_propagation / dnssec / ip / ssl / http_headers modules
+  -> shared LazyLock singletons (DNS resolver, HTTP client)
+  -> external network services (DNS resolvers, WHOIS servers, HTTPS endpoints, ipwho.is)
+```
 
-| Header | Status if Missing |
-|--------|-------------------|
-| `Strict-Transport-Security` | missing |
-| `X-Frame-Options` | missing |
-| `X-Content-Type-Options` | missing |
-| `Content-Security-Policy` | missing |
-| `Referrer-Policy` | warning |
-| `Permissions-Policy` | warning |
-| `X-XSS-Protection` | warning |
+All methods are independent. DNS resolvers and HTTP clients are lazily initialised and reused across calls.
 
 ## DNS Propagation Servers
 
-Propagation checks query 13 servers across 4 regions:
+Propagation checks query 13 resolvers across multiple regions:
 
-- **North America**: Google DNS, Cloudflare, Quad9, Level3
-- **Europe**: Cloudflare (1.0.0.1), Quad9 (149.112.112.112), Google (8.8.4.4)
-- **Asia**: Alibaba DNS, Tencent DNS, DNSPod
-- **Other**: OpenDNS, AdGuard, Telstra
+- North America: Google DNS, Cloudflare, Quad9, Level3
+- Europe: Cloudflare (1.0.0.1), Quad9 (149.112.112.112), Google (8.8.4.4)
+- Asia: Alibaba DNS, Tencent DNS, DNSPod
+- Other: OpenDNS, AdGuard, Telstra
+
+## Development
+
+```bash
+# From repository root
+cargo check -p dns-orchestrator-toolbox
+cargo test -p dns-orchestrator-toolbox
+```
 
 ## License
 

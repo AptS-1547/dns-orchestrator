@@ -110,7 +110,7 @@ dns-orchestrator-provider/
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                       reqwest + TLS                                  │
-│              (native-tls for desktop, rustls for Android)           │
+│              (rustls by default, native-tls as alternative)          │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -334,11 +334,11 @@ The crate uses Cargo feature flags for conditional compilation:
 
 ```toml
 [features]
-default = ["native-tls", "all-providers"]
+default = ["rustls", "all-providers"]
 
 # TLS backend (choose one)
-native-tls = ["reqwest/native-tls"]    # Default for desktop
-rustls = ["reqwest/rustls-tls"]        # Required for Android
+native-tls = ["reqwest/native-tls"]
+rustls = ["reqwest/rustls-tls"]        # Default
 
 # Provider selection
 cloudflare = []
@@ -351,14 +351,14 @@ all-providers = ["cloudflare", "aliyun", "dnspod", "huaweicloud"]
 ### Usage Examples
 
 ```bash
-# Default (all providers, native-tls)
+# Default (all providers, rustls)
 cargo build -p dns-orchestrator-provider
 
-# Android (all providers, rustls)
-cargo build -p dns-orchestrator-provider --no-default-features --features "rustls,all-providers"
+# Use native-tls instead
+cargo build -p dns-orchestrator-provider --no-default-features --features "native-tls,all-providers"
 
 # Single provider only
-cargo build -p dns-orchestrator-provider --no-default-features --features "native-tls,cloudflare"
+cargo build -p dns-orchestrator-provider --no-default-features --features "rustls,cloudflare"
 ```
 
 ## Factory Pattern
@@ -472,8 +472,8 @@ See [TESTING.md](./TESTING.md) for detailed testing documentation.
 ### 5. Platform Flexibility
 
 - TLS backend selection for cross-platform support
-- `rustls` for Android (avoids OpenSSL cross-compilation)
-- `native-tls` for desktop platforms
+- `rustls` as default (pure Rust, no system dependencies)
+- `native-tls` available as alternative when platform-native TLS is preferred
 
 ## Future Work
 

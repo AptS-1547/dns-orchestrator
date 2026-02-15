@@ -1,4 +1,4 @@
-//! type definition module
+//! Core type definitions.
 
 mod account;
 mod dns;
@@ -18,7 +18,7 @@ pub use export::{
     ImportAccountsRequest, ImportFailure, ImportPreview, ImportPreviewAccount, ImportResult,
 };
 
-// Public types of the Re-export provider library
+// Re-export commonly used types from `dns-orchestrator-provider`.
 pub use dns_orchestrator_provider::{
     BatchCreateFailure, BatchCreateResult, BatchDeleteFailure, BatchDeleteResult,
     BatchUpdateFailure, BatchUpdateItem, BatchUpdateResult, CreateDnsRecordRequest,

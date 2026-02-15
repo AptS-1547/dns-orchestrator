@@ -1,0 +1,69 @@
+[package]
+name = "dns-orchestrator-mcp"
+version = "0.0.4"
+edition = "2024"
+license = "MIT"
+description = "MCP Server for DNS Orchestrator - AI agent interface"
+authors = [
+    "AptS-1547 <apts-1547@esaps.net>",
+    "YewFence <88962785+YewFence@users.noreply.github.com>",
+]
+repository = "https://github.com/AptS-1547/dns-orchestrator"
+homepage = "https://github.com/AptS-1547/dns-orchestrator"
+keywords = ["dns", "mcp", "ai", "agent"]
+categories = ["web-programming"]
+rust-version = "1.89"
+
+[dependencies]
+# DNS Orchestrator crates
+dns-orchestrator-core = { workspace = true, features = ["rustls"] }
+dns-orchestrator-toolbox = { workspace = true, features = ["schemars"] }
+dns-orchestrator-app = { workspace = true, features = [
+    "keyring-store",
+    "sqlite-store",
+] }
+
+# MCP SDK
+rmcp = { version = "0.15", features = ["server", "transport-io"] }
+
+# Async runtime
+tokio = { workspace = true, features = [
+    "rt-multi-thread",
+    "macros",
+    "time",
+    "sync",
+] }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+schemars = "1.0"
+
+# Async trait
+async-trait.workspace = true
+
+# Logging
+log.workspace = true
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Platform directories
+dirs = "6"
+
+# Time
+chrono.workspace = true
+
+[dev-dependencies]
+dns-orchestrator-provider = { workspace = true, features = [
+    "all-providers",
+    "rustls",
+] }
+rmcp = { version = "0.15", features = ["client"] }
+anyhow = "1"
+
+[lints]
+workspace = true
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-v{ version }-{ target }{ binary-ext }"
+pkg-fmt = "bin"

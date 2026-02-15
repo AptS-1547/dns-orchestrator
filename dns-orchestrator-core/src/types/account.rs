@@ -1,21 +1,21 @@
-//! Account related type definitions
+//! Account-related types.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use dns_orchestrator_provider::{ProviderCredentials, ProviderType};
 
-/// Account status
+/// Account status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum AccountStatus {
-    /// active state
+    /// Account is active.
     Active,
-    /// Error status (voucher invalid, etc.)
+    /// Account is in error state (for example invalid credentials).
     Error,
 }
 
-/// Account information
+/// Account metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     /// Account ID (UUID)
@@ -24,11 +24,11 @@ pub struct Account {
     pub name: String,
     /// DNS provider type
     pub provider: ProviderType,
-    /// creation time
+    /// Created timestamp.
     #[serde(rename = "createdAt")]
     #[serde(with = "crate::utils::datetime")]
     pub created_at: DateTime<Utc>,
-    /// Update time
+    /// Updated timestamp.
     #[serde(rename = "updatedAt")]
     #[serde(with = "crate::utils::datetime")]
     pub updated_at: DateTime<Utc>,
@@ -40,18 +40,18 @@ pub struct Account {
     pub error: Option<String>,
 }
 
-/// Create account request (v1.7.0 type safety refactoring)
+/// Request payload for creating an account.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAccountRequest {
     /// Account name
     pub name: String,
     /// DNS provider type
     pub provider: ProviderType,
-    /// Credentials (structured type)
+    /// Structured credentials.
     pub credentials: ProviderCredentials,
 }
 
-/// Update account request (v1.7.0 type safety refactoring)
+/// Request payload for updating an account.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateAccountRequest {
     /// Account ID

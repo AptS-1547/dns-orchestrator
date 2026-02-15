@@ -27,6 +27,7 @@
 面向架构师和核心开发者。
 
 - [架构概览](./architecture/overview.md) - 整体架构设计
+- [App 引导层设计](./architecture/app-bootstrap.md) - 多前端共享引导层
 - [Core 库设计](./architecture/core-library.md) - 核心业务逻辑
 - [Provider 抽象](./architecture/provider-abstraction.md) - DNS 服务商抽象层
 - [架构图](./architecture/diagrams/) - 可视化架构设计

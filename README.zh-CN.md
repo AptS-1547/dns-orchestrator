@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/github/license/AptS-1547/dns-orchestrator)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android-blue)
 
-跨平台桌面应用，统一管理多个 DNS 服务商的域名解析记录。
+跨平台 DNS 管理项目，统一管理多个 DNS 服务商的域名解析记录。
 
 简体中文 | [English](./README.md)
 
@@ -16,7 +16,7 @@
 - **统一 DNS 管理** - 跨服务商创建、查看、更新和删除 DNS 记录
 - **高级搜索与过滤** - 分页、实时搜索、记录类型过滤，支持无限滚动
 - **账号导入导出** - 加密备份和迁移账号配置
-- **网络工具箱** - 内置 DNS 查询和 WHOIS 查询工具，支持历史记录
+- **网络工具箱** - 内置 DNS 查询、WHOIS、IP 地理位置、SSL 证书、HTTP Header、DNS 传播和 DNSSEC 工具
 - **跨平台支持** - 原生体验，支持 macOS、Windows、Linux 和 Android
 - **现代化界面** - 简洁的用户界面，支持深色/浅色主题和中英文双语切换
 
@@ -64,7 +64,7 @@
 1. 点击**"添加账号"**配置您的第一个 DNS 服务商
 2. 选择服务商类型并输入 API 凭证
 3. 查看和管理您的域名及 DNS 记录
-4. 使用**网络工具箱**进行 DNS 查询和 WHOIS 查询
+4. 使用**网络工具箱**进行网络诊断（DNS、WHOIS、IP、SSL、HTTP Header、传播检查、DNSSEC）
 
 ## 核心功能
 
@@ -90,6 +90,11 @@
 ### 网络工具箱
 - **DNS 查询**：查询 DNS 记录（A、AAAA、CNAME、MX、TXT、NS、SOA、SRV、CAA、PTR、ALL）
 - **WHOIS 查询**：检索域名注册信息
+- **IP 地理位置**：查询 IP 或域名对应的国家/地区/城市/ISP/ASN
+- **SSL 证书检查**：查看证书有效期、SAN、签发者和过期时间
+- **HTTP Header 分析**：评估响应安全头并给出建议
+- **DNS 传播检查**：对比全球解析器返回的一致性
+- **DNSSEC 验证**：校验 DNSKEY/DS/RRSIG 部署状态
 - **历史记录**：快速访问最近的查询
 
 ### 主题与本地化
@@ -108,7 +113,10 @@
 - **图标**：Lucide React
 
 ### 后端
-- **框架**：Tauri 2 (Rust)
+- **框架**：Tauri 2 + Rust workspace crates
+- **核心逻辑**：`dns-orchestrator-core`
+- **Provider 抽象**：`dns-orchestrator-provider`
+- **网络诊断**：`dns-orchestrator-toolbox`
 - **运行时**：Tokio（异步运行时）
 - **HTTP 客户端**：Reqwest
 - **凭证存储**：keyring 3（系统钥匙串集成）
@@ -142,25 +150,32 @@ pnpm install
 # 开发模式
 pnpm tauri dev
 
+# Web 开发模式
+pnpm dev:web
+
 # 生产构建
 pnpm tauri build
+
+# Web 构建
+pnpm build:web
 
 # 同步版本号（package.json → tauri.conf.json + Cargo.toml）
 pnpm sync-version
 ```
 
-详细的开发说明请参阅 [DEVELOPMENT.zh-CN.md](./docs/DEVELOPMENT.zh-CN.md)。
+详细的开发说明请参阅 [docs/development/README.md](./docs/development/README.md)。
 
 ## 架构
 
 DNS Orchestrator 遵循清晰的架构模式：
 
-- **前端**：React 组件通过 Zustand stores 通信
-- **后端**：基于 Rust 的 Tauri 命令处理业务逻辑
-- **抽象**：`DnsProvider` trait 使添加新服务商变得简单
-- **注册表**：通过 `ProviderRegistry` 进行动态服务商管理
+- **前端层**：`dns-orchestrator-app`（React + Zustand）
+- **平台层**：`dns-orchestrator-tauri` 与 `dns-orchestrator-web`
+- **核心层**：`dns-orchestrator-core` 负责账户/域名/DNS 编排
+- **Provider 层**：`dns-orchestrator-provider` 负责服务商集成
+- **工具层**：`dns-orchestrator-toolbox` 负责网络诊断能力
 
-深入的架构细节请参阅 [ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
+深入的架构细节请参阅 [docs/architecture/README.md](./docs/architecture/README.md)。
 
 ## 系统要求
 
@@ -175,7 +190,7 @@ DNS Orchestrator 遵循清晰的架构模式：
 
 1. **报告 Bug**：提交包含复现步骤的 issue
 2. **建议功能**：在 issues 中分享您的想法
-3. **添加 DNS 服务商**：按照 [DEVELOPMENT.zh-CN.md](./docs/DEVELOPMENT.zh-CN.md#添加新的-dns-服务商) 中的指南操作
+3. **添加 DNS 服务商**：参考 [docs/development/README.md](./docs/development/README.md) 中的开发指南
 4. **改进翻译**：更新 `src/i18n/locales/` 中的语言文件
 5. **提交 Pull Request**：Fork、创建分支、编码、提交 PR
 

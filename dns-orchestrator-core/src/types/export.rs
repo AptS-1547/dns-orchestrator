@@ -1,4 +1,4 @@
-//! Import and export related type definitions
+//! Import/export related types.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use dns_orchestrator_provider::ProviderType;
 
-/// Export data of a single account (including credentials)
+/// Export payload for one account (including credentials).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportedAccount {
@@ -16,121 +16,121 @@ pub struct ExportedAccount {
     pub name: String,
     /// DNS provider type
     pub provider: ProviderType,
-    /// creation time
+    /// Created timestamp.
     #[serde(with = "crate::utils::datetime")]
     pub created_at: DateTime<Utc>,
-    /// Update time
+    /// Updated timestamp.
     #[serde(with = "crate::utils::datetime")]
     pub updated_at: DateTime<Utc>,
-    /// Voucher data
+    /// Credential key-value data.
     pub credentials: HashMap<String, String>,
 }
 
-/// Export file header (plain text part)
+/// Export file header (plain-text section).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportFileHeader {
-    /// File format version
+    /// File format version.
     pub version: u32,
-    /// Whether to encrypt
+    /// Whether payload data is encrypted.
     pub encrypted: bool,
-    /// Salt value used when encrypting (Base64 encoding)
+    /// Base64 salt used for encryption.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub salt: Option<String>,
-    /// IV/Nonce used for encryption (Base64 encoding)
+    /// Base64 nonce/IV used for encryption.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
-    /// Export time
+    /// Export timestamp.
     pub exported_at: String,
-    /// Application version
+    /// Application version.
     pub app_version: String,
 }
 
-/// Complete export file structure
+/// Complete export file structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportFile {
-    /// File header
+    /// File header.
     pub header: ExportFileHeader,
-    /// Account data (base64 encoded ciphertext when encrypted, JSON array when unencrypted)
+    /// Account data (Base64 ciphertext when encrypted, JSON array when plaintext).
     pub data: serde_json::Value,
 }
 
-/// Export request
+/// Request payload for exporting accounts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportAccountsRequest {
-    /// List of account IDs to export
+    /// Account IDs to export.
     pub account_ids: Vec<String>,
-    /// Whether to encrypt
+    /// Whether to encrypt the exported data.
     pub encrypt: bool,
-    /// Encryption password (only required when encrypt=true)
+    /// Encryption password (required when `encrypt = true`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
 }
 
-/// export response
+/// Response payload for account export.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportAccountsResponse {
-    /// Exported JSON content
+    /// Exported JSON content.
     pub content: String,
-    /// Suggested file name
+    /// Suggested filename.
     pub suggested_filename: String,
 }
 
-/// import request
+/// Request payload for importing accounts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportAccountsRequest {
-    /// Import the contents of the file
+    /// Import file content.
     pub content: String,
-    /// Decryption password (if file is encrypted)
+    /// Decryption password (when file is encrypted).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
 }
 
-/// Import preview (used to display the accounts to be imported)
+/// Import preview (for UI display before actual import).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportPreview {
-    /// Whether the file is encrypted
+    /// Whether the file is encrypted.
     pub encrypted: bool,
-    /// Number of accounts
+    /// Number of accounts in the file.
     pub account_count: usize,
-    /// Account preview list (only available if unencrypted or decrypted)
+    /// Account previews (available only when plaintext is available).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accounts: Option<Vec<ImportPreviewAccount>>,
 }
 
-/// Import the account information in the preview (excluding sensitive credentials)
+/// Account info used in import preview (without sensitive credentials).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportPreviewAccount {
-    /// Account name
+    /// Account name.
     pub name: String,
-    /// DNS provider type
+    /// DNS provider type.
     pub provider: ProviderType,
-    /// Does it conflict with the existing account name?
+    /// Whether this name conflicts with an existing account.
     pub has_conflict: bool,
 }
 
-/// Import results
+/// Result payload for account import.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportResult {
-    /// Number of accounts successfully imported
+    /// Number of accounts imported successfully.
     pub success_count: usize,
-    /// Failed accounts and reasons
+    /// Failed accounts and reasons.
     pub failures: Vec<ImportFailure>,
 }
 
-/// Import failed items
+/// One failed import item.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportFailure {
-    /// Account name
+    /// Account name.
     pub name: String,
-    /// Reason for failure
+    /// Failure reason.
     pub reason: String,
 }

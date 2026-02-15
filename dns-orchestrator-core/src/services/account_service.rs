@@ -1,12 +1,13 @@
 //! Unified account service
 //!
-//! Merge the original `AccountMetadataService`, `CredentialManagementService`,
-//! `AccountLifecycleService`, `AccountBootstrapService` four services.
+//! Consolidates the responsibilities of:
+//! `AccountMetadataService`, `CredentialManagementService`,
+//! `AccountLifecycleService`, and `AccountBootstrapService`.
 
 use std::sync::Arc;
 
 use chrono::Utc;
-use dns_orchestrator_provider::{create_provider, DnsProvider, ProviderCredentials, ProviderType};
+use dns_orchestrator_provider::{DnsProvider, ProviderCredentials, ProviderType, create_provider};
 
 use crate::error::{CoreError, CoreResult};
 use crate::services::ServiceContext;
@@ -16,22 +17,22 @@ use crate::types::{
     UpdateAccountRequest,
 };
 
-/// Account recovery results
+/// Account restore result summary.
 #[derive(Debug, Clone)]
 pub struct RestoreResult {
-    /// Number of accounts successfully recovered
+    /// Number of accounts restored successfully.
     pub success_count: usize,
-    /// Number of accounts that failed to be restored
+    /// Number of accounts that failed to restore.
     pub error_count: usize,
 }
 
-/// Unified account service
+/// Unified account management service.
 pub struct AccountService {
     ctx: Arc<ServiceContext>,
 }
 
 impl AccountService {
-    /// Create an account service instance
+    /// Creates an account service.
     #[must_use]
     pub fn new(ctx: Arc<ServiceContext>) -> Self {
         Self { ctx }
@@ -39,17 +40,17 @@ impl AccountService {
 
     // ===== CRUD operations =====
 
-    /// List all accounts
+    /// Lists all accounts.
     pub async fn list_accounts(&self) -> CoreResult<Vec<Account>> {
         self.ctx.account_repository().find_all().await
     }
 
-    /// Get account based on ID
+    /// Returns one account by ID.
     pub async fn get_account(&self, account_id: &str) -> CoreResult<Option<Account>> {
         self.ctx.account_repository().find_by_id(account_id).await
     }
 
-    /// Update account status
+    /// Updates account status.
     pub async fn update_status(
         &self,
         account_id: &str,
@@ -62,32 +63,34 @@ impl AccountService {
             .await
     }
 
-    // ===== Life cycle operations =====
+    // ===== Lifecycle operations =====
 
-    /// create Account
+    /// Creates an account.
     ///
-    /// Complete process: Verify credentials -> Save credentials -> Register Provider -> Save metadata
-    /// If saving metadata fails, saved credentials and registered Providers will be automatically cleaned up
+    /// Workflow:
+    /// verify credentials -> save credentials -> register provider -> save metadata.
+    ///
+    /// If metadata save fails, saved credentials and registered providers are rolled back.
     pub async fn create_account(&self, request: CreateAccountRequest) -> CoreResult<Account> {
-        // 1. Verify credentials
+        // 1. Validate credentials.
         let provider = self
             .validate_and_create_provider(&request.credentials)
             .await?;
 
-        // 2. Generate account ID
+        // 2. Generate account ID.
         let account_id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
 
-        // 3. Save the credentials
+        // 3. Persist credentials.
         log::info!("Saving credentials for account: {account_id}");
         self.save_credentials(&account_id, &request.credentials)
             .await?;
         log::info!("Credentials saved successfully");
 
-        // 4. Register provider
+        // 4. Register provider instance.
         self.register_provider(account_id.clone(), provider).await;
 
-        // 5. Create account metadata
+        // 5. Build account metadata.
         let account = Account {
             id: account_id.clone(),
             name: request.name,
@@ -98,7 +101,7 @@ impl AccountService {
             error: None,
         };
 
-        // 6. Save metadata and cleanup if failed
+        // 6. Persist metadata; rollback side effects on failure.
         if let Err(e) = self.ctx.account_repository().save(&account).await {
             log::error!("Failed to save account metadata, cleaning up: {e}");
             if let Err(cleanup_err) = self.delete_credentials(&account_id).await {
@@ -111,7 +114,7 @@ impl AccountService {
         Ok(account)
     }
 
-    /// Create account from imported data (does not verify credentials)
+    /// Creates an account from imported data (skips credential validation).
     pub async fn create_account_from_import(
         &self,
         name: String,
@@ -152,7 +155,7 @@ impl AccountService {
     /// Supports updating account names and/or credentials.
     /// If the credentials are updated, the provider is revalidated and reregistered.
     pub async fn update_account(&self, request: UpdateAccountRequest) -> CoreResult<Account> {
-        // 1. Get an existing account
+        // 1. Load the existing account.
         let mut account = self
             .ctx
             .account_repository()
@@ -160,11 +163,11 @@ impl AccountService {
             .await?
             .ok_or_else(|| CoreError::AccountNotFound(request.id.clone()))?;
 
-        // 2. If new credentials are provided, verify and update
+        // 2. If credentials are provided, validate and update them.
         let old_credentials = if let Some(ref new_credentials) = request.credentials {
             let new_provider = self.validate_and_create_provider(new_credentials).await?;
 
-            // Back up old credentials for rollback
+            // Keep old credentials for rollback.
             let old_creds = self.load_credentials(&request.id).await.ok();
 
             log::info!("Updating credentials for account: {}", request.id);
@@ -180,15 +183,15 @@ impl AccountService {
             None
         };
 
-        // 3. Update name (if provided)
+        // 3. Update name if provided.
         if let Some(new_name) = request.name {
             account.name = new_name;
         }
 
-        // 4. Update timestamp
+        // 4. Refresh timestamp.
         account.updated_at = Utc::now();
 
-        // 5. Save the updated account and roll back the credentials if it fails.
+        // 5. Persist account and rollback credentials/provider if this fails.
         if let Err(e) = self.ctx.account_repository().save(&account).await {
             if let Some(old_creds) = old_credentials {
                 log::warn!("Rolling back credentials for account: {}", request.id);
@@ -198,7 +201,7 @@ impl AccountService {
                         request.id
                     );
                 }
-                // Rollback provider
+                // Roll back provider registration.
                 if let Ok(old_provider) = create_provider(old_creds) {
                     self.register_provider(request.id.clone(), old_provider)
                         .await;
@@ -212,22 +215,25 @@ impl AccountService {
 
     /// Delete account
     ///
-    /// Process: Restorable operations come first, irreversible operations come last.
-    /// Failure to delete credentials will abort the entire operation (the account is still in the list and the user can try again),
-    /// Only a warning if domain name metadata deletion fails (does not affect the main process),
-    /// Account metadata is finally deleted (irreversibly).
+    /// Order of operations:
+    /// - Reversible operations first.
+    /// - Irreversible operations last.
+    ///
+    /// Credential deletion failure aborts the whole operation, so users can retry safely.
+    /// Domain metadata cleanup failure is non-fatal and logged as warning.
+    /// Account metadata deletion is executed last.
     pub async fn delete_account(&self, account_id: &str) -> CoreResult<()> {
-        // 1. Check account existence
+        // 1. Ensure account exists.
         self.ctx
             .account_repository()
             .find_by_id(account_id)
             .await?
             .ok_or_else(|| CoreError::AccountNotFound(account_id.to_string()))?;
 
-        // 2. Delete the credentials (abort if failed: to prevent orphan credentials)
+        // 2. Delete credentials (abort on failure to prevent orphan credentials).
         self.delete_credentials(account_id).await?;
 
-        // 3. Clean up domain name metadata (soft failure: does not affect the deletion process)
+        // 3. Clean domain metadata (soft failure).
         if let Err(e) = self
             .ctx
             .domain_metadata_repository()
@@ -237,16 +243,16 @@ impl AccountService {
             log::warn!("Failed to delete domain metadata for {account_id}: {e}");
         }
 
-        // 4. Log out of the provider (memory operation)
+        // 4. Unregister provider (in-memory operation).
         self.unregister_provider(account_id).await;
 
-        // 5. Finally delete the account metadata (irreversible)
+        // 5. Delete account metadata (irreversible).
         self.ctx.account_repository().delete(account_id).await?;
 
         Ok(())
     }
 
-    /// Delete accounts in batches
+    /// Deletes accounts in batch and aggregates per-item failures.
     pub async fn batch_delete_accounts(
         &self,
         account_ids: Vec<String>,
@@ -273,9 +279,9 @@ impl AccountService {
         })
     }
 
-    // ===== Voucher operation =====
+    // ===== Credential operations =====
 
-    /// Validate credentials and create Provider instance
+    /// Validates credentials and creates a provider instance.
     pub async fn validate_and_create_provider(
         &self,
         credentials: &ProviderCredentials,
@@ -292,7 +298,7 @@ impl AccountService {
         Ok(provider)
     }
 
-    /// Save credentials
+    /// Saves credentials.
     pub async fn save_credentials(
         &self,
         account_id: &str,
@@ -304,7 +310,7 @@ impl AccountService {
             .await
     }
 
-    /// Load credentials
+    /// Loads credentials.
     pub async fn load_credentials(&self, account_id: &str) -> CoreResult<ProviderCredentials> {
         self.ctx
             .credential_store()
@@ -317,19 +323,19 @@ impl AccountService {
             })
     }
 
-    /// Delete credentials
+    /// Deletes credentials.
     pub async fn delete_credentials(&self, account_id: &str) -> CoreResult<()> {
         self.ctx.credential_store().remove(account_id).await
     }
 
-    /// Load all credentials
+    /// Loads all credentials.
     pub async fn load_all_credentials(&self) -> CoreResult<CredentialsMap> {
         self.ctx.credential_store().load_all().await
     }
 
-    // ===== Provider Registration =====
+    // ===== Provider registration =====
 
-    /// Register Provider to Registry
+    /// Registers a provider in the runtime registry.
     pub async fn register_provider(&self, account_id: String, provider: Arc<dyn DnsProvider>) {
         self.ctx
             .provider_registry()
@@ -337,22 +343,22 @@ impl AccountService {
             .await;
     }
 
-    /// Log out Provider
+    /// Unregisters a provider from the runtime registry.
     pub async fn unregister_provider(&self, account_id: &str) {
         self.ctx.provider_registry().unregister(account_id).await;
     }
 
-    // ===== Start recovery =====
+    // ===== Startup restore =====
 
-    /// Restore account (called at startup)
+    /// Restores all accounts at startup.
     pub async fn restore_accounts(&self) -> CoreResult<RestoreResult> {
         let mut success_count = 0;
         let mut error_count = 0;
 
-        // 1. Load all account metadata
+        // 1. Load all account metadata.
         let accounts = self.list_accounts().await?;
 
-        // 2. Load all credentials
+        // 2. Load all credentials.
         let all_credentials = match self.load_all_credentials().await {
             Ok(creds) => creds,
             Err(e) => {
@@ -375,7 +381,7 @@ impl AccountService {
             }
         };
 
-        // 3. Restore accounts one by one
+        // 3. Restore providers account by account.
         for account in &accounts {
             let Some(credentials) = all_credentials.get(&account.id) else {
                 log::warn!("No credentials found for account: {}", account.id);
@@ -383,7 +389,7 @@ impl AccountService {
                     .update_status(
                         &account.id,
                         AccountStatus::Error,
-                        Some("凭证不存在".to_string()),
+                        Some("Credentials not found".to_string()),
                     )
                     .await
                 {
@@ -405,7 +411,7 @@ impl AccountService {
                         .update_status(
                             &account.id,
                             AccountStatus::Error,
-                            Some(format!("创建 Provider 失败: {e}")),
+                            Some(format!("Failed to create provider: {e}")),
                         )
                         .await
                     {
@@ -462,15 +468,15 @@ mod tests {
         assert_eq!(account.provider, ProviderType::Cloudflare);
         assert_eq!(account.status, Some(AccountStatus::Active));
 
-        // Verification credentials saved
+        // Verify credentials were saved.
         let creds = credential_store.get(&account.id).await.unwrap();
         assert!(creds.is_some());
 
-        // Verify account metadata is saved
+        // Verify account metadata was saved.
         let saved = account_repo.find_by_id(&account.id).await.unwrap();
         assert!(saved.is_some());
 
-        // Verify provider is registered
+        // Verify provider was registered.
         let provider = svc.ctx.provider_registry().get(&account.id).await;
         assert!(provider.is_some());
     }
@@ -479,7 +485,7 @@ mod tests {
     async fn create_account_from_import_save_failure_cleanup() {
         let (svc, account_repo, credential_store, _) = create_test_account_service();
 
-        // Setting save must fail
+        // Configure save to fail.
         account_repo
             .set_save_error(Some("disk full".to_string()))
             .await;
@@ -494,11 +500,11 @@ mod tests {
 
         assert!(result.is_err());
 
-        // Verify cleanup: Credentials are cleaned
+        // Verify cleanup: credentials were removed.
         let all_creds = credential_store.load_all().await.unwrap();
         assert!(all_creds.is_empty());
 
-        // Verify cleanup:provider is logged out
+        // Verify cleanup: provider was unregistered.
         let ids = svc.ctx.provider_registry().list_account_ids().await;
         assert!(ids.is_empty());
     }
@@ -519,11 +525,11 @@ mod tests {
 
         svc.delete_account(&id).await.unwrap();
 
-        // Account metadata deleted
+        // Account metadata deleted.
         assert!(account_repo.find_by_id(&id).await.unwrap().is_none());
-        // Credential deleted
+        // Credentials deleted.
         assert!(credential_store.get(&id).await.unwrap().is_none());
-        // provider has logged out
+        // Provider unregistered.
         assert!(svc.ctx.provider_registry().get(&id).await.is_none());
     }
 
@@ -536,6 +542,8 @@ mod tests {
 
     #[tokio::test]
     async fn delete_account_cleans_domain_metadata() {
+        use crate::types::{DomainMetadata, DomainMetadataKey};
+
         let (svc, _, _, domain_meta_repo) = create_test_account_service();
 
         let account = svc
@@ -548,18 +556,19 @@ mod tests {
             .unwrap();
         let id = account.id.clone();
 
-        // Add some metadata to the account's domain name
-        use crate::types::{DomainMetadata, DomainMetadataKey};
+        // Add metadata under this account.
         let key = DomainMetadataKey::new(id.clone(), "example.com".to_string());
-        let mut meta = DomainMetadata::default();
-        meta.is_favorite = true;
-        meta.favorited_at = Some(chrono::Utc::now());
+        let meta = DomainMetadata {
+            is_favorite: true,
+            favorited_at: Some(chrono::Utc::now()),
+            ..DomainMetadata::default()
+        };
         domain_meta_repo.save(&key, &meta).await.unwrap();
 
-        // Delete account
+        // Delete account.
         svc.delete_account(&id).await.unwrap();
 
-        // Domain name metadata has also been cleaned
+        // Domain metadata was cleaned as well.
         let found = domain_meta_repo.find_by_key(&key).await.unwrap();
         assert!(found.is_none());
     }
@@ -671,27 +680,27 @@ mod tests {
             .unwrap();
         let id = account.id.clone();
 
-        // Set credential deletion must fail
+        // Configure credential deletion to fail.
         credential_store
             .set_remove_error(Some("keychain locked".to_string()))
             .await;
 
-        // Delete should fail
+        // Delete should fail.
         let result = svc.delete_account(&id).await;
         assert!(result.is_err());
 
-        // Account metadata still exists (irreversible operations are not performed)
+        // Account metadata should still exist (irreversible step not reached).
         let still_exists = account_repo.find_by_id(&id).await.unwrap();
         assert!(
             still_exists.is_some(),
             "account should still exist when credential deletion fails"
         );
 
-        // The credentials also still exist
+        // Credentials should still exist.
         let creds = credential_store.get(&id).await.unwrap();
         assert!(creds.is_some(), "credentials should still exist");
 
-        // provider is still registered
+        // Provider should still be registered.
         let provider = svc.ctx.provider_registry().get(&id).await;
         assert!(provider.is_some(), "provider should still be registered");
     }
@@ -710,10 +719,10 @@ mod tests {
             .unwrap();
         let id = account.id.clone();
 
-        // Delete normally
+        // Delete normally.
         svc.delete_account(&id).await.unwrap();
 
-        // clean it all
+        // Verify all related data is removed.
         assert!(account_repo.find_by_id(&id).await.unwrap().is_none());
         assert!(credential_store.get(&id).await.unwrap().is_none());
         assert!(svc.ctx.provider_registry().get(&id).await.is_none());

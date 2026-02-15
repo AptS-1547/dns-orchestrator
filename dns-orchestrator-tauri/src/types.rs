@@ -35,3 +35,32 @@ impl<T> ApiResponse<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_api_response_success_construction() {
+        let resp = ApiResponse::success(42);
+        assert!(resp.success);
+        assert_eq!(resp.data, Some(42));
+    }
+
+    #[test]
+    fn test_api_response_serialize() {
+        let resp = ApiResponse::success("hello");
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["success"], true);
+        assert_eq!(json["data"], "hello");
+    }
+
+    #[test]
+    fn test_api_response_roundtrip() {
+        let resp = ApiResponse::success(vec![1, 2, 3]);
+        let json_str = serde_json::to_string(&resp).unwrap();
+        let deserialized: ApiResponse<Vec<i32>> = serde_json::from_str(&json_str).unwrap();
+        assert!(deserialized.success);
+        assert_eq!(deserialized.data, Some(vec![1, 2, 3]));
+    }
+}

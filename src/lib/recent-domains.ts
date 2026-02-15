@@ -35,3 +35,21 @@ export function cleanupInvalidRecentDomains(validAccountIds: string[]) {
     storage.set("recentDomains", filtered)
   }
 }
+
+export function clearAllRecentDomains() {
+  storage.set("recentDomains", [])
+}
+
+export function cleanupStaleRecentDomains(
+  domainsByAccount: Record<string, { domains: { id: string }[] } | undefined>
+) {
+  const recent = getRecentDomains()
+  const filtered = recent.filter((d) => {
+    const cache = domainsByAccount[d.accountId]
+    if (!cache) return true // 缓存未加载，保留（避免误删）
+    return cache.domains.some((domain) => domain.id === d.domainId)
+  })
+  if (filtered.length !== recent.length) {
+    storage.set("recentDomains", filtered)
+  }
+}

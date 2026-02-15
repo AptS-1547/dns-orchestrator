@@ -290,4 +290,96 @@ mod tests {
         // 确保编译时内嵌的公钥格式正确
         PublicKey::decode(APK_UPDATER_PUBKEY).expect("Embedded pubkey should be valid");
     }
+
+    #[test]
+    fn test_version_comparison_empty_strings() {
+        // 两个空字符串 → 相等，不是更新
+        assert!(!is_newer_version("", ""));
+        // 空 vs 有值 → remote 更新
+        assert!(is_newer_version("", "1.0.0"));
+        // 有值 vs 空 → 不是更新
+        assert!(!is_newer_version("1.0.0", ""));
+    }
+
+    #[test]
+    fn test_version_comparison_single_segment() {
+        assert!(is_newer_version("1", "2"));
+        assert!(!is_newer_version("2", "1"));
+        assert!(!is_newer_version("1", "1"));
+    }
+
+    #[test]
+    fn test_version_comparison_four_segments() {
+        assert!(is_newer_version("1.0.0.0", "1.0.0.1"));
+        assert!(!is_newer_version("1.0.0.1", "1.0.0.0"));
+        // 不同长度比较：缺失段视为 0
+        assert!(is_newer_version("1.0.0", "1.0.0.1"));
+        assert!(!is_newer_version("1.0.0.1", "1.0.0"));
+    }
+
+    #[test]
+    fn test_latest_json_deserialize() {
+        let json = r#"{
+            "version": "v1.2.0",
+            "notes": "Bug fixes",
+            "platforms": {
+                "android-aarch64": {
+                    "url": "https://example.com/app.apk",
+                    "signature": "sig123"
+                }
+            }
+        }"#;
+        let latest: LatestJson = serde_json::from_str(json).unwrap();
+        assert_eq!(latest.version, "v1.2.0");
+        assert_eq!(latest.notes.as_deref(), Some("Bug fixes"));
+        let platform = latest.platforms.get("android-aarch64").unwrap();
+        assert_eq!(platform.url, "https://example.com/app.apk");
+        assert_eq!(platform.signature.as_deref(), Some("sig123"));
+    }
+
+    #[test]
+    fn test_latest_json_deserialize_no_notes() {
+        let json = r#"{
+            "version": "v1.0.0",
+            "platforms": {}
+        }"#;
+        let latest: LatestJson = serde_json::from_str(json).unwrap();
+        assert!(latest.notes.is_none());
+        assert!(latest.platforms.is_empty());
+    }
+
+    #[test]
+    fn test_download_progress_serialize() {
+        let started = DownloadProgress::Started {
+            content_length: 1024,
+        };
+        let json = serde_json::to_value(&started).unwrap();
+        assert_eq!(json["event"], "Started");
+        assert_eq!(json["data"]["content_length"], 1024);
+
+        let progress = DownloadProgress::Progress { chunk_length: 256 };
+        let json = serde_json::to_value(&progress).unwrap();
+        assert_eq!(json["event"], "Progress");
+        assert_eq!(json["data"]["chunk_length"], 256);
+
+        let finished = DownloadProgress::Finished;
+        let json = serde_json::to_value(&finished).unwrap();
+        assert_eq!(json["event"], "Finished");
+        assert!(json.get("data").is_none());
+    }
+
+    #[test]
+    fn test_android_update_serialize() {
+        let update = AndroidUpdate {
+            version: "v1.2.0".into(),
+            notes: "New feature".into(),
+            url: "https://example.com/app.apk".into(),
+            signature: "sig123".into(),
+        };
+        let json = serde_json::to_value(&update).unwrap();
+        assert_eq!(json["version"], "v1.2.0");
+        assert_eq!(json["notes"], "New feature");
+        assert_eq!(json["url"], "https://example.com/app.apk");
+        assert_eq!(json["signature"], "sig123");
+    }
 }

@@ -1,4 +1,4 @@
-use tauri::{command, AppHandle, Runtime};
+use tauri::{AppHandle, Runtime, command};
 
 #[cfg(mobile)]
 use crate::ApkInstallerExt;

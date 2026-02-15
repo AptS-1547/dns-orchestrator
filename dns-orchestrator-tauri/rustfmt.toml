@@ -1,5 +1,5 @@
 # Rust Edition
-edition = "2021"
+edition = "2024"
 
 # 格式化基本设置（稳定版本支持的选项）
 max_width = 100
@@ -28,4 +28,3 @@ match_block_trailing_comma = false
 # format_strings = true
 # format_macro_matchers = true
 # format_macro_bodies = true
-

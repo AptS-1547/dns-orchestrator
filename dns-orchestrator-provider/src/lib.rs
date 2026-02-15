@@ -24,8 +24,8 @@
 //!
 //! ### TLS Backend
 //!
-//! - **`native-tls`** *(default)* — Use the platform's native TLS implementation.
-//! - **`rustls`** — Use rustls. Recommended for cross-compilation and Android targets.
+//! - **`native-tls`** — Use the platform's native TLS implementation.
+//! - **`rustls`** *(default)* — Use rustls, a pure-Rust TLS implementation.
 //!
 //! ## Quick Start
 //!

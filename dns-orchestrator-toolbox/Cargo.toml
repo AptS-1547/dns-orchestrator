@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-toolbox"
-version = "0.1.3"
+version = "0.1.5"
 edition = "2024"
 license = "MIT"
 description = "Network diagnostic toolbox: WHOIS, DNS lookup, IP geolocation, SSL certificate check, HTTP headers, DNSSEC validation"
@@ -12,10 +12,16 @@ keywords = ["dns", "whois", "ssl", "dnssec", "network"]
 categories = ["network-programming", "web-programming"]
 rust-version = "1.89"
 
+[features]
+schemars = ["dep:schemars"]
+
 [dependencies]
 # Serialization
 serde.workspace = true
 serde_json.workspace = true
+
+# JSON Schema (optional, for MCP)
+schemars = { version = "1.0", optional = true }
 
 # Async
 tokio = { workspace = true, features = ["sync", "time", "net"] }
@@ -49,7 +55,11 @@ base64 = "0.22"
 hex.workspace = true
 
 # SSL/TLS inspection
-rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls = { version = "0.23", default-features = false, features = [
+    "ring",
+    "std",
+    "tls12",
+] }
 tokio-rustls = "0.26"
 rustls-pki-types = "1"
 webpki-roots = "1"

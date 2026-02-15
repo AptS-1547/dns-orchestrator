@@ -1,22 +1,24 @@
-//! Domain name metadata type definition
+//! Domain metadata types.
 
 use serde::{Deserialize, Serialize};
 
-/// Default color value (no color)
+/// Default color marker used when no color is assigned.
 fn default_color() -> String {
     "none".to_string()
 }
 
-/// Domain name metadata key (composite primary key)
+/// Domain metadata key (composite key).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DomainMetadataKey {
+    /// Account ID.
     pub account_id: String,
+    /// Domain ID.
     pub domain_id: String,
 }
 
 impl DomainMetadataKey {
-    /// Create new metadata key
+    /// Creates a new metadata key.
     #[must_use]
     pub fn new(account_id: String, domain_id: String) -> Self {
         Self {
@@ -25,13 +27,13 @@ impl DomainMetadataKey {
         }
     }
 
-    /// Generate a string key for storage (format: `account_id::domain_id`)
+    /// Converts this key into a storage key (`account_id::domain_id`).
     #[must_use]
     pub fn to_storage_key(&self) -> String {
         format!("{}::{}", self.account_id, self.domain_id)
     }
 
-    /// Parse from storage key
+    /// Parses from a storage key.
     #[must_use]
     pub fn from_storage_key(key: &str) -> Option<Self> {
         let parts: Vec<&str> = key.split("::").collect();
@@ -45,31 +47,31 @@ impl DomainMetadataKey {
     }
 }
 
-/// Domain name metadata
+/// User-defined domain metadata.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DomainMetadata {
-    /// Whether to collect
+    /// Whether the domain is favorited.
     #[serde(default)]
     pub is_favorite: bool,
 
-    /// Tag list (Phase 2 implementation)
+    /// User tags.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
 
-    /// Color tag ("none" means no color, Phase 3 implementation)
+    /// Color label (`none` means no color).
     #[serde(default = "default_color")]
     pub color: String,
 
-    /// Remarks (optional, Phase 3 implementation)
+    /// Optional note.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 
-    /// Collection time (only valuable when collecting)
+    /// Timestamp of first time being favorited.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub favorited_at: Option<chrono::DateTime<chrono::Utc>>,
 
-    /// last modified time
+    /// Last updated timestamp.
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -87,7 +89,7 @@ impl Default for DomainMetadata {
 }
 
 impl DomainMetadata {
-    /// Create new metadata (all fields)
+    /// Creates metadata with all fields explicitly provided.
     #[must_use]
     pub fn new(
         is_favorite: bool,
@@ -106,12 +108,12 @@ impl DomainMetadata {
         }
     }
 
-    /// Refresh update time
+    /// Updates `updated_at` to current time.
     pub fn touch(&mut self) {
         self.updated_at = chrono::Utc::now();
     }
 
-    /// Whether the metadata is empty (all fields are default values)
+    /// Returns `true` when metadata is effectively empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         !self.is_favorite
@@ -122,26 +124,32 @@ impl DomainMetadata {
     }
 }
 
-/// Domain name metadata update request (supports partial updates)
+/// Partial update payload for domain metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DomainMetadataUpdate {
+    /// New favorite state.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_favorite: Option<bool>,
 
+    /// New full tag set.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
 
-    /// An empty string indicates clear color
+    /// New color value. Empty string means "clear color".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
 
+    /// Optional note patch:
+    /// - `None` means "do not change"
+    /// - `Some(None)` means "clear note"
+    /// - `Some(Some(v))` means "set note to v"
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<Option<String>>,
 }
 
 impl DomainMetadataUpdate {
-    /// Apply updates to existing metadata
+    /// Applies this update to an existing metadata object.
     pub fn apply_to(&self, metadata: &mut DomainMetadata) {
         if let Some(is_favorite) = self.is_favorite {
             metadata.is_favorite = is_favorite;
@@ -159,30 +167,39 @@ impl DomainMetadataUpdate {
     }
 }
 
-/// Bulk label operation request
+/// One batch tag operation request.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchTagRequest {
+    /// Account ID.
     pub account_id: String,
+    /// Domain ID.
     pub domain_id: String,
+    /// Tags to add/remove/set based on the operation.
     pub tags: Vec<String>,
 }
 
-/// Batch label operation results
+/// Result of a batch tag operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchTagResult {
+    /// Number of successful items.
     pub success_count: usize,
+    /// Number of failed items.
     pub failed_count: usize,
+    /// Failure details.
     pub failures: Vec<BatchTagFailure>,
 }
 
-/// Batch label operation failure details
+/// One batch tag operation failure item.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchTagFailure {
+    /// Account ID.
     pub account_id: String,
+    /// Domain ID.
     pub domain_id: String,
+    /// Failure reason.
     pub reason: String,
 }
 
@@ -198,22 +215,28 @@ mod tests {
 
     #[test]
     fn metadata_with_favorite_not_empty() {
-        let mut m = DomainMetadata::default();
-        m.is_favorite = true;
+        let m = DomainMetadata {
+            is_favorite: true,
+            ..DomainMetadata::default()
+        };
         assert!(!m.is_empty());
     }
 
     #[test]
     fn metadata_with_tag_not_empty() {
-        let mut m = DomainMetadata::default();
-        m.tags = vec!["important".to_string()];
+        let m = DomainMetadata {
+            tags: vec!["important".to_string()],
+            ..DomainMetadata::default()
+        };
         assert!(!m.is_empty());
     }
 
     #[test]
     fn metadata_with_color_not_empty() {
-        let mut m = DomainMetadata::default();
-        m.color = "red".to_string();
+        let m = DomainMetadata {
+            color: "red".to_string(),
+            ..DomainMetadata::default()
+        };
         assert!(!m.is_empty());
     }
 
@@ -228,7 +251,7 @@ mod tests {
     fn metadata_touch_updates_timestamp() {
         let mut m = DomainMetadata::default();
         let before = m.updated_at;
-        // chrono::Utc::now() is precise enough to allow two calls to produce different timestamps
+        // `chrono::Utc::now()` precision allows these two calls to differ.
         std::thread::sleep(std::time::Duration::from_millis(2));
         m.touch();
         assert!(m.updated_at >= before);
@@ -252,9 +275,11 @@ mod tests {
 
     #[test]
     fn apply_to_partial_update() {
-        let mut m = DomainMetadata::default();
-        m.tags = vec!["old".to_string()];
-        m.color = "red".to_string();
+        let mut m = DomainMetadata {
+            tags: vec!["old".to_string()],
+            color: "red".to_string(),
+            ..DomainMetadata::default()
+        };
 
         let update = DomainMetadataUpdate {
             is_favorite: Some(true),
@@ -265,7 +290,7 @@ mod tests {
         update.apply_to(&mut m);
 
         assert!(m.is_favorite);
-        // Unupdated fields remain unchanged
+        // Fields not present in the update should stay unchanged.
         assert_eq!(m.tags, vec!["old".to_string()]);
         assert_eq!(m.color, "red");
     }

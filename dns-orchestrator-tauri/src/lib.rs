@@ -3,7 +3,6 @@ mod commands;
 mod error;
 mod types;
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 #[cfg(target_os = "android")]
@@ -12,76 +11,193 @@ use commands::{account, dns, domain, domain_metadata, toolbox};
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
-use adapters::{TauriAccountRepository, TauriCredentialStore, TauriDomainMetadataRepository};
-use dns_orchestrator_core::services::{
-    AccountService, DnsService, DomainMetadataService, DomainService, ImportExportService,
-    MigrationResult, MigrationService, ProviderMetadataService, ServiceContext,
-};
-use dns_orchestrator_core::traits::InMemoryProviderRegistry;
+#[cfg(not(target_os = "android"))]
+use adapters::SqliteStore;
+use adapters::TauriCredentialStore;
+#[cfg(target_os = "android")]
+use adapters::{TauriAccountRepository, TauriDomainMetadataRepository};
+use dns_orchestrator_app::{AppState, AppStateBuilder, StartupHooks};
+#[cfg(not(target_os = "android"))]
+use tauri_plugin_store::StoreExt;
 
-/// 应用全局状态
-pub struct AppState {
-    /// 服务上下文
-    pub ctx: Arc<ServiceContext>,
-    /// 统一账户服务
-    pub account_service: Arc<AccountService>,
-    /// Provider 元数据服务
-    pub provider_metadata_service: ProviderMetadataService,
-    /// 导入导出服务
-    pub import_export_service: ImportExportService,
-    /// 域名服务
-    pub domain_service: DomainService,
-    /// 域名元数据服务
-    pub domain_metadata_service: Arc<DomainMetadataService>,
-    /// DNS 服务
-    pub dns_service: DnsService,
-    /// 账户恢复是否完成
-    pub restore_completed: AtomicBool,
+/// Tauri-specific startup hooks for credential backup.
+struct TauriStartupHooks {
+    app_handle: tauri::AppHandle,
 }
 
-impl AppState {
-    pub fn new(app_handle: tauri::AppHandle) -> Self {
-        // 创建适配器（Android 版本需要 AppHandle）
-        #[cfg(not(target_os = "android"))]
-        let credential_store = Arc::new(TauriCredentialStore::new());
+/// Write credential JSON to a timestamped backup file in `data_dir`.
+///
+/// Returns the backup file path on success, or `None` on failure.
+/// Extracted from `TauriStartupHooks` for testability.
+fn backup_credentials_to_dir(data_dir: &std::path::Path, raw_json: &str) -> Option<String> {
+    if let Err(e) = std::fs::create_dir_all(data_dir) {
+        log::warn!("Failed to create data dir for backup: {e}");
+        return None;
+    }
 
-        #[cfg(target_os = "android")]
-        let credential_store = Arc::new(TauriCredentialStore::new(app_handle.clone()));
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let backup_path = data_dir.join(format!("credentials.backup.{timestamp}.json"));
 
-        let account_repository = Arc::new(TauriAccountRepository::new(app_handle.clone()));
-        let provider_registry = Arc::new(InMemoryProviderRegistry::new());
-        let domain_metadata_repository = Arc::new(TauriDomainMetadataRepository::new(app_handle));
+    if let Err(e) = std::fs::write(&backup_path, raw_json.as_bytes()) {
+        log::warn!("Failed to write backup: {e}");
+        return None;
+    }
 
-        // 创建服务上下文
-        let ctx = Arc::new(ServiceContext::new(
-            credential_store.clone(),
-            account_repository.clone(),
-            provider_registry.clone(),
-            domain_metadata_repository.clone(),
-        ));
+    let path_str = backup_path.display().to_string();
+    log::info!("凭证已备份到: {path_str}");
+    Some(path_str)
+}
 
-        // 创建统一账户服务
-        let account_service = Arc::new(AccountService::new(Arc::clone(&ctx)));
-        let provider_metadata_service = ProviderMetadataService::new();
+/// Delete a backup file by path.
+///
+/// Extracted from `TauriStartupHooks` for testability.
+fn cleanup_backup_file(backup_path: &str) {
+    if let Err(e) = std::fs::remove_file(backup_path) {
+        log::warn!("删除备份文件失败: {e}");
+    } else {
+        log::info!("已删除备份文件");
+    }
+}
 
-        // 创建其他服务
-        let import_export_service = ImportExportService::new(Arc::clone(&account_service));
-        let domain_metadata_service =
-            Arc::new(DomainMetadataService::new(domain_metadata_repository));
-        let domain_service =
-            DomainService::new(Arc::clone(&ctx), Arc::clone(&domain_metadata_service));
-        let dns_service = DnsService::new(Arc::clone(&ctx));
+/// Migrate accounts and domain metadata from tauri-plugin-store JSON files to `SqliteStore`.
+///
+/// Runs once on first upgrade. Detects old JSON files, imports data into `SQLite`,
+/// then renames them to `.migrated` so the migration never runs again.
+#[cfg(not(target_os = "android"))]
+async fn migrate_json_to_sqlite(app_handle: &tauri::AppHandle, sqlite_store: &SqliteStore) {
+    use dns_orchestrator_core::traits::{AccountRepository, DomainMetadataRepository};
+    use dns_orchestrator_core::types::{Account, DomainMetadata, DomainMetadataKey};
+    use std::collections::HashMap;
 
-        Self {
-            ctx,
-            account_service,
-            provider_metadata_service,
-            import_export_service,
-            domain_service,
-            domain_metadata_service,
-            dns_service,
-            restore_completed: AtomicBool::new(false),
+    let data_dir = match app_handle.path().app_data_dir() {
+        Ok(dir) => dir,
+        Err(e) => {
+            log::warn!("Failed to get app data dir for migration: {e}");
+            return;
         }
+    };
+
+    // --- accounts.json ---
+    let accounts_json = data_dir.join("accounts.json");
+    if accounts_json.exists() {
+        let accounts_migrated = match app_handle.store("accounts.json") {
+            Ok(store) => {
+                if let Some(value) = store.get("accounts") {
+                    match serde_json::from_value::<Vec<Account>>(value.clone()) {
+                        Ok(accounts) if !accounts.is_empty() => {
+                            match sqlite_store.save_all(&accounts).await {
+                                Ok(()) => {
+                                    log::info!(
+                                        "Migrated {} accounts from JSON to SQLite",
+                                        accounts.len()
+                                    );
+                                    true
+                                }
+                                Err(e) => {
+                                    log::error!("Failed to migrate accounts to SQLite: {e}");
+                                    false
+                                }
+                            }
+                        }
+                        Ok(_) => true, // 空数组，无需迁移
+                        Err(e) => {
+                            log::warn!("Failed to parse accounts.json: {e}");
+                            false
+                        }
+                    }
+                } else {
+                    true // 无数据，无需迁移
+                }
+            }
+            Err(_) => true, // store 打开失败，跳过
+        };
+
+        if accounts_migrated {
+            let migrated_path = data_dir.join("accounts.json.migrated");
+            if let Err(e) = std::fs::rename(&accounts_json, &migrated_path) {
+                log::warn!("Failed to rename accounts.json: {e}");
+            }
+        }
+    }
+
+    // --- domain_metadata.json ---
+    let metadata_json = data_dir.join("domain_metadata.json");
+    if metadata_json.exists() {
+        let metadata_migrated = match app_handle.store("domain_metadata.json") {
+            Ok(store) => {
+                if let Some(value) = store.get("metadata") {
+                    match serde_json::from_value::<HashMap<String, DomainMetadata>>(value.clone()) {
+                        Ok(metadata_map) if !metadata_map.is_empty() => {
+                            let entries: Vec<(DomainMetadataKey, DomainMetadata)> = metadata_map
+                                .into_iter()
+                                .filter_map(|(storage_key, metadata)| {
+                                    DomainMetadataKey::from_storage_key(&storage_key)
+                                        .map(|key| (key, metadata))
+                                })
+                                .collect();
+
+                            if entries.is_empty() {
+                                true
+                            } else {
+                                match sqlite_store.batch_save(&entries).await {
+                                    Ok(()) => {
+                                        log::info!(
+                                            "Migrated {} domain metadata entries from JSON to SQLite",
+                                            entries.len()
+                                        );
+                                        true
+                                    }
+                                    Err(e) => {
+                                        log::error!(
+                                            "Failed to migrate domain metadata to SQLite: {e}"
+                                        );
+                                        false
+                                    }
+                                }
+                            }
+                        }
+                        Ok(_) => true, // 空 map，无需迁移
+                        Err(e) => {
+                            log::warn!("Failed to parse domain_metadata.json: {e}");
+                            false
+                        }
+                    }
+                } else {
+                    true // 无数据，无需迁移
+                }
+            }
+            Err(_) => true, // store 打开失败，跳过
+        };
+
+        if metadata_migrated {
+            let migrated_path = data_dir.join("domain_metadata.json.migrated");
+            if let Err(e) = std::fs::rename(&metadata_json, &migrated_path) {
+                log::warn!("Failed to rename domain_metadata.json: {e}");
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl StartupHooks for TauriStartupHooks {
+    async fn backup_credentials(&self, raw_json: &str) -> Option<String> {
+        let data_dir = match self.app_handle.path().app_data_dir() {
+            Ok(dir) => dir,
+            Err(e) => {
+                log::warn!("Failed to get data dir for backup: {e}");
+                return None;
+            }
+        };
+
+        backup_credentials_to_dir(&data_dir, raw_json)
+    }
+
+    async fn cleanup_backup(&self, backup_info: &str) {
+        cleanup_backup_file(backup_info);
+    }
+
+    async fn preserve_backup(&self, backup_info: &str, error: &str) {
+        log::error!("迁移失败，备份文件保留在: {backup_info}，请手动检查 (error: {error})");
     }
 }
 
@@ -138,147 +254,69 @@ pub fn run() {
     }
 
     let builder = builder.setup(|app| {
-        // 创建 AppState（需要 AppHandle）
-        let state = AppState::new(app.handle().clone());
-        app.manage(state);
+        let app_handle = app.handle().clone();
+
+        // ============ 桌面端：Keyring + SqliteStore ============
+        #[cfg(not(target_os = "android"))]
+        {
+            let data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+            let db_path = data_dir.join("data.db");
+
+            // SqliteStore 不传密码（桌面端凭证走 Keyring）
+            let sqlite_store =
+                tauri::async_runtime::block_on(async { SqliteStore::new(&db_path, None).await })
+                    .map_err(|e| e.to_string())?;
+            let sqlite_store = Arc::new(sqlite_store);
+
+            let credential_store = Arc::new(TauriCredentialStore::new());
+
+            let state = AppStateBuilder::new()
+                .credential_store(credential_store)
+                .account_repository(sqlite_store.clone())
+                .domain_metadata_repository(sqlite_store.clone())
+                .build()
+                .map_err(|e| e.to_string())?;
+
+            app.manage(state);
+
+            // JSON → SQLite 数据迁移（首次升级时执行）
+            tauri::async_runtime::block_on(async {
+                migrate_json_to_sqlite(&app_handle, &sqlite_store).await;
+            });
+        }
+
+        // ============ Android 端：tauri-plugin-store ============
+        #[cfg(target_os = "android")]
+        {
+            let credential_store = Arc::new(TauriCredentialStore::new(app_handle.clone()));
+            let account_repository = Arc::new(TauriAccountRepository::new(app_handle.clone()));
+            let domain_metadata_repository =
+                Arc::new(TauriDomainMetadataRepository::new(app_handle.clone()));
+
+            let state = AppStateBuilder::new()
+                .credential_store(credential_store)
+                .account_repository(account_repository)
+                .domain_metadata_repository(domain_metadata_repository)
+                .build()
+                .map_err(|e| e.to_string())?;
+
+            app.manage(state);
+        }
 
         // 执行凭证迁移（v1.7.0 - 阻塞操作，确保迁移完成后再恢复账户）
-        let app_handle = app.handle().clone();
+        let hooks = TauriStartupHooks {
+            app_handle: app_handle.clone(),
+        };
+        let app_handle_for_migration = app_handle.clone();
         tauri::async_runtime::block_on(async move {
-            let state = app_handle.state::<AppState>();
-
-            // 1. 备份凭证（迁移前）
-            let backup_result = async {
-                let raw_json = state.ctx.credential_store().load_raw_json().await?;
-
-                let data_dir = app_handle.path().app_data_dir().map_err(|e| {
-                    dns_orchestrator_core::error::CoreError::StorageError(format!(
-                        "Failed to get data dir: {e}"
-                    ))
-                })?;
-
-                std::fs::create_dir_all(&data_dir).map_err(|e| {
-                    dns_orchestrator_core::error::CoreError::StorageError(format!(
-                        "Failed to create data dir: {e}"
-                    ))
-                })?;
-
-                let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-                let backup_path = data_dir.join(format!("credentials.backup.{timestamp}.json"));
-
-                std::fs::write(&backup_path, raw_json.as_bytes()).map_err(|e| {
-                    dns_orchestrator_core::error::CoreError::StorageError(format!(
-                        "Failed to write backup: {e}"
-                    ))
-                })?;
-
-                log::info!("凭证已备份到: {}", backup_path.display());
-                Ok::<_, dns_orchestrator_core::error::CoreError>(backup_path)
-            }
-            .await;
-
-            // 保存备份路径（用于后续清理）
-            let backup_path_opt = match &backup_result {
-                Ok(path) => {
-                    log::info!("备份成功: {}", path.display());
-                    Some(path.clone())
-                }
-                Err(e) => {
-                    log::warn!("备份失败（继续迁移）: {e}");
-                    None
-                }
-            };
-
-            // 2. 创建迁移服务
-            let migration_service = MigrationService::new(
-                Arc::clone(state.ctx.credential_store()),
-                Arc::clone(state.ctx.account_repository()),
-            );
-
-            // 3. 执行迁移
-            match migration_service.migrate_if_needed().await {
-                Ok(MigrationResult::NotNeeded) => {
-                    log::info!("凭证格式检查：无需迁移");
-                    // 删除备份文件（无需迁移）
-                    if let Some(backup_path) = &backup_path_opt {
-                        if let Err(e) = std::fs::remove_file(backup_path) {
-                            log::warn!("删除备份文件失败: {e}");
-                        } else {
-                            log::info!("已删除备份文件");
-                        }
-                    }
-                }
-                Ok(MigrationResult::Success {
-                    migrated_count,
-                    failed_accounts,
-                }) => {
-                    log::info!("凭证迁移成功：{migrated_count} 个账户已迁移");
-                    if !failed_accounts.is_empty() {
-                        log::warn!(
-                            "部分账户迁移失败 ({} 个): {:?}",
-                            failed_accounts.len(),
-                            failed_accounts
-                        );
-
-                        // 将失败的账户标记为 Error 状态
-                        for (account_id, error_msg) in &failed_accounts {
-                            if let Err(e) = state
-                                .account_service
-                                .update_status(
-                                    account_id,
-                                    dns_orchestrator_core::types::AccountStatus::Error,
-                                    Some(format!("凭证迁移失败: {error_msg}")),
-                                )
-                                .await
-                            {
-                                log::error!("更新账户 {account_id} 状态失败: {e}");
-                            }
-                        }
-                    }
-
-                    // 删除备份文件（迁移成功）
-                    if let Some(backup_path) = &backup_path_opt {
-                        if let Err(e) = std::fs::remove_file(backup_path) {
-                            log::warn!("删除备份文件失败: {e}");
-                        } else {
-                            log::info!("已删除备份文件（迁移成功）");
-                        }
-                    }
-                }
-                Err(e) => {
-                    log::error!("凭证迁移失败: {e}");
-                    // 保留备份文件供手动恢复
-                    if let Some(backup_path) = &backup_path_opt {
-                        log::error!(
-                            "迁移失败，备份文件保留在: {}，请手动检查",
-                            backup_path.display()
-                        );
-                    }
-                    // 不中断启动，继续尝试恢复（可能会因为格式问题导致部分账户恢复失败）
-                }
-            }
+            let state = app_handle_for_migration.state::<AppState>();
+            state.run_migration(&hooks).await;
         });
 
         // 后台恢复账户，不阻塞启动
-        let app_handle = app.handle().clone();
         tauri::async_runtime::spawn(async move {
             let state = app_handle.state::<AppState>();
-            let result = state.account_service.restore_accounts().await;
-
-            match result {
-                Ok(restore_result) => {
-                    log::info!(
-                        "Account restoration complete: {} succeeded, {} failed",
-                        restore_result.success_count,
-                        restore_result.error_count
-                    );
-                }
-                Err(e) => {
-                    log::error!("Failed to restore accounts: {e}");
-                }
-            }
-
-            state.restore_completed.store(true, Ordering::SeqCst);
+            state.run_account_restore().await;
         });
 
         Ok(())
@@ -350,4 +388,46 @@ pub fn run() {
     builder
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_backup_credentials_to_dir_writes_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let data_dir = tmp.path().join("app_data");
+        // data_dir doesn't exist yet — function should create it
+        let raw_json = r#"{"key":"secret"}"#;
+
+        let result = backup_credentials_to_dir(&data_dir, raw_json);
+        assert!(result.is_some());
+
+        let path_str = result.unwrap();
+        let content = std::fs::read_to_string(&path_str).unwrap();
+        assert_eq!(content, raw_json);
+    }
+
+    #[test]
+    fn test_cleanup_backup_file_removes_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file_path = tmp.path().join("backup.json");
+        std::fs::write(&file_path, "data").unwrap();
+        assert!(file_path.exists());
+
+        cleanup_backup_file(&file_path.display().to_string());
+        assert!(!file_path.exists());
+    }
+
+    #[test]
+    fn test_backup_credentials_creates_parent_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let nested = tmp.path().join("a").join("b").join("c");
+        assert!(!nested.exists());
+
+        let result = backup_credentials_to_dir(&nested, "{}");
+        assert!(result.is_some());
+        assert!(nested.exists());
+    }
 }

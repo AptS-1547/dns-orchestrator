@@ -1,4 +1,4 @@
-//! Domain name related type definitions
+//! Domain-related types.
 
 use serde::{Deserialize, Serialize};
 
@@ -6,30 +6,30 @@ use dns_orchestrator_provider::{DomainStatus, ProviderDomain, ProviderType};
 
 use super::domain_metadata::DomainMetadata;
 
-/// Application layer domain name type (including `account_id`)
+/// Application-layer domain model (extends provider domain with `account_id`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppDomain {
-    /// Domain ID
+    /// Domain ID.
     pub id: String,
-    /// domain name
+    /// Domain name.
     pub name: String,
-    /// Account ID
+    /// Account ID.
     #[serde(rename = "accountId")]
     pub account_id: String,
-    /// DNS provider type
+    /// DNS provider type.
     pub provider: ProviderType,
-    /// Domain name status
+    /// Domain status.
     pub status: DomainStatus,
-    /// Number of DNS records
+    /// Number of DNS records.
     #[serde(rename = "recordCount", skip_serializing_if = "Option::is_none")]
     pub record_count: Option<u32>,
-    /// User-defined metadata
+    /// User-defined metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<DomainMetadata>,
 }
 
 impl AppDomain {
-    /// Construct application layer Domain from Provider layer Domain
+    /// Converts a provider domain into an application domain.
     #[must_use]
     pub fn from_provider(provider_domain: ProviderDomain, account_id: String) -> Self {
         Self {

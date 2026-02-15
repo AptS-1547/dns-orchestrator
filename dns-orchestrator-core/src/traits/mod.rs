@@ -1,4 +1,4 @@
-//! Storage layer abstraction trait definition
+//! Storage layer abstraction traits.
 
 mod account_repository;
 mod credential_store;

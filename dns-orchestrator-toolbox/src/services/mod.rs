@@ -13,8 +13,8 @@ mod whois;
 
 use crate::error::{ToolboxError, ToolboxResult};
 use crate::types::{
-    DnsLookupResult, DnsPropagationResult, DnssecResult, HttpHeaderCheckResult, IpLookupResult,
-    WhoisResult,
+    DnsLookupResult, DnsPropagationResult, DnsQueryType, DnssecResult, HttpHeaderCheckResult,
+    IpLookupResult, WhoisResult,
 };
 
 /// Validate and normalise a domain name or IP address input.
@@ -53,9 +53,9 @@ const WHOIS_SERVERS: &str = include_str!("whois_servers.json");
 /// All methods are stateless associated functions -- call them directly on the type.
 ///
 /// ```rust,no_run
-/// use dns_orchestrator_toolbox::ToolboxService;
+/// use dns_orchestrator_toolbox::{ToolboxService, DnsQueryType};
 /// # async fn demo() -> dns_orchestrator_toolbox::ToolboxResult<()> {
-/// let dns = ToolboxService::dns_lookup("example.com", "A", None).await?;
+/// let dns = ToolboxService::dns_lookup("example.com", DnsQueryType::A, None).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -73,9 +73,6 @@ impl ToolboxService {
 
     /// Resolve DNS records for a domain.
     ///
-    /// `record_type` can be `"A"`, `"AAAA"`, `"MX"`, `"TXT"`, `"NS"`, `"CNAME"`,
-    /// `"SOA"`, `"SRV"`, `"CAA"`, `"PTR"`, or `"ALL"`.
-    ///
     /// Pass `None` for `nameserver` to use the system default resolver.
     ///
     /// Notes:
@@ -83,7 +80,7 @@ impl ToolboxService {
     ///   an empty `records` list, rather than a `ToolboxError::NetworkError`.
     pub async fn dns_lookup(
         domain: &str,
-        record_type: &str,
+        record_type: DnsQueryType,
         nameserver: Option<&str>,
     ) -> ToolboxResult<DnsLookupResult> {
         let domain = validate_domain(domain)?;
@@ -127,7 +124,7 @@ impl ToolboxService {
     /// Returns per-server results and an overall consistency percentage.
     pub async fn dns_propagation_check(
         domain: &str,
-        record_type: &str,
+        record_type: DnsQueryType,
     ) -> ToolboxResult<DnsPropagationResult> {
         let domain = validate_domain(domain)?;
         dns_propagation::dns_propagation_check(&domain, record_type).await

@@ -1,93 +1,93 @@
-//! Unified error type definition
+//! Unified core error definitions.
 
 use serde::Serialize;
 use thiserror::Error;
 
-// Re-export library error type
+// Re-export provider library error types.
 pub use dns_orchestrator_provider::{CredentialValidationError, ProviderError};
 
-/// Core layer error type
+/// Error type for the core layer.
 #[derive(Error, Debug, Serialize)]
 #[serde(tag = "code", content = "details")]
 pub enum CoreError {
-    /// Provider not found
+    /// Provider was not found.
     #[error("Provider not found: {0}")]
     ProviderNotFound(String),
 
-    /// Account not found
+    /// Account was not found.
     #[error("Account not found: {0}")]
     AccountNotFound(String),
 
-    /// Domain name not found
+    /// Domain was not found.
     #[error("Domain not found: {0}")]
     DomainNotFound(String),
 
-    /// Record not found
+    /// DNS record was not found.
     #[error("Record not found: {0}")]
     RecordNotFound(String),
 
-    /// Credential storage error
+    /// Credential storage error.
     #[error("Credential error: {0}")]
     CredentialError(String),
 
-    /// Credential validation errors (structured, supports field level errors)
+    /// Credential validation error (structured, field-level details supported).
     #[error("{0}")]
     CredentialValidation(CredentialValidationError),
 
-    /// API error
+    /// Provider API error.
     #[error("API error: {provider} - {message}")]
     ApiError { provider: String, message: String },
 
-    /// Invalid voucher
+    /// Invalid credentials.
     #[error("Invalid credentials for: {0}")]
     InvalidCredentials(String),
 
-    /// serialization error
+    /// Serialization/deserialization error.
     #[error("Serialization error: {0}")]
     SerializationError(String),
 
-    /// Validation error
+    /// Validation error.
     #[error("Validation error: {0}")]
     ValidationError(String),
 
-    /// Import and export errors
+    /// Import/export error.
     #[error("Import/Export error: {0}")]
     ImportExportError(String),
 
-    /// No account is selected (when exporting)
+    /// No account selected (during export).
     #[error("No accounts selected")]
     NoAccountsSelected,
 
-    /// Unsupported file version (when importing)
+    /// Unsupported file version (during import).
     #[error("Unsupported file version")]
     UnsupportedFileVersion,
 
-    /// Storage layer error
+    /// Storage layer error.
     #[error("Storage error: {0}")]
     StorageError(String),
 
-    /// network error
+    /// Network error.
     #[error("Network error: {0}")]
     NetworkError(String),
 
-    /// Data format needs to be migrated (v1.7.0 voucher format upgrade)
+    /// Data format migration required (v1.7.0 credential format upgrade).
     #[error("Credential data migration required")]
     MigrationRequired,
 
-    /// Migration failed
+    /// Migration failed.
     #[error("Migration failed: {0}")]
     MigrationFailed(String),
 
-    /// Provider error (converting from library)
+    /// Provider library error.
     #[error("{0}")]
     Provider(#[from] ProviderError),
 }
 
 impl CoreError {
-    /// Whether it is expected behavior (user input, resource does not exist, etc.) is used for log classification.
+    /// Returns whether this error is expected (user input, missing resource, etc.).
     ///
-    /// Level `warn` should be used when returning `true` and level `error` when returning `false`.
-    /// **Please update this method simultaneously when new variants are added. **
+    /// Use `warn` when this returns `true`, and `error` otherwise.
+    /// Keep this method updated when adding new variants.
     #[must_use]
     pub fn is_expected(&self) -> bool {
         match self {
@@ -106,5 +106,5 @@ impl CoreError {
     }
 }
 
-/// Core layer Result type alias
+/// `Result` alias used by the core layer.
 pub type CoreResult<T> = std::result::Result<T, CoreError>;

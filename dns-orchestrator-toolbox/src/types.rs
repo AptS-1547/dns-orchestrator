@@ -1,6 +1,80 @@
 //! Public types returned by toolbox operations.
 
+use std::fmt;
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
+
+/// DNS query type for lookup and propagation operations.
+///
+/// Includes all supported record types plus [`All`](Self::All) to query every
+/// type at once.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[serde(rename_all = "UPPERCASE")]
+pub enum DnsQueryType {
+    /// IPv4 address record.
+    A,
+    /// IPv6 address record.
+    Aaaa,
+    /// Canonical name (alias) record.
+    Cname,
+    /// Mail exchange record.
+    Mx,
+    /// Text record.
+    Txt,
+    /// Name server record.
+    Ns,
+    /// Start of authority record.
+    Soa,
+    /// Service locator record.
+    Srv,
+    /// Certificate Authority Authorization record.
+    Caa,
+    /// Pointer record (reverse DNS).
+    Ptr,
+    /// Query all supported record types.
+    All,
+}
+
+impl fmt::Display for DnsQueryType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::A => write!(f, "A"),
+            Self::Aaaa => write!(f, "AAAA"),
+            Self::Cname => write!(f, "CNAME"),
+            Self::Mx => write!(f, "MX"),
+            Self::Txt => write!(f, "TXT"),
+            Self::Ns => write!(f, "NS"),
+            Self::Soa => write!(f, "SOA"),
+            Self::Srv => write!(f, "SRV"),
+            Self::Caa => write!(f, "CAA"),
+            Self::Ptr => write!(f, "PTR"),
+            Self::All => write!(f, "ALL"),
+        }
+    }
+}
+
+impl FromStr for DnsQueryType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "A" => Ok(Self::A),
+            "AAAA" => Ok(Self::Aaaa),
+            "CNAME" => Ok(Self::Cname),
+            "MX" => Ok(Self::Mx),
+            "TXT" => Ok(Self::Txt),
+            "NS" => Ok(Self::Ns),
+            "SOA" => Ok(Self::Soa),
+            "SRV" => Ok(Self::Srv),
+            "CAA" => Ok(Self::Caa),
+            "PTR" => Ok(Self::Ptr),
+            "ALL" => Ok(Self::All),
+            _ => Err(format!("Unsupported DNS query type: {s}")),
+        }
+    }
+}
 
 /// WHOIS query result with parsed registration fields.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -317,7 +391,7 @@ pub struct DnsPropagationResult {
     /// Queried domain.
     pub domain: String,
     /// Queried record type.
-    pub record_type: String,
+    pub record_type: DnsQueryType,
     /// Per-server results.
     pub results: Vec<DnsPropagationServerResult>,
     /// Total wall-clock time in milliseconds.
@@ -441,6 +515,100 @@ pub struct DnssecResult {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    // ==================== DnsQueryType tests ====================
+
+    #[test]
+    fn test_dns_query_type_from_str_all_variants() {
+        let cases = [
+            ("A", DnsQueryType::A),
+            ("AAAA", DnsQueryType::Aaaa),
+            ("CNAME", DnsQueryType::Cname),
+            ("MX", DnsQueryType::Mx),
+            ("TXT", DnsQueryType::Txt),
+            ("NS", DnsQueryType::Ns),
+            ("SOA", DnsQueryType::Soa),
+            ("SRV", DnsQueryType::Srv),
+            ("CAA", DnsQueryType::Caa),
+            ("PTR", DnsQueryType::Ptr),
+            ("ALL", DnsQueryType::All),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(input.parse::<DnsQueryType>().unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn test_dns_query_type_from_str_case_insensitive() {
+        assert_eq!("a".parse::<DnsQueryType>().unwrap(), DnsQueryType::A);
+        assert_eq!("aaaa".parse::<DnsQueryType>().unwrap(), DnsQueryType::Aaaa);
+        assert_eq!(
+            "Cname".parse::<DnsQueryType>().unwrap(),
+            DnsQueryType::Cname
+        );
+        assert_eq!("all".parse::<DnsQueryType>().unwrap(), DnsQueryType::All);
+        assert_eq!("sOa".parse::<DnsQueryType>().unwrap(), DnsQueryType::Soa);
+    }
+
+    #[test]
+    fn test_dns_query_type_from_str_invalid() {
+        assert!("INVALID".parse::<DnsQueryType>().is_err());
+        assert!("".parse::<DnsQueryType>().is_err());
+        assert!("HTTPS".parse::<DnsQueryType>().is_err());
+    }
+
+    #[test]
+    fn test_dns_query_type_display_roundtrip() {
+        let variants = [
+            DnsQueryType::A,
+            DnsQueryType::Aaaa,
+            DnsQueryType::Cname,
+            DnsQueryType::Mx,
+            DnsQueryType::Txt,
+            DnsQueryType::Ns,
+            DnsQueryType::Soa,
+            DnsQueryType::Srv,
+            DnsQueryType::Caa,
+            DnsQueryType::Ptr,
+            DnsQueryType::All,
+        ];
+        for variant in variants {
+            let s = variant.to_string();
+            let parsed: DnsQueryType = s.parse().unwrap();
+            assert_eq!(parsed, variant);
+        }
+    }
+
+    #[test]
+    fn test_dns_query_type_serde_roundtrip() {
+        let variant = DnsQueryType::Aaaa;
+        let json = serde_json::to_string(&variant).unwrap();
+        assert_eq!(json, "\"AAAA\"");
+        let parsed: DnsQueryType = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, variant);
+    }
+
+    #[test]
+    fn test_dns_query_type_serde_all_variants() {
+        let variants = [
+            (DnsQueryType::A, "\"A\""),
+            (DnsQueryType::Aaaa, "\"AAAA\""),
+            (DnsQueryType::Cname, "\"CNAME\""),
+            (DnsQueryType::Mx, "\"MX\""),
+            (DnsQueryType::Txt, "\"TXT\""),
+            (DnsQueryType::Ns, "\"NS\""),
+            (DnsQueryType::Soa, "\"SOA\""),
+            (DnsQueryType::Srv, "\"SRV\""),
+            (DnsQueryType::Caa, "\"CAA\""),
+            (DnsQueryType::Ptr, "\"PTR\""),
+            (DnsQueryType::All, "\"ALL\""),
+        ];
+        for (variant, expected_json) in variants {
+            assert_eq!(serde_json::to_string(&variant).unwrap(), expected_json);
+        }
+    }
+
+    // ==================== existing tests ====================
 
     #[test]
     fn test_whois_result_camel_case_serialization() {

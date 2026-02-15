@@ -1,13 +1,13 @@
-//! DNS record related type definitions
+//! DNS record-related types.
 
 use serde::{Deserialize, Serialize};
 
-/// Bulk delete DNS record requests
+/// Request payload for deleting DNS records in batch.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchDeleteRequest {
-    /// Domain ID
+    /// Domain ID.
     pub domain_id: String,
-    /// Record ID list
+    /// Record ID list.
     pub record_ids: Vec<String>,
 }

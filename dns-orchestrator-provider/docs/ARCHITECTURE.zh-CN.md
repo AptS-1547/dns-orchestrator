@@ -334,11 +334,11 @@ pub fn create_http_client() -> Client {
 
 ```toml
 [features]
-default = ["native-tls", "all-providers"]
+default = ["rustls", "all-providers"]
 
 # TLS 后端（二选一）
-native-tls = ["reqwest/native-tls"]    # 桌面端默认
-rustls = ["reqwest/rustls-tls"]        # Android 必需
+native-tls = ["reqwest/native-tls"]
+rustls = ["reqwest/rustls-tls"]        # 默认
 
 # Provider 选择
 cloudflare = []
@@ -351,14 +351,14 @@ all-providers = ["cloudflare", "aliyun", "dnspod", "huaweicloud"]
 ### 使用示例
 
 ```bash
-# 默认（所有 providers，native-tls）
+# 默认（所有 providers，rustls）
 cargo build -p dns-orchestrator-provider
 
-# Android（所有 providers，rustls）
-cargo build -p dns-orchestrator-provider --no-default-features --features "rustls,all-providers"
+# 使用 native-tls
+cargo build -p dns-orchestrator-provider --no-default-features --features "native-tls,all-providers"
 
 # 仅单个 provider
-cargo build -p dns-orchestrator-provider --no-default-features --features "native-tls,cloudflare"
+cargo build -p dns-orchestrator-provider --no-default-features --features "rustls,cloudflare"
 ```
 
 ## 工厂模式
@@ -472,8 +472,8 @@ cargo test -p dns-orchestrator-provider --test cloudflare_test
 ### 5. 平台灵活性
 
 - TLS 后端可选，支持跨平台
-- Android 使用 `rustls`（避免 OpenSSL 交叉编译）
-- 桌面平台使用 `native-tls`
+- 默认使用 `rustls`（纯 Rust 实现，无系统依赖）
+- 可选 `native-tls` 用于需要平台原生 TLS 的场景
 
 ## 待实现功能
 

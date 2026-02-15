@@ -1,4 +1,4 @@
-//! Provider registry abstract Trait
+//! Provider registry abstraction.
 
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -7,36 +7,36 @@ use tokio::sync::RwLock;
 
 use dns_orchestrator_provider::DnsProvider;
 
-/// Provider Registry Trait
+/// Registry of runtime provider instances.
 ///
-/// Manages all registered Provider instances, indexed by `account_id`.
-/// Provides a default memory implementation of `InMemoryProviderRegistry`.
+/// Stores provider instances keyed by `account_id`.
+/// Includes an in-memory implementation: [`InMemoryProviderRegistry`].
 #[async_trait]
 pub trait ProviderRegistry: Send + Sync {
-    /// Register a Provider instance
+    /// Registers a provider instance.
     ///
     /// # Arguments
-    /// * `account_id` - Account ID
-    /// * `provider` - Provider instance
+    /// * `account_id` - Account ID.
+    /// * `provider` - Provider instance.
     async fn register(&self, account_id: String, provider: Arc<dyn DnsProvider>);
 
-    /// Log out Provider
+    /// Unregisters a provider.
     ///
     /// # Arguments
-    /// * `account_id` - Account ID
+    /// * `account_id` - Account ID.
     async fn unregister(&self, account_id: &str);
 
-    /// Get Provider instance
+    /// Returns a provider instance.
     ///
     /// # Arguments
-    /// * `account_id` - Account ID
+    /// * `account_id` - Account ID.
     async fn get(&self, account_id: &str) -> Option<Arc<dyn DnsProvider>>;
 
-    /// List all registered `account_id`
+    /// Lists all registered account IDs.
     async fn list_account_ids(&self) -> Vec<String>;
 }
 
-/// In-memory Provider registry
+/// In-memory provider registry.
 ///
 /// Default implementation, available on all platforms.
 #[derive(Clone)]
@@ -45,7 +45,7 @@ pub struct InMemoryProviderRegistry {
 }
 
 impl InMemoryProviderRegistry {
-    /// Create a new memory registry
+    /// Creates a new in-memory registry.
     #[must_use]
     pub fn new() -> Self {
         Self {

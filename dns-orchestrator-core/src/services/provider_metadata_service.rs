@@ -1,22 +1,22 @@
 //! Provider metadata service
 //!
-//! Provide static metadata information for DNS Provider (stateless service)
+//! Exposes static DNS provider metadata (stateless).
 
 use dns_orchestrator_provider::get_all_provider_metadata;
 
 use crate::types::ProviderMetadata;
 
-/// Provider metadata service (stateless)
+/// Stateless provider metadata service.
 pub struct ProviderMetadataService;
 
 impl ProviderMetadataService {
-    /// Create Provider metadata service instance
+    /// Creates a provider metadata service.
     #[must_use]
     pub fn new() -> Self {
         Self
     }
 
-    /// Get a list of all supported providers
+    /// Returns all supported provider metadata.
     pub fn list_providers(&self) -> Vec<ProviderMetadata> {
         get_all_provider_metadata()
     }

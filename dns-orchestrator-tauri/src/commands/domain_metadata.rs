@@ -1,12 +1,12 @@
 //! 域名元数据相关命令
 
+use dns_orchestrator_app::AppState;
 use tauri::State;
 
 use crate::error::AppError;
 use crate::types::{
     ApiResponse, BatchTagRequest, BatchTagResult, DomainMetadata, DomainMetadataUpdate,
 };
-use crate::AppState;
 
 /// 获取域名元数据
 #[tauri::command]

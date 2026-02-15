@@ -1,4 +1,4 @@
-//! Domain name metadata management service
+//! Domain metadata management service.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -10,19 +10,21 @@ use crate::types::{
     DomainMetadataUpdate,
 };
 
-/// Domain name metadata management service
+/// Service for reading and mutating domain metadata.
 pub struct DomainMetadataService {
     repository: Arc<dyn DomainMetadataRepository>,
 }
 
 impl DomainMetadataService {
-    /// Create a metadata service instance
+    /// Creates a metadata service.
     #[must_use]
     pub fn new(repository: Arc<dyn DomainMetadataRepository>) -> Self {
         Self { repository }
     }
 
-    /// Get metadata (returns default value if it does not exist)
+    /// Gets metadata for one domain.
+    ///
+    /// Returns default metadata when no stored entry exists.
     pub async fn get_metadata(
         &self,
         account_id: &str,
@@ -32,10 +34,10 @@ impl DomainMetadataService {
         Ok(self.repository.find_by_key(&key).await?.unwrap_or_default())
     }
 
-    /// Get metadata in batches (for domain name list, performance optimization)
+    /// Gets metadata in batch (used by domain list APIs).
     pub async fn get_metadata_batch(
         &self,
-        keys: Vec<(String, String)>, // (account_id, domain_id) pair
+        keys: Vec<(String, String)>, // `(account_id, domain_id)` pairs.
     ) -> CoreResult<HashMap<DomainMetadataKey, DomainMetadata>> {
         let keys: Vec<DomainMetadataKey> = keys
             .into_iter()
@@ -44,7 +46,7 @@ impl DomainMetadataService {
         self.repository.find_by_keys(&keys).await
     }
 
-    /// Update metadata (full amount)
+    /// Saves full metadata for one domain.
     pub async fn save_metadata(
         &self,
         account_id: &str,
@@ -55,7 +57,7 @@ impl DomainMetadataService {
         self.repository.save(&key, &metadata).await
     }
 
-    /// Update metadata (partial, used by Phase 2/3)
+    /// Applies a partial metadata update.
     pub async fn update_metadata(
         &self,
         account_id: &str,
@@ -64,51 +66,51 @@ impl DomainMetadataService {
     ) -> CoreResult<()> {
         use crate::error::CoreError;
 
-        // Color validation ("none" means no color)
+        // Validate color (`none` means no color).
         const VALID_COLORS: &[&str] = &[
             "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink", "brown", "gray",
             "none",
         ];
 
-        if let Some(ref color) = update.color {
-            if !VALID_COLORS.contains(&color.as_str()) {
-                return Err(CoreError::ValidationError(format!(
-                    "Invalid color key: '{}'. Must be one of: {}",
-                    color,
-                    VALID_COLORS.join(", ")
-                )));
-            }
+        if let Some(ref color) = update.color
+            && !VALID_COLORS.contains(&color.as_str())
+        {
+            return Err(CoreError::ValidationError(format!(
+                "Invalid color key: '{}'. Must be one of: {}",
+                color,
+                VALID_COLORS.join(", ")
+            )));
         }
 
-        // Memo length validation (only validates non-null values)
-        if let Some(Some(ref note)) = update.note {
-            if note.len() > 500 {
-                return Err(CoreError::ValidationError(
-                    "Note length cannot exceed 500 characters".to_string(),
-                ));
-            }
+        // Validate note length (only when note is provided).
+        if let Some(Some(ref note)) = update.note
+            && note.len() > 500
+        {
+            return Err(CoreError::ValidationError(
+                "Note length cannot exceed 500 characters".to_string(),
+            ));
         }
 
         let key = DomainMetadataKey::new(account_id.to_string(), domain_id.to_string());
         self.repository.update(&key, &update).await
     }
 
-    /// Delete metadata
+    /// Deletes metadata for one domain.
     pub async fn delete_metadata(&self, account_id: &str, domain_id: &str) -> CoreResult<()> {
         let key = DomainMetadataKey::new(account_id.to_string(), domain_id.to_string());
         self.repository.delete(&key).await
     }
 
-    /// Switch collection status
+    /// Toggles favorite state.
     pub async fn toggle_favorite(&self, account_id: &str, domain_id: &str) -> CoreResult<bool> {
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
         metadata.is_favorite = !metadata.is_favorite;
 
-        // The time is recorded when collecting for the first time and will never be modified thereafter.
+        // Record favorite timestamp once on the first favorite action.
         if metadata.is_favorite && metadata.favorited_at.is_none() {
             metadata.favorited_at = Some(chrono::Utc::now());
         }
-        // Note: favorited_at is not cleared when canceling favorites
+        // Note: `favorited_at` is intentionally not cleared when unfavoriting.
 
         metadata.touch();
 
@@ -117,21 +119,21 @@ impl DomainMetadataService {
         Ok(new_state)
     }
 
-    /// Get the favorite domain name key under the account
+    /// Lists favorite domain keys under one account.
     pub async fn list_favorites(&self, account_id: &str) -> CoreResult<Vec<DomainMetadataKey>> {
         self.repository.find_favorites_by_account(account_id).await
     }
 
-    /// Delete all metadata under the account (called when the account is deleted)
+    /// Deletes all metadata under one account.
     pub async fn delete_account_metadata(&self, account_id: &str) -> CoreResult<()> {
         self.repository.delete_by_account(account_id).await
     }
 
-    /// Verify a single label
+    /// Validates one tag.
     ///
     /// # Validation rules
-    /// - Cannot be empty after removing leading and trailing spaces
-    /// - Length cannot exceed 50 characters
+    /// - Must not be empty after trimming.
+    /// - Max length is 50 characters.
     fn validate_tag(tag: &str) -> CoreResult<()> {
         use crate::error::CoreError;
 
@@ -149,7 +151,7 @@ impl DomainMetadataService {
         Ok(())
     }
 
-    /// Add tags (returns updated tag list)
+    /// Adds one tag and returns updated tags.
     pub async fn add_tag(
         &self,
         account_id: &str,
@@ -158,18 +160,18 @@ impl DomainMetadataService {
     ) -> CoreResult<Vec<String>> {
         use crate::error::CoreError;
 
-        // Tag verification
+        // Validate incoming tag.
         let tag = tag.trim().to_string();
         Self::validate_tag(&tag)?;
 
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
 
-        // Deduplication: Check if the tag already exists
+        // Deduplicate: no-op if already exists.
         if metadata.tags.contains(&tag) {
             return Ok(metadata.tags);
         }
 
-        // Limit the number of tags
+        // Enforce tag count limit.
         if metadata.tags.len() >= 10 {
             return Err(CoreError::ValidationError(
                 "Cannot add more than 10 tags".to_string(),
@@ -185,7 +187,7 @@ impl DomainMetadataService {
         Ok(tags)
     }
 
-    /// Remove tags (returns updated tag list)
+    /// Removes one tag and returns updated tags.
     pub async fn remove_tag(
         &self,
         account_id: &str,
@@ -194,7 +196,7 @@ impl DomainMetadataService {
     ) -> CoreResult<Vec<String>> {
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
 
-        // Remove the tag (no error will be reported if it does not exist, silent processing)
+        // Silent no-op when the tag does not exist.
         metadata.tags.retain(|t| t != tag);
         metadata.touch();
 
@@ -203,7 +205,7 @@ impl DomainMetadataService {
         Ok(tags)
     }
 
-    /// Set labels in batches (replace all labels)
+    /// Replaces all tags and returns updated tags.
     pub async fn set_tags(
         &self,
         account_id: &str,
@@ -212,7 +214,7 @@ impl DomainMetadataService {
     ) -> CoreResult<Vec<String>> {
         use crate::error::CoreError;
 
-        // Verify each label
+        // Validate each tag.
         for tag in &tags {
             Self::validate_tag(tag)?;
         }
@@ -225,7 +227,7 @@ impl DomainMetadataService {
 
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
 
-        // Clean, remove duplicates, sort
+        // Normalize, deduplicate, and sort.
         let mut cleaned_tags: Vec<String> = tags
             .into_iter()
             .map(|t| t.trim().to_string())
@@ -241,19 +243,19 @@ impl DomainMetadataService {
         Ok(cleaned_tags)
     }
 
-    /// Query domain names by tags (cross-account)
+    /// Finds domains by tag (cross-account).
     pub async fn find_by_tag(&self, tag: &str) -> CoreResult<Vec<DomainMetadataKey>> {
         self.repository.find_by_tag(tag).await
     }
 
-    /// Get all used tags (for auto-completion, optional feature)
+    /// Lists all tags currently in use.
     pub async fn list_all_tags(&self) -> CoreResult<Vec<String>> {
         self.repository.list_all_tags().await
     }
 
-    // ===== How to operate batch tags =====
+    // ===== Batch tag operations =====
 
-    /// Add tags in batches (add the same tag to multiple domain names)
+    /// Batch add tags to domains.
     pub async fn batch_add_tags(
         &self,
         requests: Vec<BatchTagRequest>,
@@ -261,7 +263,7 @@ impl DomainMetadataService {
         let mut entries_to_save = Vec::new();
         let mut failures = Vec::new();
 
-        // Phase 1: Process all modifications in memory
+        // Phase 1: process all updates in memory.
         for req in requests {
             match self
                 .add_tags_internal_no_save(&req.account_id, &req.domain_id, req.tags)
@@ -276,7 +278,7 @@ impl DomainMetadataService {
             }
         }
 
-        // The second stage: one-time batch saving
+        // Phase 2: persist all successful updates in one batch call.
         if !entries_to_save.is_empty() {
             self.repository.batch_save(&entries_to_save).await?;
         }
@@ -288,7 +290,7 @@ impl DomainMetadataService {
         })
     }
 
-    /// Remove tags in batches (remove the same tags from multiple domains)
+    /// Batch remove tags from domains.
     pub async fn batch_remove_tags(
         &self,
         requests: Vec<BatchTagRequest>,
@@ -296,7 +298,7 @@ impl DomainMetadataService {
         let mut entries_to_save = Vec::new();
         let mut failures = Vec::new();
 
-        // Phase 1: Process all modifications in memory
+        // Phase 1: process all updates in memory.
         for req in requests {
             match self
                 .remove_tags_internal_no_save(&req.account_id, &req.domain_id, req.tags)
@@ -311,7 +313,7 @@ impl DomainMetadataService {
             }
         }
 
-        // The second stage: one-time batch saving
+        // Phase 2: persist all successful updates in one batch call.
         if !entries_to_save.is_empty() {
             self.repository.batch_save(&entries_to_save).await?;
         }
@@ -323,7 +325,7 @@ impl DomainMetadataService {
         })
     }
 
-    /// Replace tags in batches (clear the original tags and then set new tags)
+    /// Batch replace tags for domains.
     pub async fn batch_set_tags(
         &self,
         requests: Vec<BatchTagRequest>,
@@ -331,7 +333,7 @@ impl DomainMetadataService {
         let mut entries_to_save = Vec::new();
         let mut failures = Vec::new();
 
-        // Phase 1: Process all modifications in memory
+        // Phase 1: process all updates in memory.
         for req in requests {
             match self
                 .set_tags_internal_no_save(&req.account_id, &req.domain_id, req.tags)
@@ -346,7 +348,7 @@ impl DomainMetadataService {
             }
         }
 
-        // The second stage: one-time batch saving
+        // Phase 2: persist all successful updates in one batch call.
         if !entries_to_save.is_empty() {
             self.repository.batch_save(&entries_to_save).await?;
         }
@@ -358,9 +360,9 @@ impl DomainMetadataService {
         })
     }
 
-    // ===== Internal helper methods (for batch operation optimization) =====
+    // ===== Internal helpers for batch optimizations =====
 
-    /// Internal method: add tags to a single domain name (not saved, used for batch operations)
+    /// Adds tags for one domain in-memory (no persistence).
     async fn add_tags_internal_no_save(
         &self,
         account_id: &str,
@@ -369,14 +371,14 @@ impl DomainMetadataService {
     ) -> CoreResult<(DomainMetadataKey, DomainMetadata)> {
         use crate::error::CoreError;
 
-        // Verify each label
+        // Validate each tag.
         for tag in &tags_to_add {
             Self::validate_tag(tag)?;
         }
 
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
 
-        // Merge tags and remove duplicates
+        // Merge existing and incoming tags.
         let mut all_tags: Vec<String> = metadata.tags.clone();
         for tag in tags_to_add {
             let trimmed = tag.trim().to_string();
@@ -385,7 +387,7 @@ impl DomainMetadataService {
             }
         }
 
-        // Check label quantity limit
+        // Enforce tag count limit.
         if all_tags.len() > 10 {
             return Err(CoreError::ValidationError(
                 "Cannot exceed 10 tags".to_string(),
@@ -402,7 +404,7 @@ impl DomainMetadataService {
         Ok((key, metadata))
     }
 
-    /// Internal method: remove tags for a single domain (not saved, used for batch operations)
+    /// Removes tags for one domain in-memory (no persistence).
     async fn remove_tags_internal_no_save(
         &self,
         account_id: &str,
@@ -411,7 +413,7 @@ impl DomainMetadataService {
     ) -> CoreResult<(DomainMetadataKey, DomainMetadata)> {
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
 
-        // Remove specified tag
+        // Remove specified tags.
         let tags_to_remove_set: std::collections::HashSet<String> = tags_to_remove
             .into_iter()
             .map(|t| t.trim().to_string())
@@ -424,7 +426,7 @@ impl DomainMetadataService {
         Ok((key, metadata))
     }
 
-    /// Internal method: Replace tags for a single domain name (not saved, used for batch operations)
+    /// Replaces tags for one domain in-memory (no persistence).
     async fn set_tags_internal_no_save(
         &self,
         account_id: &str,
@@ -433,7 +435,7 @@ impl DomainMetadataService {
     ) -> CoreResult<(DomainMetadataKey, DomainMetadata)> {
         use crate::error::CoreError;
 
-        // Verify each label
+        // Validate each tag.
         for tag in &tags {
             Self::validate_tag(tag)?;
         }
@@ -446,7 +448,7 @@ impl DomainMetadataService {
 
         let mut metadata = self.get_metadata(account_id, domain_id).await?;
 
-        // Clean, remove duplicates, sort
+        // Normalize, deduplicate, and sort.
         let mut cleaned_tags: Vec<String> = tags
             .into_iter()
             .map(|t| t.trim().to_string())
@@ -484,14 +486,14 @@ mod tests {
     async fn toggle_favorite_on_off() {
         let svc = make_service();
 
-        // First time toggle → On
+        // First toggle -> on.
         let state = svc.toggle_favorite("a", "d").await.unwrap();
         assert!(state);
 
         let m = svc.get_metadata("a", "d").await.unwrap();
         assert!(m.is_favorite);
 
-        // Toggle again → Off
+        // Second toggle -> off.
         let state = svc.toggle_favorite("a", "d").await.unwrap();
         assert!(!state);
 
@@ -503,18 +505,18 @@ mod tests {
     async fn toggle_favorite_records_favorited_at_once() {
         let svc = make_service();
 
-        // Favorite → set favorited_at
+        // Favorite -> set `favorited_at`.
         svc.toggle_favorite("a", "d").await.unwrap();
         let m = svc.get_metadata("a", "d").await.unwrap();
         assert!(m.favorited_at.is_some());
         let first_fav_at = m.favorited_at.unwrap();
 
-        // Unfavorite → favorited_at unchanged
+        // Unfavorite -> `favorited_at` unchanged.
         svc.toggle_favorite("a", "d").await.unwrap();
         let m = svc.get_metadata("a", "d").await.unwrap();
         assert_eq!(m.favorited_at, Some(first_fav_at));
 
-        // Re-favorite → favorited_at remains unchanged (never modified after first recording)
+        // Favorite again -> `favorited_at` remains unchanged.
         svc.toggle_favorite("a", "d").await.unwrap();
         let m = svc.get_metadata("a", "d").await.unwrap();
         assert_eq!(m.favorited_at, Some(first_fav_at));
@@ -571,7 +573,7 @@ mod tests {
     #[tokio::test]
     async fn remove_tag_nonexistent_silent() {
         let svc = make_service();
-        // Remove non-existing tags without reporting an error
+        // Removing non-existing tags should not fail.
         let tags = svc.remove_tag("a", "d", "ghost").await.unwrap();
         assert!(tags.is_empty());
     }
@@ -662,7 +664,7 @@ mod tests {
     async fn batch_remove_tags() {
         let svc = make_service();
 
-        // Add tag first
+        // Seed initial tags.
         svc.add_tag("a", "d1", "web".to_string()).await.unwrap();
         svc.add_tag("a", "d2", "web".to_string()).await.unwrap();
 

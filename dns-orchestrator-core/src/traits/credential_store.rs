@@ -1,4 +1,4 @@
-//! Credential storage abstraction Trait
+//! Credential storage abstraction.
 
 use async_trait::async_trait;
 use dns_orchestrator_provider::ProviderCredentials;
@@ -6,16 +6,16 @@ use std::collections::HashMap;
 
 use crate::error::CoreResult;
 
-/// Credential mapping type: `account_id` -> `ProviderCredentials` (type safe)
+/// Credential map type: `account_id` -> `ProviderCredentials` (type-safe).
 pub type CredentialsMap = HashMap<String, ProviderCredentials>;
 
-/// Old format credential mapping (used during migration)
+/// Legacy credential map used during migration.
 pub type LegacyCredentialsMap = HashMap<String, HashMap<String, String>>;
 
-/// Credential storage Trait
+/// Credential storage interface.
 ///
-/// Platform implementation:
-/// - Tauri Desktop: `TauriCredentialStore` (keyring crate)
+/// Platform implementations:
+/// - Tauri Desktop: `TauriCredentialStore` (`keyring` crate)
 /// - Tauri Android: `TauriCredentialStore` (tauri-plugin-store)
 /// - Actix-Web: `DatabaseCredentialStore` (`SeaORM` + AES encryption)
 ///
@@ -27,54 +27,54 @@ pub type LegacyCredentialsMap = HashMap<String, HashMap<String, String>>;
 /// - Added `load_raw_json()` and `save_raw_json()` for migration detection
 #[async_trait]
 pub trait CredentialStore: Send + Sync {
-    /// Load all credentials (new format)
+    /// Loads all credentials in the new format.
     ///
-    /// Used at startup to reduce the number of storage accesses. Returns type-safe `CredentialsMap`.
+    /// Used at startup to reduce storage round-trips.
     async fn load_all(&self) -> CoreResult<CredentialsMap>;
 
-    /// Save vouchers in batches (new format)
+    /// Saves credentials in batch in the new format.
     ///
-    /// Used in migration scenarios to write all credentials at once.
+    /// Used during migration to persist all credentials in one write.
     ///
     /// # Arguments
-    /// * `credentials` - Credential mapping
+    /// * `credentials` - Credential map.
     async fn save_all(&self, credentials: &CredentialsMap) -> CoreResult<()>;
 
-    /// Get individual account credentials
+    /// Loads credentials for one account.
     ///
     /// # Arguments
-    /// * `account_id` - Account ID
+    /// * `account_id` - Account ID.
     ///
     /// # Returns
-    /// * `Ok(Some(credentials))` - token exists
-    /// * `Ok(None)` - token does not exist
+    /// * `Ok(Some(credentials))` - Credentials exist.
+    /// * `Ok(None)` - Credentials do not exist.
     async fn get(&self, account_id: &str) -> CoreResult<Option<ProviderCredentials>>;
 
-    /// Set up individual account credentials
+    /// Saves credentials for one account.
     ///
     /// # Arguments
-    /// * `account_id` - Account ID
-    /// * `credentials` - type-safe token
+    /// * `account_id` - Account ID.
+    /// * `credentials` - Type-safe credential payload.
     async fn set(&self, account_id: &str, credentials: &ProviderCredentials) -> CoreResult<()>;
 
-    /// Delete credentials
+    /// Removes credentials for one account.
     ///
     /// # Arguments
-    /// * `account_id` - Account ID
+    /// * `account_id` - Account ID.
     async fn remove(&self, account_id: &str) -> CoreResult<()>;
 
     // === Migration helper methods ===
 
-    /// Load raw JSON (for format detection and migration)
+    /// Loads raw JSON for format detection and migration.
     ///
-    /// Returns the raw JSON string from storage, without deserialization.
+    /// Returns the raw JSON string without deserialization.
     async fn load_raw_json(&self) -> CoreResult<String>;
 
-    /// Save raw JSON (for migration writes)
+    /// Saves raw JSON during migration writes.
     ///
-    /// Write JSON string directly to storage without serialization.
+    /// Writes JSON directly to storage without (de)serialization.
     ///
     /// # Arguments
-    /// * `json` - JSON string
+    /// * `json` - JSON string.
     async fn save_raw_json(&self, json: &str) -> CoreResult<()>;
 }

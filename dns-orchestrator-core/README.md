@@ -1,33 +1,33 @@
 # dns-orchestrator-core
 
-Platform-agnostic core business logic for DNS Orchestrator, providing account management, domain management, DNS record operations, and encrypted import/export.
+Platform-agnostic core business logic library for DNS Orchestrator.
 
-Designed to be shared between different frontends (Tauri Desktop/Android, Actix-Web) through trait-based storage abstractions.
+[简体中文](./README.zh-CN.md) | English
 
-## Architecture
+## Features
 
-```
-┌─────────────────────────────────────────────┐
-│            Platform Layer                    │
-│  (Tauri / Actix-Web / your own backend)     │
-│  Implements storage traits                  │
-└──────────────────┬──────────────────────────┘
-                   │ injects via ServiceContext
-┌──────────────────▼──────────────────────────┐
-│          dns-orchestrator-core               │
-│  AccountService, DnsService, DomainService  │
-│  ImportExportService, MigrationService ...  │
-└──────────────────┬──────────────────────────┘
-                   │ delegates DNS operations
-┌──────────────────▼──────────────────────────┐
-│        dns-orchestrator-provider             │
-│  Cloudflare, Aliyun, DNSPod, Huaweicloud   │
-└─────────────────────────────────────────────┘
-```
+- **Unified Account Service** - Single `AccountService` for account CRUD, credential validation/storage, provider registration, and startup restore
+- **Trait-Based Storage Abstraction** - Inject platform-specific implementations via `AccountRepository`, `CredentialStore`, `ProviderRegistry`, and `DomainMetadataRepository`
+- **DNS Record Management** - List, create, update, delete, and batch delete DNS records through a unified service API
+- **Domain Metadata Layer** - Favorites, tags, color, and note metadata with single/batch operations
+- **Encrypted Import/Export** - `.dnso` account backup/import with optional AES-256-GCM encryption
+- **Credential Migration Support** - Legacy credential format migration to typed `ProviderCredentials`
 
-## Usage
+## Core Services
 
-Add to your `Cargo.toml`:
+| Service | Description |
+|---------|-------------|
+| `AccountService` | Account lifecycle, credential operations, provider registration, startup restore |
+| `DnsService` | DNS record list/create/update/delete and batch delete |
+| `DomainService` | Domain listing and metadata merge |
+| `DomainMetadataService` | Favorites/tags/color/note metadata operations |
+| `ImportExportService` | Account export/import and encrypted preview flow |
+| `MigrationService` | Legacy credential format migration |
+| `ProviderMetadataService` | Supported provider metadata listing |
+
+## Quick Start
+
+### Install
 
 ```toml
 [dependencies]
@@ -36,97 +36,97 @@ dns-orchestrator-core = "0.1"
 
 ### Implement Storage Traits
 
-The core library requires four trait implementations from the platform layer:
+Platform layer must implement:
 
-```rust
-use dns_orchestrator_core::{AccountRepository, CredentialStore, ProviderRegistry};
-use dns_orchestrator_core::traits::DomainMetadataRepository;
+- `AccountRepository`
+- `CredentialStore`
+- `DomainMetadataRepository`
+- `ProviderRegistry` (or use built-in `InMemoryProviderRegistry`)
 
-// Implement these for your storage backend:
-// - AccountRepository    -- CRUD for account metadata
-// - CredentialStore      -- Secure credential storage
-// - ProviderRegistry     -- In-memory DNS provider instance cache
-// - DomainMetadataRepository -- Domain favorites, tags, notes, colors
-```
-
-An `InMemoryProviderRegistry` implementation is provided out of the box:
-
-```rust
-use dns_orchestrator_core::traits::provider_registry::InMemoryProviderRegistry;
-
-let registry = InMemoryProviderRegistry::new();
-```
-
-### Create a ServiceContext
+### Initialize Context and Services
 
 ```rust
 use std::sync::Arc;
 use dns_orchestrator_core::ServiceContext;
+use dns_orchestrator_core::services::{
+    AccountService, DnsService, DomainMetadataService, DomainService,
+    ImportExportService, MigrationService, ProviderMetadataService,
+};
+use dns_orchestrator_core::traits::InMemoryProviderRegistry;
 
-let ctx = ServiceContext::new(
+let ctx = Arc::new(ServiceContext::new(
     Arc::new(my_credential_store),
     Arc::new(my_account_repository),
-    Arc::new(my_provider_registry),
+    Arc::new(InMemoryProviderRegistry::new()),
     Arc::new(my_domain_metadata_repository),
+));
+
+let account_service = Arc::new(AccountService::new(ctx.clone()));
+let domain_metadata_service = Arc::new(DomainMetadataService::new(
+    ctx.domain_metadata_repository().clone(),
+));
+
+let dns_service = DnsService::new(ctx.clone());
+let domain_service = DomainService::new(ctx.clone(), domain_metadata_service.clone());
+let import_export_service = ImportExportService::new(account_service.clone());
+let migration_service = MigrationService::new(
+    ctx.credential_store().clone(),
+    ctx.account_repository().clone(),
 );
-let ctx = Arc::new(ctx);
+let provider_metadata_service = ProviderMetadataService::new();
 ```
 
-### Use Services
+### Startup Sequence
 
 ```rust
-use dns_orchestrator_core::services::*;
+let migration = migration_service.migrate_if_needed().await?;
+let restore = account_service.restore_accounts().await?;
 
-// Account management
-let account_svc = AccountService::new(
-    ctx.account_repository().clone(),
-    ctx.credential_store().clone(),
-    ctx.provider_registry().clone(),
-);
-
-// Restore accounts on startup (loads credentials, creates providers)
-let restore = account_svc.restore_accounts().await?;
-println!("Restored: {}, Errors: {}", restore.success_count, restore.error_count);
-
-// DNS record operations
-let dns_svc = DnsService::new(ctx.clone());
-let records = dns_svc.list_records("account-id", "example.com", 1, 20, None, None).await?;
-
-// Domain listing (with metadata: favorites, tags, colors)
-let domain_svc = DomainService::new(ctx.clone());
-let domains = domain_svc.list_domains("account-id", 1, 20).await?;
-
-// Encrypted export/import
-let ie_svc = ImportExportService::new(ctx.clone());
-let export = ie_svc.export_accounts(
-    ExportAccountsRequest {
-        account_ids: vec!["account-id".to_string()],
-        encrypt: true,
-        password: Some("secret".to_string()),
-    },
-    "1.8.0",
-).await?;
+println!("migration: {:?}", migration);
+println!("restored: {}, errors: {}", restore.success_count, restore.error_count);
 ```
 
-## Services
+## Architecture
 
-| Service | Description |
-|---------|-------------|
-| `AccountService` | Create, update, delete accounts; validate credentials; restore on startup |
-| `DnsService` | List, create, update, delete DNS records (single and batch) |
-| `DomainService` | List domains with attached metadata |
-| `DomainMetadataService` | Favorites, tags, colors, notes for domains |
-| `ImportExportService` | AES-256-GCM encrypted account export/import (`.dnso` files) |
-| `MigrationService` | Credential format migration (v1.7.0 legacy to typed) |
-| `ProviderMetadataService` | List supported DNS provider metadata |
+```
+┌───────────────────────────────────────────────────────────┐
+│ Platform Layer (Tauri / Actix-Web / custom backend)      │
+│ Implements storage traits and wires dependencies          │
+└────────────────────────────┬──────────────────────────────┘
+                             │ ServiceContext
+┌────────────────────────────▼──────────────────────────────┐
+│ dns-orchestrator-core                                    │
+│ - AccountService (unified lifecycle + credential logic)  │
+│ - DnsService / DomainService / DomainMetadataService     │
+│ - ImportExportService / MigrationService                 │
+└────────────────────────────┬──────────────────────────────┘
+                             │ DnsProvider trait
+┌────────────────────────────▼──────────────────────────────┐
+│ dns-orchestrator-provider                                │
+│ Cloudflare / Aliyun / DNSPod / Huaweicloud ...           │
+└───────────────────────────────────────────────────────────┘
+```
 
-## Encryption
+Detailed architecture: [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
-Import/export uses AES-256-GCM with PBKDF2-HMAC-SHA256 key derivation:
+## Import/Export Encryption
 
-- 16-byte random salt, 12-byte random nonce
-- Version-aware PBKDF2 iterations (v1: 100,000; v2: 600,000 per OWASP 2023)
-- Backward-compatible decryption for older file versions
+Encrypted export uses:
+
+- `AES-256-GCM`
+- `PBKDF2-HMAC-SHA256`
+- 16-byte random salt + 12-byte random nonce
+- Version-based PBKDF2 iterations (`v1=100_000`, `v2=600_000`)
+
+Version constants are defined in `src/crypto/versions.rs`.
+
+## Development
+
+```bash
+# From repository root
+cargo check -p dns-orchestrator-core
+cargo test -p dns-orchestrator-core
+```
 
 ## License
 

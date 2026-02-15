@@ -1,13 +1,13 @@
 [package]
 name = "dns-orchestrator-tauri"
-version = "1.9.1"
+version = "1.10.0"
 description = "DNS Orchestrator built with Tauri"
 license = "MIT"
 authors = [
     "AptS-1547 <apts-1547@esaps.net>",
     "YewFence <88962785+YewFence@users.noreply.github.com>",
 ]
-edition = "2021"
+edition = "2024"
 rust-version = "1.89"
 publish = false
 
@@ -37,6 +37,7 @@ tauri-plugin-fs = "2"
 urlencoding.workspace = true
 
 # Common deps (all platforms)
+dns-orchestrator-app = { workspace = true, features = ["rustls"] }
 dns-orchestrator-core = { workspace = true, features = ["rustls"] }
 dns-orchestrator-toolbox.workspace = true
 serde.workspace = true
@@ -52,11 +53,9 @@ futures.workspace = true
 # Desktop only
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-updater = "2"
-keyring = { version = "3", features = [
-    "apple-native",        # macOS/iOS
-    "windows-native",      # Windows
-    "sync-secret-service",
-    "crypto-rust",         # Linux/FreeBSD/OpenBSD (DBus Secret Service)
+dns-orchestrator-app = { workspace = true, features = [
+    "keyring-store",
+    "sqlite-store",
 ] }
 
 [target."cfg(target_os = \"macos\")".dependencies]
@@ -68,6 +67,11 @@ tauri-plugin-stronghold = "2"
 tauri-plugin-apk-installer.workspace = true
 reqwest = { workspace = true, features = ["rustls-tls", "stream"] }
 minisign-verify = "0.2"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+tempfile = "3"
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

@@ -1,4 +1,4 @@
-//! Domain name management services
+//! Domain management service.
 
 use std::sync::Arc;
 
@@ -6,14 +6,14 @@ use crate::error::CoreResult;
 use crate::services::{DomainMetadataService, ServiceContext};
 use crate::types::{AppDomain, DomainMetadataKey, PaginatedResponse, PaginationParams};
 
-/// Domain name management services
+/// Service for domain listing and lookup.
 pub struct DomainService {
     ctx: Arc<ServiceContext>,
     metadata_service: Arc<DomainMetadataService>,
 }
 
 impl DomainService {
-    /// Create a domain name service instance
+    /// Creates a domain service.
     #[must_use]
     pub fn new(ctx: Arc<ServiceContext>, metadata_service: Arc<DomainMetadataService>) -> Self {
         Self {
@@ -22,7 +22,7 @@ impl DomainService {
         }
     }
 
-    /// List all domain names under the account (paginated)
+    /// Lists all domains under an account (paginated).
     pub async fn list_domains(
         &self,
         account_id: &str,
@@ -44,7 +44,7 @@ impl DomainService {
                     .map(|d| AppDomain::from_provider(d, account_id.to_string()))
                     .collect();
 
-                // Batch load metadata and merge
+                // Batch-load metadata and merge into each domain item.
                 let keys: Vec<(String, String)> = domains
                     .iter()
                     .map(|d| (d.account_id.clone(), d.id.clone()))
@@ -71,7 +71,7 @@ impl DomainService {
         }
     }
 
-    /// Get domain name details
+    /// Gets a single domain by ID.
     pub async fn get_domain(&self, account_id: &str, domain_id: &str) -> CoreResult<AppDomain> {
         let provider = self.ctx.get_provider(account_id).await?;
 

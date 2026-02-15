@@ -1,3 +1,4 @@
+use dns_orchestrator_app::AppState;
 use tauri::State;
 
 use crate::error::AppError;
@@ -5,7 +6,6 @@ use crate::types::{
     ApiResponse, BatchDeleteRequest, BatchDeleteResult, CreateDnsRecordRequest, DnsRecord,
     DnsRecordType, PaginatedResponse, UpdateDnsRecordRequest,
 };
-use crate::AppState;
 
 /// 列出域名下的所有 DNS 记录（分页 + 搜索）
 #[tauri::command]

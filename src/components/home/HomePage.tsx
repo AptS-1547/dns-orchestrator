@@ -5,7 +5,11 @@ import { useNavigate } from "react-router-dom"
 import { ProviderIcon } from "@/components/account/ProviderIcon"
 import { PageContainer } from "@/components/ui/page-container"
 import { SectionCard } from "@/components/ui/section-card"
-import { getRecentDomains, type RecentDomain } from "@/lib/recent-domains"
+import {
+  cleanupStaleRecentDomains,
+  getRecentDomains,
+  type RecentDomain,
+} from "@/lib/recent-domains"
 import { type FavoriteDomain, useAccountStore, useDomainStore } from "@/stores"
 
 export function HomePage() {
@@ -26,11 +30,12 @@ export function HomePage() {
     [domainsByAccount]
   )
 
-  // 账户变化后重新读取最近域名（清理无效记录后刷新显示）
-  // biome-ignore lint/correctness/useExhaustiveDependencies: accounts 用于触发重新读取
+  // 账户或域名缓存变化后，清理已不存在的近期访问并刷新显示
+  // biome-ignore lint/correctness/useExhaustiveDependencies: accounts + domainsByAccount 用于触发重新读取
   useEffect(() => {
+    cleanupStaleRecentDomains(domainsByAccount)
     setRecentDomains(getRecentDomains())
-  }, [accounts])
+  }, [accounts, domainsByAccount])
 
   // 账户或域名缓存变化后更新收藏域名
   // biome-ignore lint/correctness/useExhaustiveDependencies: domainsByAccount 用于触发更新

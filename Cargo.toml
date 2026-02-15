@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "dns-orchestrator-app",
     "dns-orchestrator-core",
     "dns-orchestrator-provider",
     "dns-orchestrator-toolbox",
@@ -7,6 +8,7 @@ members = [
     "dns-orchestrator-web/migration",
     "dns-orchestrator-tauri",
     "dns-orchestrator-tauri/tauri-plugin-apk-installer",
+    "dns-orchestrator-mcp",
 ]
 resolver = "2"
 
@@ -66,14 +68,20 @@ hex = "0.4"
 # URL
 urlencoding = "2.1"
 
+# ORM — pinned to 2.0.0-rc.32 for sea-query v1 API and improved SQLite support.
+# Upgrade to stable 2.0 once released.
+sea-orm = { version = "2.0.0-rc.32", default-features = false }
+sea-orm-migration = { version = "~2.0.0-rc.32", default-features = false }
+
 # Tauri
 tauri = "2"
 tauri-build = { version = "2", features = [] }
 
 # Internal crates
-dns-orchestrator-core = { path = "dns-orchestrator-core", default-features = false }
-dns-orchestrator-provider = { path = "dns-orchestrator-provider", default-features = false }
-dns-orchestrator-toolbox = { path = "dns-orchestrator-toolbox", default-features = false }
+dns-orchestrator-app = { path = "dns-orchestrator-app", version = "0.1", default-features = false }
+dns-orchestrator-core = { path = "dns-orchestrator-core", version = "0.1", default-features = false }
+dns-orchestrator-provider = { path = "dns-orchestrator-provider", version = "0.1", default-features = false }
+dns-orchestrator-toolbox = { path = "dns-orchestrator-toolbox", version = "0.1", default-features = false }
 migration = { path = "dns-orchestrator-web/migration" }
 tauri-plugin-apk-installer = { path = "dns-orchestrator-tauri/tauri-plugin-apk-installer" }
 

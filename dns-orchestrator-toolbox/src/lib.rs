@@ -30,17 +30,17 @@
 //! ```
 //!
 //! ```rust,no_run
-//! use dns_orchestrator_toolbox::ToolboxService;
+//! use dns_orchestrator_toolbox::{ToolboxService, DnsQueryType};
 //!
 //! # async fn example() -> dns_orchestrator_toolbox::ToolboxResult<()> {
 //! // WHOIS
 //! let whois = ToolboxService::whois_lookup("example.com").await?;
 //!
 //! // DNS lookup with system default nameserver
-//! let dns = ToolboxService::dns_lookup("example.com", "A", None).await?;
+//! let dns = ToolboxService::dns_lookup("example.com", DnsQueryType::A, None).await?;
 //!
 //! // DNS propagation across global servers
-//! let prop = ToolboxService::dns_propagation_check("example.com", "A").await?;
+//! let prop = ToolboxService::dns_propagation_check("example.com", DnsQueryType::A).await?;
 //! println!("Consistency: {:.1}%", prop.consistency_percentage);
 //!
 //! // IP geolocation (accepts IP or domain)
@@ -65,7 +65,7 @@ pub use error::{ToolboxError, ToolboxResult};
 pub use services::ToolboxService;
 pub use types::{
     CertChainItem, ConnectionStatus, DnsLookupRecord, DnsLookupResult, DnsPropagationResult,
-    DnsPropagationServer, DnsPropagationServerResult, DnskeyRecord, DnssecResult,
+    DnsPropagationServer, DnsPropagationServerResult, DnsQueryType, DnskeyRecord, DnssecResult,
     DnssecValidationStatus, DsRecord, HttpHeader, HttpHeaderCheckRequest, HttpHeaderCheckResult,
     HttpMethod, IpGeoInfo, IpLookupResult, PropagationStatus, RrsigRecord, SecurityHeaderAnalysis,
     SecurityHeaderStatus, SslCertInfo, SslCheckResult, WhoisResult,

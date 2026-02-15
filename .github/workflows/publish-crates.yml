@@ -1,0 +1,124 @@
+name: Publish Crates
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "dns-orchestrator-provider/Cargo.toml"
+      - "dns-orchestrator-toolbox/Cargo.toml"
+      - "dns-orchestrator-core/Cargo.toml"
+      - "dns-orchestrator-app/Cargo.toml"
+      - "dns-orchestrator-mcp/Cargo.toml"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      # 按依赖拓扑序发布，每个 crate 发布前检查 crates.io 是否已有该版本
+      - name: Publish dns-orchestrator-provider
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          CRATE="dns-orchestrator-provider"
+          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r ".packages[] | select(.name==\"$CRATE\") | .version")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/$CRATE/$VERSION")
+          if [ "$STATUS" = "200" ]; then
+            echo "::notice::$CRATE@$VERSION already published, skipping"
+          else
+            echo "Publishing $CRATE@$VERSION..."
+            cargo publish -p "$CRATE"
+            echo "::notice::$CRATE@$VERSION published successfully"
+            echo "Waiting for crates.io index update..."
+            sleep 20
+          fi
+
+      - name: Publish dns-orchestrator-toolbox
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          CRATE="dns-orchestrator-toolbox"
+          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r ".packages[] | select(.name==\"$CRATE\") | .version")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/$CRATE/$VERSION")
+          if [ "$STATUS" = "200" ]; then
+            echo "::notice::$CRATE@$VERSION already published, skipping"
+          else
+            echo "Publishing $CRATE@$VERSION..."
+            cargo publish -p "$CRATE"
+            echo "::notice::$CRATE@$VERSION published successfully"
+            echo "Waiting for crates.io index update..."
+            sleep 20
+          fi
+
+      - name: Publish dns-orchestrator-core
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          CRATE="dns-orchestrator-core"
+          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r ".packages[] | select(.name==\"$CRATE\") | .version")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/$CRATE/$VERSION")
+          if [ "$STATUS" = "200" ]; then
+            echo "::notice::$CRATE@$VERSION already published, skipping"
+          else
+            echo "Publishing $CRATE@$VERSION..."
+            cargo publish -p "$CRATE"
+            echo "::notice::$CRATE@$VERSION published successfully"
+            echo "Waiting for crates.io index update..."
+            sleep 20
+          fi
+
+      - name: Publish dns-orchestrator-app
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          CRATE="dns-orchestrator-app"
+          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r ".packages[] | select(.name==\"$CRATE\") | .version")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/$CRATE/$VERSION")
+          if [ "$STATUS" = "200" ]; then
+            echo "::notice::$CRATE@$VERSION already published, skipping"
+          else
+            echo "Publishing $CRATE@$VERSION..."
+            cargo publish -p "$CRATE"
+            echo "::notice::$CRATE@$VERSION published successfully"
+            echo "Waiting for crates.io index update..."
+            sleep 20
+          fi
+
+      - name: Publish dns-orchestrator-mcp
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          CRATE="dns-orchestrator-mcp"
+          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r ".packages[] | select(.name==\"$CRATE\") | .version")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://crates.io/api/v1/crates/$CRATE/$VERSION")
+          if [ "$STATUS" = "200" ]; then
+            echo "::notice::$CRATE@$VERSION already published, skipping"
+          else
+            echo "Publishing $CRATE@$VERSION..."
+            cargo publish -p "$CRATE"
+            echo "::notice::$CRATE@$VERSION published successfully"
+          fi

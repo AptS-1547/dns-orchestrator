@@ -1,6 +1,6 @@
 use tauri::{
-    plugin::{PluginApi, PluginHandle},
     AppHandle, Runtime,
+    plugin::{PluginApi, PluginHandle},
 };
 
 use crate::models::{InstallApkRequest, InstallApkResponse};

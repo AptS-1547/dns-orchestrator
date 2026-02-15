@@ -8,7 +8,8 @@ use tokio::time::{Duration, timeout};
 
 use crate::error::ToolboxResult;
 use crate::types::{
-    DnsPropagationResult, DnsPropagationServer, DnsPropagationServerResult, PropagationStatus,
+    DnsPropagationResult, DnsPropagationServer, DnsPropagationServerResult, DnsQueryType,
+    PropagationStatus,
 };
 
 use super::dns::dns_lookup;
@@ -154,7 +155,7 @@ fn calculate_consistency(results: &[DnsPropagationServerResult]) -> (f32, Vec<St
 /// Check DNS propagation across global resolvers.
 pub async fn dns_propagation_check(
     domain: &str,
-    record_type: &str,
+    record_type: DnsQueryType,
 ) -> ToolboxResult<DnsPropagationResult> {
     let servers = get_global_dns_servers();
     let start_time = Instant::now();
@@ -164,12 +165,11 @@ pub async fn dns_propagation_check(
         .into_iter()
         .map(|server| {
             let domain = domain.to_string();
-            let record_type = record_type.to_string();
             async move {
                 let query_start = Instant::now();
                 let result = timeout(
                     Duration::from_secs(QUERY_TIMEOUT_SECS),
-                    dns_lookup(&domain, &record_type, Some(&server.ip)),
+                    dns_lookup(&domain, record_type, Some(&server.ip)),
                 )
                 .await;
                 // u128 -> u64: elapsed millis for a DNS query will never exceed u64::MAX
@@ -214,7 +214,7 @@ pub async fn dns_propagation_check(
 
     Ok(DnsPropagationResult {
         domain: domain.to_string(),
-        record_type: record_type.to_string(),
+        record_type,
         results,
         total_time_ms,
         consistency_percentage,
@@ -411,11 +411,11 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires network access"]
     async fn test_dns_propagation_check_real() {
-        let result = dns_propagation_check("google.com", "A").await;
+        let result = dns_propagation_check("google.com", DnsQueryType::A).await;
         assert!(result.is_ok());
         let propagation = result.unwrap();
         assert_eq!(propagation.domain, "google.com");
-        assert_eq!(propagation.record_type, "A");
+        assert_eq!(propagation.record_type, DnsQueryType::A);
         assert!(!propagation.results.is_empty());
         assert!(propagation.total_time_ms > 0);
         // Google should have high consistency

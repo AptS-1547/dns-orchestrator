@@ -1,54 +1,66 @@
 # dns-orchestrator-provider
 
-A unified DNS provider abstraction library for managing DNS records across multiple cloud platforms.
+Unified DNS provider abstraction library for managing DNS records across multiple cloud platforms.
+
+[简体中文](./README.zh-CN.md) | English
+
+## Features
+
+- **Unified Provider Trait** - Single `DnsProvider` interface for all supported providers
+- **Full DNS Record Lifecycle** - Create, read, update, delete, and batch operations for common record types
+- **Type-Safe Credentials** - `ProviderCredentials` enum prevents provider/credential mismatch
+- **Consistent Error Model** - Standardized `ProviderError` variants across providers
+- **Retry on Transient Failures** - Automatic retry with exponential backoff for network/timeout/rate-limit errors
+- **Feature-Flag Driven** - Enable only required providers and TLS backend
 
 ## Supported Providers
 
 | Provider | Feature Flag | Auth Method | Credential Fields |
-|----------|-------------|-------------|-------------------|
-| [Cloudflare](https://www.cloudflare.com/) | `cloudflare` | Bearer Token | `api_token` |
-| [Aliyun DNS](https://www.aliyun.com/product/dns) | `aliyun` | HMAC-SHA256 (V3) | `access_key_id`, `access_key_secret` |
-| [DNSPod (Tencent Cloud)](https://www.dnspod.cn/) | `dnspod` | TC3-HMAC-SHA256 | `secret_id`, `secret_key` |
-| [Huawei Cloud DNS](https://www.huaweicloud.com/product/dns.html) | `huaweicloud` | AK/SK Signing | `access_key_id`, `secret_access_key` |
+|----------|--------------|-------------|-------------------|
+| Cloudflare | `cloudflare` | Bearer Token | `api_token` |
+| Aliyun DNS | `aliyun` | ACS3-HMAC-SHA256 | `access_key_id`, `access_key_secret` |
+| DNSPod | `dnspod` | TC3-HMAC-SHA256 | `secret_id`, `secret_key` |
+| Huawei Cloud DNS | `huaweicloud` | AK/SK Signing | `access_key_id`, `secret_access_key` |
 
-## Features
+## Quick Start
 
-- Unified `DnsProvider` trait for all providers
-- Full CRUD operations on DNS records (A, AAAA, CNAME, MX, TXT, NS, SRV, CAA)
-- Batch create / update / delete with per-record error handling
-- Paginated domain and record listing with search/filter
-- Credential validation against remote APIs
-- Automatic retry on transient errors (network, timeout, rate limit)
-- Structured error types with provider-specific error code mapping
-- Feature flags for selective provider compilation
+### Install
 
-## Usage
-
-Add to your `Cargo.toml`:
+Enable all providers (default):
 
 ```toml
 [dependencies]
 dns-orchestrator-provider = { version = "0.1", features = ["all-providers"] }
 ```
 
-Or enable only the providers you need:
+Enable only selected providers:
 
 ```toml
 [dependencies]
 dns-orchestrator-provider = { version = "0.1", default-features = false, features = ["cloudflare", "rustls"] }
 ```
 
-### TLS Backend
+### Feature Flags
 
-- `native-tls` (default) -- Uses the platform's native TLS implementation
-- `rustls` -- Uses rustls, recommended for cross-compilation and Android
+Provider flags:
 
-### Example
+- `all-providers` (default)
+- `cloudflare`
+- `aliyun`
+- `dnspod`
+- `huaweicloud`
 
-```rust
-use dns_orchestrator_provider::{
-    create_provider, DnsProvider, PaginationParams, ProviderCredentials,
-};
+TLS backend flags:
+
+- `native-tls`
+- `rustls` (default)
+
+## Usage
+
+### Create Provider and Query Data
+
+```rust,no_run
+use dns_orchestrator_provider::{create_provider, PaginationParams, ProviderCredentials};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -58,33 +70,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let provider = create_provider(credentials)?;
 
-    // Validate credentials
     provider.validate_credentials().await?;
 
-    // List domains
     let domains = provider.list_domains(&PaginationParams::default()).await?;
     for domain in &domains.items {
         println!("{} ({:?})", domain.name, domain.status);
-    }
-
-    // List DNS records
-    let records = provider.list_records(
-        &domains.items[0].id,
-        &Default::default(),
-    ).await?;
-    for record in &records.items {
-        println!("{} {} -> {}", record.name, record.data.record_type(), record.data.display_value());
     }
 
     Ok(())
 }
 ```
 
-### Creating Records
+### Create Record
 
-```rust
-use dns_orchestrator_provider::{CreateDnsRecordRequest, RecordData};
-
+```rust,no_run
+# use dns_orchestrator_provider::{create_provider, CreateDnsRecordRequest, ProviderCredentials, RecordData};
+# async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+# let provider = create_provider(ProviderCredentials::Cloudflare { api_token: "token".to_string() })?;
 let request = CreateDnsRecordRequest {
     domain_id: "example.com".to_string(),
     name: "www".to_string(),
@@ -94,43 +96,68 @@ let request = CreateDnsRecordRequest {
 };
 
 let record = provider.create_record(&request).await?;
+println!("created: {}", record.id);
+# Ok(())
+# }
 ```
 
-### Batch Operations
+### Batch Delete
 
-```rust
-use dns_orchestrator_provider::BatchUpdateItem;
+```rust,no_run
+# use dns_orchestrator_provider::{create_provider, ProviderCredentials};
+# async fn demo() -> Result<(), Box<dyn std::error::Error>> {
+# let provider = create_provider(ProviderCredentials::Cloudflare { api_token: "token".to_string() })?;
+let result = provider
+    .batch_delete_records(
+        "example.com",
+        &["record-1".to_string(), "record-2".to_string()],
+    )
+    .await?;
 
-let result = provider.batch_delete_records("example.com", &[
-    "record-id-1".to_string(),
-    "record-id-2".to_string(),
-]).await?;
-
-println!("Deleted: {}, Failed: {}", result.success_count, result.failed_count);
+println!("success={}, failed={}", result.success_count, result.failed_count);
 for failure in &result.failures {
-    eprintln!("  {} -- {}", failure.record_id, failure.reason);
+    eprintln!("{}: {}", failure.record_id, failure.reason);
 }
+# Ok(())
+# }
 ```
 
 ## Error Handling
 
-All provider operations return `Result<T, ProviderError>`. The error enum provides structured variants:
+All operations return `Result<T, ProviderError>`.
 
-| Variant | Description |
-|---------|-------------|
-| `InvalidCredentials` | Authentication failed |
-| `RecordExists` | DNS record already exists |
-| `RecordNotFound` | DNS record not found |
-| `DomainNotFound` | Domain/zone not found |
-| `InvalidParameter` | Invalid request parameter |
-| `RateLimited` | API rate limit exceeded |
-| `QuotaExceeded` | Account quota exceeded |
-| `DomainLocked` | Domain is locked |
-| `PermissionDenied` | Insufficient permissions |
-| `NetworkError` | Network connectivity issue |
-| `Timeout` | Request timed out |
+Common categories:
 
-Each variant includes the provider name and the original error message from the API.
+- Authentication: `InvalidCredentials`
+- Resource conflicts/missing: `RecordExists`, `RecordNotFound`, `DomainNotFound`
+- Validation/permission: `InvalidParameter`, `PermissionDenied`, `DomainLocked`
+- Capacity/limits: `QuotaExceeded`, `RateLimited`
+- Infrastructure: `NetworkError`, `Timeout`, `ParseError`, `SerializationError`
+
+Transient failures (`NetworkError`, `Timeout`, `RateLimited`) are retryable.
+
+## Architecture
+
+```
+Consumer (core/tauri/web)
+  -> create_provider(credentials)
+  -> Arc<dyn DnsProvider>
+  -> provider-specific implementation (Cloudflare/Aliyun/DNSPod/Huawei)
+  -> shared HTTP utility + unified error mapping
+```
+
+Detailed docs:
+
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Testing Guide](./docs/TESTING.md)
+
+## Development
+
+```bash
+# From repository root
+cargo check -p dns-orchestrator-provider
+cargo test -p dns-orchestrator-provider
+```
 
 ## License
 

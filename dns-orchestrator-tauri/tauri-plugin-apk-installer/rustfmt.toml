@@ -1,0 +1,14 @@
+# Rust Edition
+edition = "2024"
+
+# Basic formatting (stable options only)
+max_width = 100
+hard_tabs = false
+tab_spaces = 4
+
+# Functions and closures
+fn_params_layout = "Tall"
+
+# Code style
+use_small_heuristics = "Default"
+match_block_trailing_comma = false

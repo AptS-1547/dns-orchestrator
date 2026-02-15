@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/github/license/AptS-1547/dns-orchestrator)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android-blue)
 
-A cross-platform desktop application for unified management of DNS records across multiple DNS service providers.
+A cross-platform DNS management project for unified management of DNS records across multiple DNS service providers.
 
 [简体中文](./README.zh-CN.md) | English
 
@@ -16,7 +16,7 @@ A cross-platform desktop application for unified management of DNS records acros
 - **Universal DNS Management** - Create, read, update, and delete DNS records across all providers
 - **Advanced Search & Filtering** - Pagination, real-time search, and record type filtering with infinite scroll
 - **Account Import/Export** - Encrypted backup and migration of account configurations
-- **Network Toolbox** - Built-in DNS lookup and WHOIS query tools with history tracking
+- **Network Toolbox** - Built-in DNS lookup, WHOIS, IP geolocation, SSL certificate, HTTP header, DNS propagation, and DNSSEC tools
 - **Cross-Platform** - Native experience on macOS, Windows, Linux, and Android
 - **Modern UI** - Clean interface with dark/light theme support and bilingual (English/Chinese) localization
 
@@ -64,7 +64,7 @@ Download the latest version for your platform from the [Releases](https://github
 1. Click **"Add Account"** to configure your first DNS provider
 2. Select provider type and enter your API credentials
 3. View and manage your domains and DNS records
-4. Use the **Network Toolbox** for DNS queries and WHOIS lookups
+4. Use the **Network Toolbox** for network diagnostics (DNS, WHOIS, IP, SSL, HTTP headers, propagation, DNSSEC)
 
 ## Core Functionality
 
@@ -90,6 +90,11 @@ Download the latest version for your platform from the [Releases](https://github
 ### Network Toolbox
 - **DNS Lookup**: Query DNS records (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, PTR, ALL)
 - **WHOIS Query**: Retrieve domain registration information
+- **IP Geolocation**: Query country/region/city/ISP/ASN for IP or domain
+- **SSL Certificate Check**: Inspect certificate validity, SAN, issuer, and expiration
+- **HTTP Header Analysis**: Evaluate response security headers and recommendations
+- **DNS Propagation Check**: Compare DNS answers across global resolvers
+- **DNSSEC Validation**: Validate DNSKEY/DS/RRSIG deployment status
 - **History Tracking**: Quick access to recent queries
 
 ### Themes & Localization
@@ -108,7 +113,10 @@ Download the latest version for your platform from the [Releases](https://github
 - **Icons**: Lucide React
 
 ### Backend
-- **Framework**: Tauri 2 (Rust)
+- **Framework**: Tauri 2 + Rust workspace crates
+- **Core Logic**: `dns-orchestrator-core`
+- **Provider Abstraction**: `dns-orchestrator-provider`
+- **Network Diagnostics**: `dns-orchestrator-toolbox`
 - **Runtime**: Tokio (async runtime)
 - **HTTP Client**: Reqwest
 - **Credential Storage**: keyring 3 (system keychain integration)
@@ -142,25 +150,32 @@ pnpm install
 # Start development mode
 pnpm tauri dev
 
+# Start web development mode
+pnpm dev:web
+
 # Build for production
 pnpm tauri build
+
+# Build web version
+pnpm build:web
 
 # Sync version across package.json, tauri.conf.json, and Cargo.toml
 pnpm sync-version
 ```
 
-For detailed development instructions, see [DEVELOPMENT.md](./docs/DEVELOPMENT.md).
+For detailed development instructions, see [docs/development/README.md](./docs/development/README.md).
 
 ## Architecture
 
 DNS Orchestrator follows a clean architecture pattern:
 
-- **Frontend**: React components communicate via Zustand stores
-- **Backend**: Rust-based Tauri commands handle business logic
-- **Abstraction**: `DnsProvider` trait enables easy addition of new providers
-- **Registry**: Dynamic provider management through `ProviderRegistry`
+- **Frontend**: `dns-orchestrator-app` (React + Zustand)
+- **Platform Layer**: `dns-orchestrator-tauri` and `dns-orchestrator-web`
+- **Core Layer**: `dns-orchestrator-core` for account/domain/DNS orchestration
+- **Provider Layer**: `dns-orchestrator-provider` for DNS vendor integrations
+- **Toolbox Layer**: `dns-orchestrator-toolbox` for network diagnostics
 
-For in-depth architectural details, see [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+For in-depth architectural details, see [docs/architecture/README.md](./docs/architecture/README.md).
 
 ## System Requirements
 
@@ -175,7 +190,7 @@ Contributions are welcome! Here's how you can help:
 
 1. **Report Bugs**: Open an issue with reproduction steps
 2. **Suggest Features**: Share your ideas in the issues
-3. **Add DNS Providers**: Follow the guide in [DEVELOPMENT.md](./docs/DEVELOPMENT.md#adding-a-new-dns-provider)
+3. **Add DNS Providers**: Follow the guides in [docs/development/README.md](./docs/development/README.md)
 4. **Improve Translations**: Update locale files in `src/i18n/locales/`
 5. **Submit Pull Requests**: Fork, branch, code, and PR
 

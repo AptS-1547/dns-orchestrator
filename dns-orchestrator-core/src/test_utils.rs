@@ -1,6 +1,6 @@
-//! Test auxiliary module
+//! Test utility module.
 //!
-//! Provides mock implementation and convenient test factory methods.
+//! Provides mock implementations and factory helpers for tests.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -21,6 +21,7 @@ use crate::types::{
 
 // ===== MockAccountRepository =====
 
+/// In-memory mock for [`AccountRepository`].
 pub struct MockAccountRepository {
     accounts: RwLock<HashMap<String, Account>>,
     /// If Some, this error is returned when saving (used to test the cleanup path)
@@ -28,6 +29,7 @@ pub struct MockAccountRepository {
 }
 
 impl MockAccountRepository {
+    /// Creates a new mock repository.
     pub fn new() -> Self {
         Self {
             accounts: RwLock::new(HashMap::new()),
@@ -35,6 +37,7 @@ impl MockAccountRepository {
         }
     }
 
+    /// Configures an artificial save error for testing.
     pub async fn set_save_error(&self, err: Option<String>) {
         *self.save_error.write().await = err;
     }
@@ -91,6 +94,7 @@ impl AccountRepository for MockAccountRepository {
 
 // ===== MockCredentialStore =====
 
+/// In-memory mock for [`CredentialStore`].
 pub struct MockCredentialStore {
     credentials: RwLock<HashMap<String, ProviderCredentials>>,
     /// If Some, this error is returned when remove (used to test the credential removal failure path)
@@ -98,6 +102,7 @@ pub struct MockCredentialStore {
 }
 
 impl MockCredentialStore {
+    /// Creates a new mock credential store.
     pub fn new() -> Self {
         Self {
             credentials: RwLock::new(HashMap::new()),
@@ -105,6 +110,7 @@ impl MockCredentialStore {
         }
     }
 
+    /// Configures an artificial remove error for testing.
     pub async fn set_remove_error(&self, err: Option<String>) {
         *self.remove_error.write().await = err;
     }
@@ -156,11 +162,13 @@ impl CredentialStore for MockCredentialStore {
 
 // ===== MockDomainMetadataRepository =====
 
+/// In-memory mock for [`DomainMetadataRepository`].
 pub struct MockDomainMetadataRepository {
     metadata: RwLock<HashMap<String, DomainMetadata>>,
 }
 
 impl MockDomainMetadataRepository {
+    /// Creates a new mock metadata repository.
     pub fn new() -> Self {
         Self {
             metadata: RwLock::new(HashMap::new()),
@@ -285,7 +293,7 @@ impl DomainMetadataRepository for MockDomainMetadataRepository {
 
 // ===== Factory method =====
 
-/// Create `ServiceContext` for testing
+/// Creates a [`ServiceContext`] wired with mock dependencies.
 pub fn create_test_context() -> (
     Arc<ServiceContext>,
     Arc<MockAccountRepository>,
@@ -307,7 +315,7 @@ pub fn create_test_context() -> (
     (ctx, account_repo, credential_store, domain_metadata_repo)
 }
 
-/// Create `AccountService` for testing
+/// Creates an [`AccountService`] wired with mock dependencies.
 pub fn create_test_account_service() -> (
     AccountService,
     Arc<MockAccountRepository>,
@@ -324,9 +332,9 @@ pub fn create_test_account_service() -> (
     )
 }
 
-/// Create a `ProviderCredentials` for testing
+/// Creates default credentials for tests.
 ///
-/// Use Cloudflare as the default provider (since it only requires one field).
+/// Cloudflare is used because it requires only one field.
 pub fn test_credentials() -> ProviderCredentials {
     ProviderCredentials::Cloudflare {
         api_token: "test-token-12345".to_string(),
