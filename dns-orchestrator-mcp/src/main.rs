@@ -3,6 +3,7 @@
 //! Starts the MCP server with stdio transport, sharing the desktop app's
 //! `SQLite` database and system keyring for credentials.
 
+mod mcp_types;
 mod schemas;
 mod server;
 
