@@ -21,7 +21,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 const PRIMARY_APP_DIR_NAME: &str = "net.esaps.dns-orchestrator";
 /// Legacy desktop application data directory identifier kept for migration.
 const LEGACY_APP_DIR_NAME: &str = "com.apts-1547.dns-orchestrator";
-/// Shared SQLite filename used by both desktop and MCP server processes.
+/// Shared `SQLite` filename used by both desktop and MCP server processes.
 const DB_FILE_NAME: &str = "data.db";
 
 /// Detect the Tauri desktop app's data directory.
