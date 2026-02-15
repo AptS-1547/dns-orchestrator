@@ -1,117 +1,115 @@
 # dns-orchestrator-mcp
 
-[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for DNS Orchestrator, exposing read-only DNS management tools to AI agents.
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for [DNS Orchestrator](https://github.com/AptS-1547/dns-orchestrator), exposing DNS management and network diagnostic tools to AI agents.
 
-Shares account data with the desktop app but operates in read-only mode -- the desktop app remains the single source of truth.
+Shares account data with the DNS Orchestrator desktop app via SQLite database and system keyring, operating in **read-only mode**.
 
-## Features
+## Install
 
-- **Account Management Tools** -- List accounts, domains, and DNS records with pagination
-- **Network Diagnostic Tools** -- DNS lookup, WHOIS, IP geolocation, DNS propagation check, DNSSEC validation
-- **Shared Storage** -- Reads accounts from Tauri Store and credentials from system keyring
-- **Security** -- Sanitized error messages, timeout protection, resource limits
-- **Stateless** -- No write operations, no data modification
-
-## Available Tools
-
-| Tool | Description |
-|------|-------------|
-| `list_accounts` | List all configured DNS provider accounts (Cloudflare, Aliyun, DNSPod, Huaweicloud) |
-| `list_domains` | List domains for a specific account with pagination |
-| `list_records` | List DNS records for a domain with filtering and pagination |
-| `dns_lookup` | Perform DNS lookup (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, PTR, ALL) |
-| `whois_lookup` | Query WHOIS information (registrar, dates, name servers) |
-| `ip_lookup` | Look up IP geolocation (country, region, city, ISP, ASN) |
-| `dns_propagation_check` | Check DNS record propagation across 13 global servers |
-| `dnssec_check` | Validate DNSSEC deployment (DNSKEY, DS, RRSIG records) |
-
-## Usage
-
-### Build
+### From crates.io
 
 ```bash
-cargo build --release
+cargo install dns-orchestrator-mcp
 ```
 
-The executable will be at `target/release/dns-orchestrator-mcp`.
+### From source
 
-### Configure MCP Client
+```bash
+git clone https://github.com/AptS-1547/dns-orchestrator.git
+cd dns-orchestrator
+cargo build --release -p dns-orchestrator-mcp
+# Binary: target/release/dns-orchestrator-mcp
+```
 
-Add to your MCP client configuration (e.g., Claude Desktop):
+## Configure MCP Client
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
+Add to your MCP client configuration:
+
+### Claude Desktop
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "dns-orchestrator": {
-      "command": "/path/to/dns-orchestrator-mcp"
+      "command": "dns-orchestrator-mcp"
     }
   }
 }
 ```
 
-### Run
-
-The server will:
-1. Load account configurations from Tauri Store (`~/.dns-orchestrator/accounts.json`)
-2. Restore credentials from system keyring
-3. Initialize DNS provider connections
-4. Start MCP server on stdio transport
-
-Network toolbox tools work without any account configuration.
-
-## Architecture
-
-```text
-┌─────────────────────────────────────┐
-│      MCP Client (Claude, etc.)      │
-└──────────────┬──────────────────────┘
-               │ stdio transport
-┌──────────────▼──────────────────────┐
-│     dns-orchestrator-mcp server     │
-│  8 read-only tools (list/lookup)    │
-└──────────────┬──────────────────────┘
-               │
-    ┌──────────┴──────────┐
-    │                     │
-┌───▼────────────┐  ┌────▼──────────────┐
-│ Tauri Store    │  │ System Keyring    │
-│ (accounts.json)│  │ (credentials)     │
-└────────────────┘  └───────────────────┘
-```
-
-### Data Sharing
-
-- **Account Repository**: `TauriStoreAccountRepository` reads from `~/.dns-orchestrator/accounts.json`
-- **Credential Store**: `KeyringCredentialStore` reads from system keyring (same service as desktop app)
-- **Domain Metadata**: `NoOpDomainMetadataRepository` (MCP doesn't need persistent metadata)
-
-### Security
-
-- Error messages sanitized to prevent credential leakage
-- Full errors logged to stderr, generic messages returned to client
-- Timeout limits on all external service calls (15-60 seconds)
-- Page size clamped to max 100 items
-
-## Development
-
-### Run Tests
+### Claude Code
 
 ```bash
-cargo test
+claude mcp add dns-orchestrator dns-orchestrator-mcp
 ```
 
-### Logging
+### Cursor / Windsurf
 
-Set log level via `RUST_LOG` environment variable:
+Add to `.cursor/mcp.json` or MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "dns-orchestrator": {
+      "command": "dns-orchestrator-mcp"
+    }
+  }
+}
+```
+
+> If `dns-orchestrator-mcp` is not in your `PATH`, use the full path to the binary (e.g. `~/.cargo/bin/dns-orchestrator-mcp`).
+
+## Available Tools
+
+### Account & DNS Management
+
+Requires the [DNS Orchestrator desktop app](https://github.com/AptS-1547/dns-orchestrator) to be installed with accounts configured.
+
+| Tool | Description |
+|------|-------------|
+| `list_accounts` | List all configured DNS provider accounts (Cloudflare, Aliyun, DNSPod, Huaweicloud) |
+| `list_domains` | List domains for a specific account with pagination |
+| `list_records` | List DNS records for a domain with filtering and pagination |
+
+### Network Diagnostics
+
+Work standalone without any account configuration.
+
+| Tool | Description |
+|------|-------------|
+| `dns_lookup` | DNS lookup (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, PTR, ALL) |
+| `whois_lookup` | WHOIS query (registrar, dates, name servers) |
+| `ip_lookup` | IP geolocation (country, region, city, ISP, ASN) |
+| `dns_propagation_check` | Check DNS propagation across 13 global servers |
+| `dnssec_check` | Validate DNSSEC deployment (DNSKEY, DS, RRSIG records) |
+
+## Data Sharing with Desktop App
+
+The MCP server shares data with the DNS Orchestrator desktop app:
+
+- **SQLite database** (`data.db`) — account configurations and domain metadata
+- **System keyring** — provider credentials (API keys/tokens)
+
+The server auto-detects the database from the desktop app's data directory:
+
+| Platform | Path |
+|----------|------|
+| macOS | `~/Library/Application Support/net.esaps.dns-orchestrator/data.db` |
+| Linux | `~/.local/share/net.esaps.dns-orchestrator/data.db` |
+| Windows | `%APPDATA%\net.esaps.dns-orchestrator\data.db` |
+
+If the database doesn't exist, the server creates it automatically. Network diagnostic tools work without any database.
+
+## Logging
+
+Logs are written to stderr (MCP protocol uses stdout).
 
 ```bash
 RUST_LOG=debug dns-orchestrator-mcp
 ```
-
-Logs are written to stderr (MCP protocol uses stdout).
 
 ## License
 
