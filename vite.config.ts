@@ -40,6 +40,21 @@ export default defineConfig(async () => ({
   //
   // 1. prevent Vite from obscuring rust errors
   clearScreen: false,
+
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return
+          if (/[\\/](react-dom|react[\\/]|react-router)/.test(id)) return "vendor-react"
+          if (id.includes("@radix-ui")) return "vendor-radix"
+          if (id.includes("@tauri-apps")) return "vendor-tauri"
+          if (id.includes("i18next")) return "vendor-i18n"
+        },
+      },
+    },
+  },
+
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: 1420,

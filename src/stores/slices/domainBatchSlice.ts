@@ -1,9 +1,5 @@
 import { domainMetadataService } from "@/services"
-import {
-  type DomainGet,
-  type DomainSet,
-  executeBatchTagOperation,
-} from "../domainStore.types"
+import { type DomainGet, type DomainSet, executeBatchTagOperation } from "../domainStore.types"
 
 export function createDomainBatchSlice(set: DomainSet, get: DomainGet) {
   const mergeTagsUpdater = (existingTags: string[], tagsToAdd: string[]) =>
@@ -14,8 +10,7 @@ export function createDomainBatchSlice(set: DomainSet, get: DomainGet) {
     return existingTags.filter((t) => !toRemoveSet.has(t))
   }
 
-  const replaceTagsUpdater = (_existingTags: string[], newTags: string[]) =>
-    [...newTags].sort()
+  const replaceTagsUpdater = (_existingTags: string[], newTags: string[]) => [...newTags].sort()
 
   return {
     toggleBatchMode: () => {

@@ -52,9 +52,7 @@ export function DnsRecordForm({
   const [ttl, setTtl] = useState(record?.ttl ?? DNS.DEFAULT_TTL)
   const [proxied, setProxied] = useState(record?.proxied)
   const [values, setValues] = useState<FieldValues>(() =>
-    record
-      ? { ...(record.data.content as FieldValues) }
-      : { ...RECORD_TYPE_CONFIGS.A.defaults }
+    record ? { ...(record.data.content as FieldValues) } : { ...RECORD_TYPE_CONFIGS.A.defaults }
   )
 
   const config = RECORD_TYPE_CONFIGS[formType]
@@ -174,9 +172,7 @@ export function DnsRecordForm({
         onChange={(e) =>
           updateValue(
             field.key,
-            field.type === "number"
-              ? Number.parseInt(e.target.value, 10)
-              : e.target.value
+            field.type === "number" ? Number.parseInt(e.target.value, 10) : e.target.value
           )
         }
         placeholder={field.placeholder}
@@ -243,10 +239,7 @@ export function DnsRecordForm({
           {/* TTL */}
           <div className="space-y-2">
             <Label htmlFor="ttl">{t("dns.ttl")}</Label>
-            <Select
-              value={String(ttl)}
-              onValueChange={(v) => setTtl(Number.parseInt(v, 10))}
-            >
+            <Select value={String(ttl)} onValueChange={(v) => setTtl(Number.parseInt(v, 10))}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

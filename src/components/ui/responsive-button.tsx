@@ -12,12 +12,7 @@ interface ResponsiveButtonProps extends Omit<ButtonProps, "children" | "size"> {
 /**
  * 响应式按钮：移动端显示图标 + tooltip，桌面端显示图标 + 文字
  */
-export function ResponsiveButton({
-  icon,
-  label,
-  tooltip,
-  ...buttonProps
-}: ResponsiveButtonProps) {
+export function ResponsiveButton({ icon, label, tooltip, ...buttonProps }: ResponsiveButtonProps) {
   const isMobile = useIsMobile()
 
   if (isMobile) {

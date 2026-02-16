@@ -3,7 +3,8 @@
  * 包含初始化逻辑、全局布局和路由出口
  */
 
-import { useEffect } from "react"
+import { Loader2 } from "lucide-react"
+import { Suspense, useEffect } from "react"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { ErrorBoundary } from "@/components/error"
 import { Toaster } from "@/components/ui/sonner"
@@ -106,7 +107,15 @@ export function RootLayout() {
         hideHeader={shouldHideHeader}
       >
         <ErrorBoundary level="page" name="ContentArea">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </ErrorBoundary>
       </AppLayout>
       {!isMobile && <StatusBar />}

@@ -186,9 +186,7 @@ export function TagOperationDialog({
           <Button
             variant={mode === "remove" || mode === "set" ? "destructive" : "default"}
             onClick={handleConfirm}
-            disabled={
-              mode === "remove" ? selectedTagsToRemove.size === 0 : inputTags.length === 0
-            }
+            disabled={mode === "remove" ? selectedTagsToRemove.size === 0 : inputTags.length === 0}
           >
             {t(confirmKey, { count: selectedCount })}
           </Button>

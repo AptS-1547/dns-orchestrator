@@ -1,4 +1,7 @@
+import i18n from "@/i18n"
+import { extractErrorMessage, getErrorMessage } from "@/lib/error"
 import type { ApiResponse, BatchTagRequest, BatchTagResult, Domain, DomainMetadata } from "@/types"
+import { toast } from "sonner"
 
 /**
  * 账户域名缓存
@@ -147,10 +150,6 @@ export async function executeBatchTagOperation(
   set: DomainSet,
   get: DomainGet
 ): Promise<void> {
-  const { toast } = await import("sonner")
-  const { default: i18n } = await import("@/i18n")
-  const { getErrorMessage, extractErrorMessage } = await import("@/lib/error")
-
   if (selectedDomainKeys.size === 0) return
 
   set({ isBatchOperating: true })

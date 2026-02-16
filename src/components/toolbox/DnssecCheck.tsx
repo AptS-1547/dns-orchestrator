@@ -1,11 +1,4 @@
-import {
-  AlertCircle,
-  Key,
-  Shield,
-  ShieldAlert,
-  ShieldCheck,
-  XCircle,
-} from "lucide-react"
+import { AlertCircle, Key, Shield, ShieldAlert, ShieldCheck, XCircle } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"

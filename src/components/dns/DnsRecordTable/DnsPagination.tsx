@@ -78,10 +78,7 @@ export function DnsPagination({
     <div className="flex items-center justify-between border-t px-4 py-2 md:justify-center">
       {/* 移动端分页选择器 */}
       <div className="flex items-center gap-1 md:hidden">
-        <Select
-          value={String(pageSize)}
-          onValueChange={(val) => onPageSizeChange(Number(val))}
-        >
+        <Select value={String(pageSize)} onValueChange={(val) => onPageSizeChange(Number(val))}>
           <SelectTrigger className="h-8 w-16">
             <SelectValue />
           </SelectTrigger>
@@ -110,10 +107,7 @@ export function DnsPagination({
 
           {isMobile ? (
             <PaginationItem>
-              <Select
-                value={String(page)}
-                onValueChange={(val) => onPageChange(Number(val))}
-              >
+              <Select value={String(page)} onValueChange={(val) => onPageChange(Number(val))}>
                 <SelectTrigger className="h-8 w-auto gap-1 border-none bg-transparent px-2 shadow-none">
                   <span className="text-sm">
                     {page} / {totalPages}
