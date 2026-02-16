@@ -1,6 +1,6 @@
 import { ChevronRight, Loader2, MoreHorizontal, Trash2, TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import { getProviderName, ProviderIcon } from "@/components/account/ProviderIcon"
+import { getProviderName, ProviderIcon } from "@/components/accounts/ProviderIcon"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {

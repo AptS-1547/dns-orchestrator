@@ -1,9 +1,7 @@
-import { AlertCircle, CheckCircle2, Clock, Loader2, Search, XCircle } from "lucide-react"
+import { AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import {
   Select,
@@ -20,14 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useEnterKeyHandler } from "@/hooks/useEnterKeyHandler"
 import { useIsMobile } from "@/hooks/useMediaQuery"
 import { cn } from "@/lib/utils"
 import type { DnsLookupType, DnsPropagationResult } from "@/types"
 import { DNS_RECORD_TYPES } from "@/types"
-import { HistoryChips } from "./HistoryChips"
 import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
-import { CopyableText, ToolCard } from "./shared"
+import { CopyableText, QueryInput, ToolCard } from "./shared"
 
 export function DnsPropagation() {
   const { t } = useTranslation()
@@ -54,8 +50,6 @@ export function DnsPropagation() {
       toast.info(t("toolbox.dnsPropagation.noResults"))
     }
   }
-
-  const handleKeyDown = useEnterKeyHandler(handleCheck)
 
   // 计算统计数据
   const stats = useMemo(() => {
@@ -97,17 +91,21 @@ export function DnsPropagation() {
 
   return (
     <ToolCard title={t("toolbox.dnsPropagation.title")}>
-      {/* 查询输入 */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="flex flex-1 items-center rounded-md border bg-background">
-          <Input
-            placeholder={t("toolbox.domainPlaceholder")}
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            className="flex-1 border-0 shadow-none"
-          />
+      <QueryInput
+        value={domain}
+        onChange={setDomain}
+        onSubmit={handleCheck}
+        isLoading={isLoading}
+        placeholder={t("toolbox.domainPlaceholder")}
+        historyType="dns-propagation"
+        onHistorySelect={(item) => {
+          setDomain(item.query)
+          if (item.recordType) {
+            setRecordType(item.recordType as DnsLookupType)
+          }
+        }}
+        buttonText={t("toolbox.dnsPropagation.check")}
+        inlineExtra={
           <Select
             value={recordType}
             onValueChange={(v) => setRecordType(v as DnsLookupType)}
@@ -124,26 +122,7 @@ export function DnsPropagation() {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <Button onClick={handleCheck} disabled={isLoading} className="w-full sm:w-auto">
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Search className="h-4 w-4" />
-          )}
-          <span className="ml-2">{t("toolbox.dnsPropagation.check")}</span>
-        </Button>
-      </div>
-
-      {/* 历史记录 */}
-      <HistoryChips
-        type="dns-propagation"
-        onSelect={(item) => {
-          setDomain(item.query)
-          if (item.recordType) {
-            setRecordType(item.recordType as DnsLookupType)
-          }
-        }}
+        }
       />
 
       {/* 摘要信息 */}

@@ -19,7 +19,7 @@ import { extractErrorMessage, getErrorMessage } from "@/lib/error"
 import { accountService } from "@/services"
 import { openFile } from "@/services/file.service"
 import type { ImportAccountsRequest, ImportPreview } from "@/types"
-import { getProviderName, ProviderIcon } from "./ProviderIcon"
+import { getProviderName, ProviderIcon } from "../ProviderIcon"
 
 interface ImportDialogProps {
   open: boolean

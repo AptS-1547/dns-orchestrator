@@ -13,10 +13,10 @@ import {
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useShallow } from "zustand/react/shallow"
-import { AccountForm } from "@/components/account/AccountForm"
-import { ExportDialog } from "@/components/account/ExportDialog"
-import { ImportDialog } from "@/components/account/ImportDialog"
-import { getProviderName, ProviderIcon } from "@/components/account/ProviderIcon"
+import { AccountForm } from "@/components/accounts/form/AccountForm"
+import { ExportDialog } from "@/components/accounts/io/ExportDialog"
+import { ImportDialog } from "@/components/accounts/io/ImportDialog"
+import { getProviderName, ProviderIcon } from "@/components/accounts/ProviderIcon"
 import { AccountBatchActionBar } from "@/components/accounts/AccountBatchActionBar"
 import {
   AlertDialog,
