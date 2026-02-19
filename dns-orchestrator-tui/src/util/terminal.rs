@@ -31,3 +31,14 @@ pub fn restore_terminal(terminal: &mut Term) -> Result<()> {
     terminal.show_cursor()?;
     Ok(())
 }
+
+/// 终端 RAII 守卫
+/// 持有终端所有权，在 drop 时自动恢复终端状态。
+/// 保证即使发生 panic，终端也能被正确恢复。
+pub struct TerminalGuard(pub Term);
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        let _ = restore_terminal(&mut self.0);
+    }
+}

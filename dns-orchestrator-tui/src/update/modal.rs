@@ -697,14 +697,11 @@ fn handle_query_tool(app: &mut App, msg: ModalMessage) {
             let texts = crate::i18n::t();
             let tool_name = query_type.title(&texts.modal.tools.titles);
             // TODO: 实际执行查询
-            *result = Some(format!(
-                "{} for {input}\nResult: (To be implemented)",
-                tool_name
-            ));
+            *result = Some(format!("{tool_name} for {input}\nResult: (To be implemented)"));
             *loading = false;
 
             let input_clone = input.clone();
-            app.set_status(format!("{} completed: {input_clone}", tool_name));
+            app.set_status(format!("{tool_name} completed: {input_clone}"));
         }
 
         ModalMessage::Input(ch) => {

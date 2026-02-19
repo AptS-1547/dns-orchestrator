@@ -57,21 +57,15 @@ mod view;
 
 use anyhow::Result;
 
-use util::{init_terminal, restore_terminal};
+use util::{TerminalGuard, init_terminal};
 
 fn main() -> Result<(), anyhow::Error> {
-    // 1. 初始化终端
-    let mut terminal = init_terminal()?;
+    // 1. 初始化终端，TerminalGuard 在 drop 时自动恢复
+    let mut guard = TerminalGuard(init_terminal()?);
 
     // 2. 创建应用实例
     let mut app = model::App::new();
 
-    // 3. 运行主循环
-    let result = app::run(&mut terminal, &mut app);
-
-    // 4. 恢复终端（无论成功失败都执行）
-    restore_terminal(&mut terminal)?;
-
-    // 5. 返回结果
-    result
+    // 3. 运行主循环并返回结果
+    app::run(&mut guard.0, &mut app)
 }

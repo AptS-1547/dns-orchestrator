@@ -1239,7 +1239,7 @@ fn render_simple_tool_modal(
 
     // 创建边框
     let block = Block::default()
-        .title(format!(" {} ", title))
+        .title(format!(" {title} "))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(c.highlight))
         .style(Style::default().bg(c.bg));
