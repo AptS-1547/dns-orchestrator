@@ -76,6 +76,27 @@ impl FromStr for DnsQueryType {
     }
 }
 
+/// Data source for a WHOIS result.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[serde(rename_all = "lowercase")]
+pub enum WhoisSource {
+    /// Result obtained via RDAP (RFC 7480-7484).
+    Rdap,
+    /// Result obtained via traditional WHOIS (TCP 43).
+    #[default]
+    Whois,
+}
+
+impl fmt::Display for WhoisSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Rdap => write!(f, "rdap"),
+            Self::Whois => write!(f, "whois"),
+        }
+    }
+}
+
 /// WHOIS query result with parsed registration fields.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -96,6 +117,9 @@ pub struct WhoisResult {
     pub status: Vec<String>,
     /// Raw WHOIS response text.
     pub raw: String,
+    /// Data source for this result.
+    #[serde(default)]
+    pub source: WhoisSource,
 }
 
 /// A single DNS record.
@@ -621,6 +645,7 @@ mod tests {
             name_servers: vec!["ns1.example.com".to_string()],
             status: vec!["active".to_string()],
             raw: "raw data".to_string(),
+            source: WhoisSource::Whois,
         };
         let json = serde_json::to_value(&result).unwrap();
         // Verify camelCase serialization
@@ -630,6 +655,7 @@ mod tests {
         assert!(json.get("updatedDate").is_some());
         assert_eq!(json["domain"], "example.com");
         assert_eq!(json["registrar"], "Test Registrar");
+        assert_eq!(json["source"], "whois");
     }
 
     #[test]
@@ -862,12 +888,14 @@ mod tests {
             name_servers: vec!["ns1.test.com".to_string(), "ns2.test.com".to_string()],
             status: vec!["clientTransferProhibited".to_string()],
             raw: "raw whois data".to_string(),
+            source: WhoisSource::Rdap,
         };
         let json = serde_json::to_string(&original).unwrap();
         let deserialized: WhoisResult = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.domain, original.domain);
         assert_eq!(deserialized.registrar, original.registrar);
         assert_eq!(deserialized.name_servers.len(), 2);
+        assert_eq!(deserialized.source, WhoisSource::Rdap);
     }
 
     #[test]
@@ -891,5 +919,47 @@ mod tests {
         assert_eq!(deserialized.status_code, 200);
         assert_eq!(deserialized.headers.len(), 1);
         assert_eq!(deserialized.content_length, Some(1024));
+    }
+
+    // ==================== WhoisSource tests ====================
+
+    #[test]
+    fn test_whois_source_default_is_whois() {
+        assert_eq!(WhoisSource::default(), WhoisSource::Whois);
+    }
+
+    #[test]
+    fn test_whois_source_display() {
+        assert_eq!(WhoisSource::Rdap.to_string(), "rdap");
+        assert_eq!(WhoisSource::Whois.to_string(), "whois");
+    }
+
+    #[test]
+    fn test_whois_source_serde_roundtrip() {
+        let rdap_json = serde_json::to_string(&WhoisSource::Rdap).unwrap();
+        assert_eq!(rdap_json, "\"rdap\"");
+        let parsed: WhoisSource = serde_json::from_str(&rdap_json).unwrap();
+        assert_eq!(parsed, WhoisSource::Rdap);
+
+        let whois_json = serde_json::to_string(&WhoisSource::Whois).unwrap();
+        assert_eq!(whois_json, "\"whois\"");
+        let parsed: WhoisSource = serde_json::from_str(&whois_json).unwrap();
+        assert_eq!(parsed, WhoisSource::Whois);
+    }
+
+    #[test]
+    fn test_whois_result_deserialization_missing_source_defaults_to_whois() {
+        let json = r#"{
+            "domain": "example.com",
+            "registrar": null,
+            "creationDate": null,
+            "expirationDate": null,
+            "updatedDate": null,
+            "nameServers": [],
+            "status": [],
+            "raw": ""
+        }"#;
+        let result: WhoisResult = serde_json::from_str(json).unwrap();
+        assert_eq!(result.source, WhoisSource::Whois);
     }
 }

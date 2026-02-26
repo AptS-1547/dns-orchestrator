@@ -611,6 +611,7 @@ mod tests {
             name_servers: vec!["ns1.example.com".to_string()],
             status: vec!["active".to_string()],
             raw: "huge legal boilerplate".to_string(),
+            source: Default::default(),
         });
         let json = serde_json::to_string(&result).unwrap();
         assert!(!json.contains("raw"));

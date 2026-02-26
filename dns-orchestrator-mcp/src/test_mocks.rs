@@ -421,6 +421,7 @@ impl ToolboxGateway for MockToolboxGateway {
             name_servers: vec!["ns1.example.com".to_string()],
             status: vec!["active".to_string()],
             raw: "mock-raw".to_string(),
+            source: Default::default(),
         })
     }
 
