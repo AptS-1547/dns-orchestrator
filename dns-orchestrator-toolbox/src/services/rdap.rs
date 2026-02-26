@@ -32,7 +32,7 @@ static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
         .timeout(std::time::Duration::from_secs(RDAP_REQUEST_TIMEOUT_SECS))
         .redirect(reqwest::redirect::Policy::limited(5))
         .build()
-        .unwrap_or_default()
+        .expect("failed to build RDAP HTTP client")
 });
 
 // ---------------------------------------------------------------------------
@@ -151,19 +151,20 @@ fn extract_registrar_name(entities: &[RdapEntity]) -> Option<String> {
         }
 
         // vcardArray layout: ["vcard", [ [prop, meta, type, value], ... ]]
-        if let Some(props) = entity.vcard_array.get(1).and_then(|v| v.as_array()) {
-            for prop in props {
-                if let Some(arr) = prop.as_array() {
-                    if arr.first().and_then(|v| v.as_str()) == Some("fn") {
-                        if let Some(name) = arr.get(3).and_then(|v| v.as_str()) {
-                            let trimmed = name.trim();
-                            if !trimmed.is_empty() {
-                                return Some(trimmed.to_string());
-                            }
-                        }
-                    }
-                }
-            }
+        let name = entity
+            .vcard_array
+            .get(1)
+            .and_then(|v| v.as_array())
+            .into_iter()
+            .flatten()
+            .filter_map(|prop| prop.as_array())
+            .filter(|arr| arr.first().and_then(|v| v.as_str()) == Some("fn"))
+            .filter_map(|arr| arr.get(3).and_then(|v| v.as_str()))
+            .map(str::trim)
+            .find(|s| !s.is_empty());
+
+        if let Some(n) = name {
+            return Some(n.to_string());
         }
     }
     None
@@ -197,7 +198,9 @@ async fn rdap_lookup_inner(domain: &str) -> ToolboxResult<WhoisResult> {
         .header("Accept", "application/rdap+json")
         .send()
         .await
-        .map_err(|e| ToolboxError::NetworkError(format!("RDAP request failed for {domain}: {e}")))?;
+        .map_err(|e| {
+            ToolboxError::NetworkError(format!("RDAP request failed for {domain}: {e}"))
+        })?;
 
     let status = resp.status();
     let body = resp
@@ -284,7 +287,10 @@ mod tests {
     #[test]
     fn test_find_rdap_server_trailing_dot() {
         let url = find_rdap_server("example.com.");
-        assert!(url.is_some(), "trailing dot should not break bootstrap lookup");
+        assert!(
+            url.is_some(),
+            "trailing dot should not break bootstrap lookup"
+        );
     }
 
     #[test]
