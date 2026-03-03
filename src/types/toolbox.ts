@@ -1,3 +1,6 @@
+/** WHOIS 数据来源 */
+export type WhoisSource = "rdap" | "whois"
+
 /** WHOIS 查询结果 */
 export interface WhoisResult {
   domain: string
@@ -8,6 +11,7 @@ export interface WhoisResult {
   nameServers: string[]
   status: string[]
   raw: string
+  source?: WhoisSource
 }
 
 /** DNS 查询记录 */

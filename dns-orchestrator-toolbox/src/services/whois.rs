@@ -4,7 +4,7 @@ use regex::Regex;
 use whois_rust::{WhoIs, WhoIsLookupOptions};
 
 use crate::error::{ToolboxError, ToolboxResult};
-use crate::types::WhoisResult;
+use crate::types::{WhoisResult, WhoisSource};
 
 /// Perform a WHOIS lookup for a domain.
 pub async fn whois_lookup(domain: &str, whois_servers: &str) -> ToolboxResult<WhoisResult> {
@@ -65,6 +65,7 @@ fn parse_whois_response(domain: &str, raw: &str) -> WhoisResult {
         name_servers: extract_name_servers(raw),
         status: extract_status(raw),
         raw: raw.to_string(),
+        source: WhoisSource::Whois,
     }
 }
 

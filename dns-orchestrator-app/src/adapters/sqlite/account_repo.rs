@@ -1,7 +1,7 @@
 //! `AccountRepository` implementation for `SqliteStore`.
 
 use async_trait::async_trait;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait, ModelTrait};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, EntityTrait};
 
 use dns_orchestrator_core::error::{CoreError, CoreResult};
 use dns_orchestrator_core::traits::AccountRepository;
@@ -46,14 +46,24 @@ fn account_to_active_model(account: &Account) -> CoreResult<account::ActiveModel
     let provider_str = serde_json::to_value(&account.provider)
         .map_err(|e| CoreError::SerializationError(e.to_string()))?
         .as_str()
-        .unwrap_or("unknown")
-        .to_string();
+        .map(String::from)
+        .ok_or_else(|| {
+            CoreError::SerializationError("Provider did not serialize to a string".into())
+        })?;
 
     let status_str = account
         .status
         .as_ref()
-        .and_then(|s| serde_json::to_value(s).ok())
-        .and_then(|v| v.as_str().map(String::from));
+        .map(|s| {
+            serde_json::to_value(s)
+                .map_err(|e| CoreError::SerializationError(e.to_string()))
+                .and_then(|v| {
+                    v.as_str().map(String::from).ok_or_else(|| {
+                        CoreError::SerializationError("Status did not serialize to a string".into())
+                    })
+                })
+        })
+        .transpose()?;
 
     Ok(account::ActiveModel {
         id: Set(account.id.clone()),
@@ -109,19 +119,15 @@ impl AccountRepository for SqliteStore {
     }
 
     async fn delete(&self, id: &str) -> CoreResult<()> {
-        let model = account::Entity::find_by_id(id)
-            .one(&self.db)
+        let res = account::Entity::delete_by_id(id)
+            .exec(&self.db)
             .await
-            .map_err(|e| CoreError::StorageError(format!("Failed to query account: {e}")))?;
+            .map_err(|e| CoreError::StorageError(format!("Failed to delete account: {e}")))?;
 
-        match model {
-            Some(m) => {
-                m.delete(&self.db).await.map_err(|e| {
-                    CoreError::StorageError(format!("Failed to delete account: {e}"))
-                })?;
-                Ok(())
-            }
-            None => Err(CoreError::AccountNotFound(id.to_string())),
+        if res.rows_affected == 0 {
+            Err(CoreError::AccountNotFound(id.to_string()))
+        } else {
+            Ok(())
         }
     }
 
@@ -139,8 +145,12 @@ impl AccountRepository for SqliteStore {
         error: Option<String>,
     ) -> CoreResult<()> {
         let status_str = serde_json::to_value(&status)
-            .ok()
-            .and_then(|v| v.as_str().map(String::from));
+            .map_err(|e| CoreError::SerializationError(e.to_string()))?
+            .as_str()
+            .map(String::from)
+            .ok_or_else(|| {
+                CoreError::SerializationError("Status did not serialize to a string".into())
+            })?;
 
         let model = account::Entity::find_by_id(id)
             .one(&self.db)
@@ -151,7 +161,7 @@ impl AccountRepository for SqliteStore {
             Some(_) => {
                 let active = account::ActiveModel {
                     id: Set(id.to_string()),
-                    status: Set(status_str),
+                    status: Set(Some(status_str)),
                     error: Set(error),
                     updated_at: Set(chrono::Utc::now().to_rfc3339()),
                     ..Default::default()

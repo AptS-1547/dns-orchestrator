@@ -68,5 +68,5 @@ pub use types::{
     DnsPropagationServer, DnsPropagationServerResult, DnsQueryType, DnskeyRecord, DnssecResult,
     DnssecValidationStatus, DsRecord, HttpHeader, HttpHeaderCheckRequest, HttpHeaderCheckResult,
     HttpMethod, IpGeoInfo, IpLookupResult, PropagationStatus, RrsigRecord, SecurityHeaderAnalysis,
-    SecurityHeaderStatus, SslCertInfo, SslCheckResult, WhoisResult,
+    SecurityHeaderStatus, SslCertInfo, SslCheckResult, WhoisResult, WhoisSource,
 };

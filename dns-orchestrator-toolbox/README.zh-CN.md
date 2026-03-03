@@ -94,7 +94,7 @@ async fn check_headers() -> ToolboxResult<()> {
 
 ## 架构
 
-```
+```text
 ToolboxService（无状态门面）
   -> whois / dns / dns_propagation / dnssec / ip / ssl / http_headers 模块
   -> 共享 LazyLock 单例（DNS 解析器、HTTP 客户端）

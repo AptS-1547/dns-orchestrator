@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-tauri"
-version = "1.9.1"
+version = "1.10.0"
 description = "DNS Orchestrator built with Tauri"
 license = "MIT"
 authors = [

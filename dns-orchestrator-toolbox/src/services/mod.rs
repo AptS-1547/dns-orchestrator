@@ -7,6 +7,7 @@ mod dns_propagation;
 mod dnssec;
 mod http_headers;
 mod ip;
+mod rdap;
 mod resolver;
 mod ssl;
 mod whois;
@@ -64,11 +65,20 @@ pub struct ToolboxService;
 impl ToolboxService {
     /// Query WHOIS information for a domain.
     ///
-    /// Returns structured registration data (registrar, dates, name servers, status)
-    /// parsed from the raw WHOIS response.
+    /// Uses RDAP (RFC 7480-7484) as the primary source. Falls back to
+    /// traditional WHOIS (TCP 43) when RDAP is unavailable.
     pub async fn whois_lookup(domain: &str) -> ToolboxResult<WhoisResult> {
         let domain = validate_domain(domain)?;
-        whois::whois_lookup(&domain, WHOIS_SERVERS).await
+        match rdap::rdap_lookup(&domain).await {
+            Ok(result) => {
+                log::debug!("[WHOIS] RDAP succeeded for {domain}");
+                Ok(result)
+            }
+            Err(e) => {
+                log::debug!("[WHOIS] RDAP failed for {domain}, falling back to WHOIS: {e}");
+                whois::whois_lookup(&domain, WHOIS_SERVERS).await
+            }
+        }
     }
 
     /// Resolve DNS records for a domain.

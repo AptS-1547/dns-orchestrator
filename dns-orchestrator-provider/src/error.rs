@@ -190,15 +190,8 @@ impl std::fmt::Display for ProviderError {
             Self::NetworkError { provider, detail } => {
                 write!(f, "[{provider}] Network error: {detail}")
             }
-            Self::InvalidCredentials {
-                provider,
-                raw_message,
-            } => {
-                if let Some(msg) = raw_message {
-                    write!(f, "[{provider}] Invalid credentials: {msg}")
-                } else {
-                    write!(f, "[{provider}] Invalid credentials")
-                }
+            Self::InvalidCredentials { provider, .. } => {
+                write!(f, "[{provider}] Invalid credentials")
             }
             Self::RecordExists {
                 provider,
@@ -317,7 +310,8 @@ mod tests {
             provider: "aliyun".to_string(),
             raw_message: Some("bad key".to_string()),
         };
-        assert_eq!(e.to_string(), "[aliyun] Invalid credentials: bad key");
+        // raw_message is intentionally omitted from Display to prevent leakage
+        assert_eq!(e.to_string(), "[aliyun] Invalid credentials");
     }
 
     #[test]

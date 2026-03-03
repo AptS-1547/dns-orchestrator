@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-mcp"
-version = "0.0.1"
+version = "0.0.4"
 edition = "2024"
 license = "MIT"
 description = "MCP Server for DNS Orchestrator - AI agent interface"
@@ -63,3 +63,7 @@ anyhow = "1"
 
 [lints]
 workspace = true
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-v{ version }-{ target }{ binary-ext }"
+pkg-fmt = "bin"
