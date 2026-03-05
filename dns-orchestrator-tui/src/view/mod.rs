@@ -125,11 +125,23 @@
 //!
 //!     在 src/view/theme.rs 中定义所有样式：
 //!
-//!         Styles::border()            // 普通边框（灰色）
-//!         Styles::border_focused()    // 焦点边框（蓝色）
-//!         Styles::selected()          // 选中项（蓝色背景 + 加粗）
-//!         Styles::statusbar()         // 状态栏（蓝色背景）
-//!         Styles::hint_key()          // 快捷键（黄色 + 加粗）
+//!         主题切换：
+//!             pub enum Theme { Dark, Light }
+//!             pub fn set_theme_index(index: u8)   // 切换当前主题
+//!             pub fn colors() -> ThemeColors       // 获取当前主题的颜色集
+//!
+//!         ThemeColors 包含所有语义化颜色（bg, fg, border, highlight, ...）
+//!             ThemeColors::dark()     深色主题配色
+//!             ThemeColors::light()    浅色主题配色
+//!
+//!         Styles 提供预定义的样式组合：
+//!             Styles::border()            // 普通边框
+//!             Styles::border_focused()    // 焦点边框
+//!             Styles::selected()          // 选中项
+//!             Styles::title()             // 标题
+//!             Styles::statusbar()         // 状态栏
+//!             Styles::hint_key()          // 快捷键
+//!             Styles::hint_desc()         // 快捷键描述
 //!
 //!     样式构建：
 //!         Style::default()

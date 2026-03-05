@@ -73,6 +73,7 @@
 //!             pub domains: DomainsState,          // 域名页面状态
 //!             pub dns_records: DnsRecordsState,   // DNS 记录 页面状态
 //!             pub toolbox: ToolboxState,          // 工具箱页面状态
+//!             pub settings: SettingsState,        // 设置页面状态
 //!
 //!             pub modal: ModalState               // 弹窗状态
 //!         }

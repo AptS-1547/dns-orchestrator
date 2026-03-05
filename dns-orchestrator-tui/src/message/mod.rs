@@ -47,6 +47,8 @@
 //!         mod navigation;
 //!
 //!         pub use app::AppMessage;
+//!         pub use content::ContentMessage;
+//!         pub use modal::ModalMessage;
 //!         pub use navigation::NavigationMessage;
 //!
 //!
@@ -56,7 +58,9 @@
 //!         pub enum AppMessage {
 //!             Quit,                               // 退出应用
 //!             ToggleFocus,                        // 切换焦点面板
-//!             Navigation(NavigationMessage),      // 导航面板子消息，与主消息分离
+//!             Navigation(NavigationMessage),      // 导航面板子消息
+//!             Content(ContentMessage),            // 内容面板子消息
+//!             Modal(ModalMessage),                // 弹窗子消息
 //!             GoBack,                             // 返回上一页
 //!             Refresh,                            // 刷新数据
 //!             ShowHelp,                           // 显示帮助

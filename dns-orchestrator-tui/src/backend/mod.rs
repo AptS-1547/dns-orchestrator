@@ -151,7 +151,3 @@ mod config_service;
 mod core_service;
 mod credential_service;
 mod domain_metadata_repository;
-
-// 旧的 Mock 服务（保留用于测试）
-
-// 新的核心服务

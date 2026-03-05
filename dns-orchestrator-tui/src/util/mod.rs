@@ -29,7 +29,7 @@
 //!     src/util/mod.rs
 //!         mod terminal;       // 终端初始化和恢复
 //!
-//!         pub use terminal::{init_terminal, restore_terminal, Term};
+//!         pub use terminal::{Term, TerminalGuard, init_terminal};
 //!
 //!
 //!     终端类型定义：
@@ -75,42 +75,37 @@
 //!             - 类似 vim、htop 等工具的行为
 //!
 //!
-//!     恢复终端：
+//!     恢复终端（TerminalGuard）：
 //!         在 src/util/terminal.rs 中，有：
 //!
-//!             pub fn restore_terminal(terminal: &mut Term) -> Result<()> {
-//!                 disable_raw_mode()?;                       // 1. 禁用原始模式
-//!                 execute!(terminal.backend_mut(), LeaveAlternateScreen)?;  // 2. 离开备用屏幕
-//!                 terminal.show_cursor()?;                   // 3. 显示光标
-//!                 Ok(())
+//!             pub struct TerminalGuard(pub Term);
+//!
+//!             impl Drop for TerminalGuard {
+//!                 fn drop(&mut self) {
+//!                     restore_terminal(&mut self.0).expect("...");
+//!                 }
 //!             }
 //!
-//!         注意：无论程序是正常退出还是发生错误，都必须调用此函数！
-//!               否则终端会保持在原始模式，用户输入不会正常显示。
+//!         TerminalGuard 使用 RAII 模式，在 drop 时自动调用 restore_terminal。
+//!         无论程序是正常退出还是 panic，终端都会被正确恢复。
 //!
 //!
 //!     使用方式：
 //!         在 src/main.rs 中，有：
 //!
 //!             fn main() -> Result<(), anyhow::Error> {
-//!                 // 1. 初始化终端
-//!                 let mut terminal = init_terminal()?;
+//!                 // 1. 初始化终端，TerminalGuard 在 drop 时自动恢复
+//!                 let mut guard = TerminalGuard(init_terminal()?);
 //!
 //!                 // 2. 创建应用实例
 //!                 let mut app = model::App::new();
 //!
-//!                 // 3. 运行主循环
-//!                 let result = app::run(&mut terminal, &mut app);
-//!
-//!                 // 4. 恢复终端（无论成功失败都执行）
-//!                 restore_terminal(&mut terminal)?;
-//!
-//!                 // 5. 返回结果
-//!                 return result;
+//!                 // 3. 运行主循环并返回结果
+//!                 app::run(&mut guard.0, &mut app)
 //!             }
 //!
-//!         关键：第 4 步在 app::run 之后立即执行，即使 run 返回错误，
-//!               也会先恢复终端，再返回错误结果。
+//!         关键：guard 在 main 函数结束时 drop，自动恢复终端。
+//!               即使 app::run 返回错误或 panic，TerminalGuard 也会确保终端恢复。
 //!
 //!
 //! Util 层在应用启动时初始化终端，在应用退出时恢复终端。
