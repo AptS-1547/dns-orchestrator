@@ -110,7 +110,7 @@ dns-orchestrator-provider/
                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                       reqwest + TLS                                  │
-│              (native-tls for desktop, rustls for Android)           │
+│              (rustls by default, native-tls as alternative)          │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 

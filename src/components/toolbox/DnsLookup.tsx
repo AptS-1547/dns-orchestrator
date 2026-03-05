@@ -1,8 +1,7 @@
-import { Loader2, Search, Server } from "lucide-react"
+import { Server } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -20,12 +19,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { DNS_SERVERS } from "@/constants"
-import { useEnterKeyHandler } from "@/hooks/useEnterKeyHandler"
 import type { DnsLookupResult, DnsLookupType } from "@/types"
 import { DNS_RECORD_TYPES } from "@/types"
-import { HistoryChips } from "./HistoryChips"
 import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
-import { CopyableText, ToolCard } from "./shared"
+import { CopyableText, QueryInput, ToolCard } from "./shared"
 
 export function DnsLookup() {
   const { t } = useTranslation()
@@ -43,7 +40,6 @@ export function DnsLookup() {
       return
     }
 
-    // 计算实际使用的 nameserver
     let nameserver: string | null = null
     if (dnsServer === "custom") {
       if (!customDns.trim()) {
@@ -65,23 +61,24 @@ export function DnsLookup() {
     }
   }
 
-  const handleKeyDown = useEnterKeyHandler(handleLookup)
-
   const records = result?.records ?? []
 
   return (
     <ToolCard title={t("toolbox.dnsLookup")}>
-      {/* 查询输入 */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="flex flex-1 items-center rounded-md border bg-background">
-          <Input
-            placeholder={t("toolbox.domainPlaceholder")}
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            className="flex-1 border-0 shadow-none"
-          />
+      <QueryInput
+        value={domain}
+        onChange={setDomain}
+        onSubmit={handleLookup}
+        isLoading={isLoading}
+        placeholder={t("toolbox.domainPlaceholder")}
+        historyType="dns"
+        onHistorySelect={(item) => {
+          setDomain(item.query)
+          if (item.recordType) {
+            setRecordType(item.recordType as DnsLookupType)
+          }
+        }}
+        inlineExtra={
           <Select
             value={recordType}
             onValueChange={(v) => setRecordType(v as DnsLookupType)}
@@ -98,58 +95,38 @@ export function DnsLookup() {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <Button onClick={handleLookup} disabled={isLoading} className="w-full sm:w-auto">
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Search className="h-4 w-4" />
-          )}
-          <span className="ml-2">{t("toolbox.query")}</span>
-        </Button>
-      </div>
-
-      {/* DNS 服务器选择 */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <Server className="h-4 w-4" />
-          <span>{t("toolbox.dnsServer")}:</span>
-        </div>
-        <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-          <Select value={dnsServer} onValueChange={setDnsServer} disabled={isLoading}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder={t("toolbox.systemDefault")} />
-            </SelectTrigger>
-            <SelectContent>
-              {DNS_SERVERS.map((server) => (
-                <SelectItem key={server.value} value={server.value}>
-                  {server.isRaw ? server.label : t(server.label)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {dnsServer === "custom" && (
-            <Input
-              placeholder={t("toolbox.customDnsPlaceholder")}
-              value={customDns}
-              onChange={(e) => setCustomDns(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading}
-              className="flex-1"
-            />
-          )}
-        </div>
-      </div>
-
-      {/* 历史记录 */}
-      <HistoryChips
-        type="dns"
-        onSelect={(item) => {
-          setDomain(item.query)
-          if (item.recordType) {
-            setRecordType(item.recordType as DnsLookupType)
-          }
-        }}
+        }
+        belowInput={
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Server className="h-4 w-4" />
+              <span>{t("toolbox.dnsServer")}:</span>
+            </div>
+            <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+              <Select value={dnsServer} onValueChange={setDnsServer} disabled={isLoading}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder={t("toolbox.systemDefault")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {DNS_SERVERS.map((server) => (
+                    <SelectItem key={server.value} value={server.value}>
+                      {server.isRaw ? server.label : t(server.label)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {dnsServer === "custom" && (
+                <Input
+                  placeholder={t("toolbox.customDnsPlaceholder")}
+                  value={customDns}
+                  onChange={(e) => setCustomDns(e.target.value)}
+                  disabled={isLoading}
+                  className="flex-1"
+                />
+              )}
+            </div>
+          </div>
+        }
       />
 
       {/* 显示使用的 DNS 服务器 */}

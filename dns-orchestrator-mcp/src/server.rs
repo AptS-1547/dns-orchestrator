@@ -14,6 +14,7 @@ use rmcp::{
 use std::sync::Arc;
 use tokio::time::{Duration, timeout};
 
+use dns_orchestrator_core::error::CoreError;
 use dns_orchestrator_core::services::{
     AccountService, DnsService, DomainMetadataService, DomainService, ServiceContext,
 };
@@ -23,24 +24,34 @@ use dns_orchestrator_toolbox::{
     ToolboxError, ToolboxResult, ToolboxService, WhoisResult,
 };
 
+use crate::mcp_types::{
+    McpAccount, McpAppDomain, McpDnsLookupResult, McpDnsPropagationResult, McpDnsRecord,
+    McpDnssecResult, McpIpLookupResult, McpPaginatedResponse, McpWhoisResult,
+};
 use crate::schemas::{
     DnsLookupParams, DnsPropagationCheckParams, DnssecCheckParams, IpLookupParams,
     ListAccountsParams, ListDomainsParams, ListRecordsParams, WhoisLookupParams,
 };
 
-// Timeout constants for external service calls
+/// Timeout values in seconds for network-heavy toolbox operations.
 const DNS_LOOKUP_TIMEOUT_SECS: u64 = 30;
 const WHOIS_LOOKUP_TIMEOUT_SECS: u64 = 30;
 const IP_LOOKUP_TIMEOUT_SECS: u64 = 15;
 const DNS_PROPAGATION_TIMEOUT_SECS: u64 = 60;
 const DNSSEC_CHECK_TIMEOUT_SECS: u64 = 30;
 
+/// Per-tool timeout configuration used by the MCP handler.
 #[derive(Clone, Copy)]
 struct ToolTimeouts {
+    /// Timeout for `dns_lookup`.
     dns_lookup: Duration,
+    /// Timeout for `whois_lookup`.
     whois_lookup: Duration,
+    /// Timeout for `ip_lookup`.
     ip_lookup: Duration,
+    /// Timeout for `dns_propagation_check`.
     dns_propagation_check: Duration,
+    /// Timeout for `dnssec_check`.
     dnssec_check: Duration,
 }
 
@@ -56,8 +67,10 @@ impl Default for ToolTimeouts {
     }
 }
 
+/// Abstraction over toolbox calls so tests can inject deterministic behavior.
 #[async_trait]
 trait ToolboxGateway: Send + Sync {
+    /// Performs DNS lookup via the toolbox service.
     async fn dns_lookup(
         &self,
         domain: &str,
@@ -65,16 +78,20 @@ trait ToolboxGateway: Send + Sync {
         nameserver: Option<&str>,
     ) -> ToolboxResult<DnsLookupResult>;
 
+    /// Performs WHOIS lookup via the toolbox service.
     async fn whois_lookup(&self, domain: &str) -> ToolboxResult<WhoisResult>;
 
+    /// Performs IP geolocation lookup via the toolbox service.
     async fn ip_lookup(&self, query: &str) -> ToolboxResult<IpLookupResult>;
 
+    /// Performs DNS propagation checks via the toolbox service.
     async fn dns_propagation_check(
         &self,
         domain: &str,
         record_type: DnsQueryType,
     ) -> ToolboxResult<DnsPropagationResult>;
 
+    /// Performs DNSSEC validation via the toolbox service.
     async fn dnssec_check(
         &self,
         domain: &str,
@@ -82,6 +99,7 @@ trait ToolboxGateway: Send + Sync {
     ) -> ToolboxResult<DnssecResult>;
 }
 
+/// Production toolbox gateway that delegates to [`ToolboxService`].
 #[derive(Default)]
 struct DefaultToolboxGateway;
 
@@ -132,13 +150,33 @@ fn sanitize_internal_error(error: impl std::fmt::Display, context: &str) -> McpE
     )
 }
 
+/// Map a [`CoreError`] to either a user-facing tool error or a sanitized MCP error.
+///
+/// Expected errors (bad input, not found) are returned as `CallToolResult` with
+/// `is_error = true` so the LLM can read the message and self-correct.
+/// Unexpected errors (storage, network) are sanitized to prevent information leakage.
+fn map_core_error(error: CoreError, context: &str) -> Result<CallToolResult, McpError> {
+    if error.is_expected() {
+        log::warn!("{context} expected error: {error}");
+        Ok(CallToolResult::error(vec![Content::text(
+            error.to_string(),
+        )]))
+    } else {
+        Err(sanitize_internal_error(error, context))
+    }
+}
+
+/// Converts toolbox errors into MCP errors.
+///
+/// Toolbox errors are already user-safe, so this keeps the message intact.
 fn map_toolbox_error(context: &str, error: &ToolboxError) -> McpError {
     log::warn!("{context} error: {error}");
     McpError::internal_error(error.to_string(), None)
 }
 
-/// Execute a toolbox operation with timeout, error mapping, and JSON serialization.
-async fn run_toolbox_tool<T: serde::Serialize>(
+/// Execute a toolbox operation with timeout, error mapping, type conversion,
+/// and compact JSON serialization.
+async fn run_toolbox_tool<T, U: serde::Serialize + From<T>>(
     duration: Duration,
     future: impl std::future::Future<Output = ToolboxResult<T>>,
     tool_name: &str,
@@ -148,7 +186,8 @@ async fn run_toolbox_tool<T: serde::Serialize>(
         .map_err(|_| McpError::internal_error(format!("{tool_name} timeout"), None))?
         .map_err(|e| map_toolbox_error(tool_name, &e))?;
 
-    let json = serde_json::to_string_pretty(&result)
+    let mapped: U = result.into();
+    let json = serde_json::to_string(&mapped)
         .map_err(|e| sanitize_internal_error(e, &format!("Serialize {tool_name} result")))?;
 
     Ok(CallToolResult::success(vec![Content::text(json)]))
@@ -198,6 +237,7 @@ impl DnsOrchestratorMcp {
         toolbox: Arc<dyn ToolboxGateway>,
         timeouts: ToolTimeouts,
     ) -> Self {
+        // Build dependent services using the same shared service context as the app.
         let domain_service = Arc::new(DomainService::new(Arc::clone(ctx), domain_metadata_service));
         let dns_service = Arc::new(DnsService::new(Arc::clone(ctx)));
 
@@ -222,13 +262,13 @@ impl DnsOrchestratorMcp {
         &self,
         _params: Parameters<ListAccountsParams>,
     ) -> Result<CallToolResult, McpError> {
-        let accounts = self
-            .account_service
-            .list_accounts()
-            .await
-            .map_err(|e| sanitize_internal_error(e, "List accounts"))?;
+        let accounts = match self.account_service.list_accounts().await {
+            Ok(v) => v,
+            Err(e) => return map_core_error(e, "List accounts"),
+        };
 
-        let json = serde_json::to_string_pretty(&accounts)
+        let compact: Vec<McpAccount> = accounts.into_iter().map(Into::into).collect();
+        let json = serde_json::to_string(&compact)
             .map_err(|e| sanitize_internal_error(e, "Serialize accounts"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
@@ -243,13 +283,17 @@ impl DnsOrchestratorMcp {
         // Limit page_size to prevent resource exhaustion
         let page_size = params.page_size.map(|s| s.min(100));
 
-        let result = self
+        let result = match self
             .domain_service
             .list_domains(&params.account_id, params.page, page_size)
             .await
-            .map_err(|e| sanitize_internal_error(e, "List domains"))?;
+        {
+            Ok(v) => v,
+            Err(e) => return map_core_error(e, "List domains"),
+        };
 
-        let json = serde_json::to_string_pretty(&result)
+        let compact: McpPaginatedResponse<McpAppDomain> = result.into();
+        let json = serde_json::to_string(&compact)
             .map_err(|e| sanitize_internal_error(e, "Serialize domains"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
@@ -280,7 +324,7 @@ impl DnsOrchestratorMcp {
         // Limit page_size to prevent resource exhaustion
         let page_size = params.page_size.map(|s| s.min(100));
 
-        let result = self
+        let result = match self
             .dns_service
             .list_records(
                 &params.account_id,
@@ -291,9 +335,13 @@ impl DnsOrchestratorMcp {
                 record_type,
             )
             .await
-            .map_err(|e| sanitize_internal_error(e, "List records"))?;
+        {
+            Ok(v) => v,
+            Err(e) => return map_core_error(e, "List records"),
+        };
 
-        let json = serde_json::to_string_pretty(&result)
+        let compact: McpPaginatedResponse<McpDnsRecord> = result.into();
+        let json = serde_json::to_string(&compact)
             .map_err(|e| sanitize_internal_error(e, "Serialize records"))?;
 
         Ok(CallToolResult::success(vec![Content::text(json)]))
@@ -307,7 +355,7 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<DnsLookupParams>,
     ) -> Result<CallToolResult, McpError> {
-        run_toolbox_tool(
+        run_toolbox_tool::<DnsLookupResult, McpDnsLookupResult>(
             self.timeouts.dns_lookup,
             self.toolbox.dns_lookup(
                 &params.domain,
@@ -327,7 +375,7 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<WhoisLookupParams>,
     ) -> Result<CallToolResult, McpError> {
-        run_toolbox_tool(
+        run_toolbox_tool::<WhoisResult, McpWhoisResult>(
             self.timeouts.whois_lookup,
             self.toolbox.whois_lookup(&params.domain),
             "WHOIS lookup",
@@ -343,7 +391,7 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<IpLookupParams>,
     ) -> Result<CallToolResult, McpError> {
-        run_toolbox_tool(
+        run_toolbox_tool::<IpLookupResult, McpIpLookupResult>(
             self.timeouts.ip_lookup,
             self.toolbox.ip_lookup(&params.query),
             "IP lookup",
@@ -357,7 +405,7 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<DnsPropagationCheckParams>,
     ) -> Result<CallToolResult, McpError> {
-        run_toolbox_tool(
+        run_toolbox_tool::<DnsPropagationResult, McpDnsPropagationResult>(
             self.timeouts.dns_propagation_check,
             self.toolbox
                 .dns_propagation_check(&params.domain, params.record_type),
@@ -372,7 +420,7 @@ impl DnsOrchestratorMcp {
         &self,
         Parameters(params): Parameters<DnssecCheckParams>,
     ) -> Result<CallToolResult, McpError> {
-        run_toolbox_tool(
+        run_toolbox_tool::<DnssecResult, McpDnssecResult>(
             self.timeouts.dnssec_check,
             self.toolbox
                 .dnssec_check(&params.domain, params.nameserver.as_deref()),

@@ -514,8 +514,10 @@ async fn migration_failure_preserves_backup() {
 }
 
 #[tokio::test]
-async fn migration_load_raw_json_failure_preserves_backup() {
-    // load_all returns a non-migration error → run_migration logs warning, no backup
+async fn migration_load_all_failure_preserves_backup() {
+    // with_load_error sets load_all to return StorageError("disk failure").
+    // run_migration → migrate_if_needed sees a non-MigrationRequired error
+    // and enters the preserve_backup path.
     let cred_store = Arc::new(
         MockCredentialStore::new().with_load_error(CoreError::StorageError("disk failure".into())),
     );
@@ -525,9 +527,6 @@ async fn migration_load_raw_json_failure_preserves_backup() {
     let hooks = TrackingStartupHooks::new();
     app_state.run_migration(&hooks).await;
 
-    // load_raw_json succeeded (returns "{}"), but load_all returned StorageError
-    // which is not MigrationRequired, so migration_service is not called.
-    // The error path in run_migration: Err(e) from migrate_if_needed → preserve_backup
     assert!(!*hooks.cleanup_called.read().await);
 }
 

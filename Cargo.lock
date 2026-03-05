@@ -1928,7 +1928,7 @@ dependencies = [
 
 [[package]]
 name = "dns-orchestrator-app"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1967,7 +1967,7 @@ dependencies = [
 
 [[package]]
 name = "dns-orchestrator-mcp"
-version = "0.0.1"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1989,7 +1989,7 @@ dependencies = [
 
 [[package]]
 name = "dns-orchestrator-provider"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2009,7 +2009,7 @@ dependencies = [
 
 [[package]]
 name = "dns-orchestrator-tauri"
-version = "1.9.1"
+version = "1.10.1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -2094,7 +2094,7 @@ dependencies = [
 
 [[package]]
 name = "dns-orchestrator-web"
-version = "1.9.1"
+version = "1.10.1"
 dependencies = [
  "actix-service",
  "actix-web",

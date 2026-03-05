@@ -20,7 +20,7 @@ import { extractErrorMessage, getErrorMessage } from "@/lib/error"
 import { accountService } from "@/services"
 import { saveFile } from "@/services/file.service"
 import type { Account, ExportAccountsRequest } from "@/types"
-import { getProviderName, ProviderIcon } from "./ProviderIcon"
+import { getProviderName, ProviderIcon } from "../ProviderIcon"
 
 interface ExportDialogProps {
   open: boolean

@@ -1,11 +1,11 @@
 //! `DomainMetadataRepository` implementation for `SqliteStore`.
 
 use async_trait::async_trait;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use sea_orm::{
     ActiveValue::Set,
-    ColumnTrait, EntityTrait, FromQueryResult, ModelTrait, QueryFilter, QueryTrait,
+    ColumnTrait, Condition, EntityTrait, FromQueryResult, ModelTrait, QueryFilter, QueryTrait,
     sea_query::{Alias, Expr, ExprTrait, Func, IntoIden, Query, TableRef},
 };
 
@@ -154,19 +154,25 @@ impl DomainMetadataRepository for SqliteStore {
             return Ok(HashMap::new());
         }
 
+        let mut condition = Condition::any();
+        for key in keys {
+            condition = condition.add(
+                Condition::all()
+                    .add(domain_metadata::Column::AccountId.eq(&key.account_id))
+                    .add(domain_metadata::Column::DomainId.eq(&key.domain_id)),
+            );
+        }
+
         let rows = domain_metadata::Entity::find()
+            .filter(condition)
             .all(&self.db)
             .await
             .map_err(|e| CoreError::StorageError(format!("Failed to query metadata: {e}")))?;
 
-        let key_set: HashSet<_> = keys.iter().collect();
         let mut result = HashMap::new();
-
         for row in rows {
             let (key, metadata) = row.into_key_and_metadata()?;
-            if key_set.contains(&key) {
-                result.insert(key, metadata);
-            }
+            result.insert(key, metadata);
         }
 
         Ok(result)

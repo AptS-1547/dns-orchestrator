@@ -5,9 +5,7 @@ import {
   Clock,
   Globe,
   Link,
-  Loader2,
   Lock,
-  Search,
   Shield,
   Unlock,
   XCircle,
@@ -16,15 +14,12 @@ import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { NETWORK } from "@/constants"
-import { useEnterKeyHandler } from "@/hooks/useEnterKeyHandler"
 import type { SslCheckResult } from "@/types"
-import { HistoryChips } from "./HistoryChips"
 import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
-import { CopyableText, InfoCard, ToolCard } from "./shared"
+import { CopyableText, InfoCard, QueryInput, ToolCard } from "./shared"
 
 /** 获取状态信息 */
 function getStatusInfo(result: SslCheckResult | null, t: (key: string) => string) {
@@ -123,8 +118,6 @@ export function SslCheck() {
     })
   }
 
-  const handleKeyDown = useEnterKeyHandler(handleLookup)
-
   const handleHistorySelect = (item: { query: string }) => {
     const parts = item.query.split(":")
     if (parts.length === 2 && /^\d+$/.test(parts[1])) {
@@ -142,40 +135,27 @@ export function SslCheck() {
 
   return (
     <ToolCard title={t("toolbox.sslCheck")}>
-      {/* 查询输入 - 域名 + 端口内嵌样式（与 DNS 查询一致） */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="flex flex-1 items-center rounded-md border bg-background">
-          <Input
-            placeholder={t("toolbox.domainPlaceholder")}
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            className="flex-1 border-0 shadow-none"
-          />
+      <QueryInput
+        value={domain}
+        onChange={setDomain}
+        onSubmit={handleLookup}
+        isLoading={isLoading}
+        placeholder={t("toolbox.domainPlaceholder")}
+        historyType="ssl"
+        onHistorySelect={handleHistorySelect}
+        inlineExtra={
           <div className="flex items-center border-l px-3">
             <span className="text-muted-foreground text-sm">:</span>
             <Input
               placeholder="443"
               value={port}
               onChange={(e) => setPort(e.target.value.replace(/\D/g, ""))}
-              onKeyDown={handleKeyDown}
               disabled={isLoading}
               className="w-16 border-0 px-1 text-center shadow-none"
             />
           </div>
-        </div>
-        <Button onClick={handleLookup} disabled={isLoading} className="w-full sm:w-auto">
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Search className="h-4 w-4" />
-          )}
-          <span className="ml-2">{t("toolbox.query")}</span>
-        </Button>
-      </div>
-
-      <HistoryChips type="ssl" onSelect={handleHistorySelect} />
+        }
+      />
 
       {result && statusInfo && (
         <div className="space-y-4">

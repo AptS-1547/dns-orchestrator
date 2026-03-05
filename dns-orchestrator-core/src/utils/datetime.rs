@@ -44,10 +44,9 @@ where
             parse_unix_timestamp(ts).ok_or_else(|| Error::custom("Invalid Unix timestamp"))
         }
         TimestampOrString::U64(ts) => {
-            // The `cast_signed` method explicitly performs a wrapping cast from u64 to i64.
-            // This is safe for timestamps, which are not expected to exceed i64::MAX.
-            parse_unix_timestamp(ts.cast_signed())
-                .ok_or_else(|| Error::custom("Invalid Unix timestamp"))
+            let ts =
+                i64::try_from(ts).map_err(|_| Error::custom("Unix timestamp out of i64 range"))?;
+            parse_unix_timestamp(ts).ok_or_else(|| Error::custom("Invalid Unix timestamp"))
         }
     }
 }
@@ -90,9 +89,9 @@ pub mod option {
                 .map(Some)
                 .ok_or_else(|| Error::custom("Invalid Unix timestamp")),
             Some(OptionalTimestamp::U64(ts)) => {
-                // The `cast_signed` method explicitly performs a wrapping cast from u64 to i64.
-                // This is safe for timestamps, which are not expected to exceed i64::MAX.
-                parse_unix_timestamp(ts.cast_signed())
+                let ts = i64::try_from(ts)
+                    .map_err(|_| Error::custom("Unix timestamp out of i64 range"))?;
+                parse_unix_timestamp(ts)
                     .map(Some)
                     .ok_or_else(|| Error::custom("Invalid Unix timestamp"))
             }
@@ -103,8 +102,9 @@ pub mod option {
 
 /// Parses a Unix timestamp with second/millisecond auto-detection.
 fn parse_unix_timestamp(ts: i64) -> Option<DateTime<Utc>> {
-    // Values larger than 10^11 are interpreted as milliseconds.
-    if ts > 100_000_000_000 {
+    // Use absolute value to correctly handle negative timestamps (pre-epoch dates).
+    // Values whose magnitude exceeds 10^11 are interpreted as milliseconds.
+    if ts.unsigned_abs() > 100_000_000_000 {
         DateTime::from_timestamp_millis(ts)
     } else {
         // Otherwise treat the value as seconds.

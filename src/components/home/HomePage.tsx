@@ -2,7 +2,7 @@ import { ChevronRight, Clock, Globe, Loader2, Settings, Star, Users, Wrench } fr
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
-import { ProviderIcon } from "@/components/account/ProviderIcon"
+import { ProviderIcon } from "@/components/accounts/ProviderIcon"
 import { PageContainer } from "@/components/ui/page-container"
 import { SectionCard } from "@/components/ui/section-card"
 import {

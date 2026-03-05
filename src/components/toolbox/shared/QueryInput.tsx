@@ -21,8 +21,14 @@ interface QueryInputProps {
   historyType: QueryHistoryItem["type"]
   /** 历史记录选中回调 */
   onHistorySelect: (item: QueryHistoryItem) => void
-  /** 额外的输入控件（如 DNS 的类型选择、SSL 的端口输入） */
+  /** 额外的输入控件，渲染在输入框和按钮之间 */
   extraInput?: ReactNode
+  /** 内嵌控件，渲染在输入框边框内部（如 Select、端口输入） */
+  inlineExtra?: ReactNode
+  /** 自定义按钮文本 */
+  buttonText?: string
+  /** 输入行与历史记录之间的内容 */
+  belowInput?: ReactNode
 }
 
 /**
@@ -38,6 +44,9 @@ function QueryInputComponent({
   historyType,
   onHistorySelect,
   extraInput,
+  inlineExtra,
+  buttonText,
+  belowInput,
 }: QueryInputProps) {
   const { t } = useTranslation()
 
@@ -50,14 +59,28 @@ function QueryInputComponent({
   return (
     <>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isLoading}
-          className="flex-1"
-        />
+        {inlineExtra ? (
+          <div className="flex flex-1 items-center rounded-md border bg-background">
+            <Input
+              placeholder={placeholder}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading}
+              className="flex-1 border-0 shadow-none"
+            />
+            {inlineExtra}
+          </div>
+        ) : (
+          <Input
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            className="flex-1"
+          />
+        )}
         {extraInput}
         <Button onClick={onSubmit} disabled={isLoading} className="w-full sm:w-auto">
           {isLoading ? (
@@ -65,9 +88,10 @@ function QueryInputComponent({
           ) : (
             <Search className="h-4 w-4" />
           )}
-          <span className="ml-2">{t("toolbox.query")}</span>
+          <span className="ml-2">{buttonText ?? t("toolbox.query")}</span>
         </Button>
       </div>
+      {belowInput}
       <HistoryChips type={historyType} onSelect={onHistorySelect} />
     </>
   )

@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { ResponsiveButton } from "@/components/ui/responsive-button"
 import {
   Select,
   SelectContent,
@@ -66,7 +67,6 @@ interface DnsTableToolbarProps {
   onAddWizard: () => void
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: toolbar with responsive layout logic
 export function DnsTableToolbar({
   accountId,
   domainId,
@@ -132,37 +132,13 @@ export function DnsTableToolbar({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Select 按钮：移动端纯图标 */}
-          {isMobile ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={isSelectMode ? "secondary" : "outline"}
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={onToggleSelectMode}
-                    disabled={!hasRecords}
-                  >
-                    {isSelectMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isSelectMode ? t("common.cancel") : t("dns.batchSelect")}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <Button
-              variant={isSelectMode ? "secondary" : "outline"}
-              size="sm"
-              onClick={onToggleSelectMode}
-              disabled={!hasRecords}
-            >
-              <CheckSquare className="mr-2 h-4 w-4" />
-              {isSelectMode ? t("common.cancel") : t("dns.batchSelect")}
-            </Button>
-          )}
+          <ResponsiveButton
+            icon={isSelectMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+            label={isSelectMode ? t("common.cancel") : t("dns.batchSelect")}
+            variant={isSelectMode ? "secondary" : "outline"}
+            onClick={onToggleSelectMode}
+            disabled={!hasRecords}
+          />
 
           {/* Add Record 按钮：移动端纯图标 + 下拉 */}
           {!isSelectMode &&
@@ -268,24 +244,15 @@ export function DnsTableToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {hasActiveFilters &&
-          (isMobile ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClearFilters}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("common.clearFilter")}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <Button variant="ghost" size="sm" className="h-8" onClick={onClearFilters}>
-              <X className="mr-1 h-4 w-4" />
-              {t("common.clearFilter")}
-            </Button>
-          ))}
+        {hasActiveFilters && (
+          <ResponsiveButton
+            icon={<X className="h-4 w-4" />}
+            label={t("common.clearFilter")}
+            variant="ghost"
+            className="h-8"
+            onClick={onClearFilters}
+          />
+        )}
       </div>
     </div>
   )

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { useAccountStore } from "@/stores"
 import type { Account, ProviderCredentials } from "@/types"
-import { ProviderIcon } from "./ProviderIcon"
+import { ProviderIcon } from "../ProviderIcon"
 
 /**
  * 构建结构化的 Provider 凭证对象（v1.7.0 类型安全重构）

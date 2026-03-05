@@ -5,6 +5,37 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.10.0] - 2026-02-15
+
+### Added
+- MCP 服务器（dns-orchestrator-mcp）：8 个工具支持 AI 代理查询 DNS 账户、域名、记录及网络诊断
+- 应用引导层（dns-orchestrator-app）：平台无关的 AppState/AppStateBuilder、启动生命周期管理
+- SQLite 统一存储适配器（SeaORM），支持 MCP/TUI/CLI 场景
+- Keyring 凭证存储适配器（从 Tauri 提取为共享组件）
+- 工具箱强类型 `DnsQueryType` 枚举（替代字符串传参）
+- 首页近期访问域名自动清理无效记录
+- Homebrew Cask/Formula 自动更新流程
+- crates.io 自动发布流水线（按依赖拓扑序）
+- MCP Server 跨平台构建（macOS/Linux/Windows，x64/ARM64）
+- 所有 crate 中英文双语 README
+- dns-orchestrator-mcp 完整 Rustdoc 注释
+
+### Changed
+- 存储层架构升级：适配器从 Tauri 提取至 dns-orchestrator-app，Tauri 与 MCP 共享
+- 默认 TLS 后端从 `native-tls` 切换为 `rustls`
+- 全工作区升级至 Rust 2024 Edition
+- 内部 crate 依赖从工作区路径引用切换为版本引用
+- 统一代码格式化配置（rustfmt.toml）和 Clippy lint 配置
+- dns-orchestrator-core 代码注释统一为英文
+- Release 流水线新增发布自动化（draft → 正式发布）
+
+### Fixed
+- `InvalidCredentials` 错误信息泄露防护（移除原始 API 消息显示）
+- SQLite 适配器序列化错误处理中的 panic 问题
+- SQLite 跨平台路径兼容性
+- SQLite 解密失败时的错误恢复逻辑
+- SQLite 适配器查询与事务处理优化
+
 ## [1.9.1] - 2026-02-14
 
 ### Fixed
@@ -298,6 +329,7 @@
 - DNS 记录 CRUD 操作
 - 跨平台支持（macOS、Windows、Linux、Android）
 
+[1.10.0]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.7.0...v1.8.0

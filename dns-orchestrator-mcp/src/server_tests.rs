@@ -323,7 +323,7 @@ async fn get_info_contains_expected_instructions() {
 #[tokio::test]
 async fn run_toolbox_tool_success_returns_json() {
     let future = async { Ok::<_, ToolboxError>("hello".to_string()) };
-    let result = run_toolbox_tool(Duration::from_secs(1), future, "test tool")
+    let result = run_toolbox_tool::<String, String>(Duration::from_secs(1), future, "test tool")
         .await
         .unwrap();
     let text = &result.content[0];
@@ -336,7 +336,7 @@ async fn run_toolbox_tool_timeout_returns_error() {
         tokio::time::sleep(Duration::from_millis(50)).await;
         Ok::<_, ToolboxError>("late".to_string())
     };
-    let error = run_toolbox_tool(Duration::from_millis(5), future, "slow tool")
+    let error = run_toolbox_tool::<String, String>(Duration::from_millis(5), future, "slow tool")
         .await
         .unwrap_err();
     assert!(error.to_string().contains("slow tool timeout"));
@@ -345,7 +345,7 @@ async fn run_toolbox_tool_timeout_returns_error() {
 #[tokio::test]
 async fn run_toolbox_tool_error_maps_toolbox_error() {
     let future = async { Err::<String, _>(ToolboxError::NetworkError("conn refused".into())) };
-    let error = run_toolbox_tool(Duration::from_secs(1), future, "fail tool")
+    let error = run_toolbox_tool::<String, String>(Duration::from_secs(1), future, "fail tool")
         .await
         .unwrap_err();
     assert!(error.to_string().contains("conn refused"));
