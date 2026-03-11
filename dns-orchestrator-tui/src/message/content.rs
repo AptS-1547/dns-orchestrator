@@ -42,4 +42,8 @@ pub enum ContentMessage {
     TogglePrev,
     /// 切换到下一个值（用于设置项）
     ToggleNext,
+
+    // ========== 收藏操作 ==========
+    /// 切换当前选中域名的收藏状态
+    ToggleFavorite,
 }

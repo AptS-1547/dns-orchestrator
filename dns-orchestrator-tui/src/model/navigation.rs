@@ -4,6 +4,7 @@
 pub enum NavItemId {
     Home,
     Domains,
+    Favorites,
     Accounts,
     Toolbox,
     Settings,
@@ -13,7 +14,6 @@ pub enum NavItemId {
 #[derive(Debug, Clone)]
 pub struct NavItem {
     pub id: NavItemId,
-    pub label: &'static str,
     pub icon: &'static str,
 }
 
@@ -32,27 +32,26 @@ impl NavigationState {
             items: vec![
                 NavItem {
                     id: NavItemId::Home,
-                    label: "Home",
                     icon: "⌂",
                 },
                 NavItem {
                     id: NavItemId::Domains,
-                    label: "Domains",
                     icon: "●",
                 },
                 NavItem {
+                    id: NavItemId::Favorites,
+                    icon: "★",
+                },
+                NavItem {
                     id: NavItemId::Accounts,
-                    label: "Accounts",
                     icon: "@",
                 },
                 NavItem {
                     id: NavItemId::Toolbox,
-                    label: "Toolbox",
                     icon: "+",
                 },
                 NavItem {
                     id: NavItemId::Settings,
-                    label: "Settings",
                     icon: "≡",
                 },
             ],
@@ -82,6 +81,11 @@ impl NavigationState {
     /// 获取当前选中的导航项 ID
     pub fn current_id(&self) -> Option<NavItemId> {
         self.current_item().map(|item| item.id)
+    }
+
+    /// 主导航区域的项目数量。从此索引开始的项会固定渲染在侧边栏底部。
+    pub fn main_items_count(&self) -> usize {
+        self.items.len().saturating_sub(2)
     }
 }
 

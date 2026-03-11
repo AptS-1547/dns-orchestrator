@@ -120,6 +120,14 @@ fn handle_content_keys(key: KeyEvent, app: &App) -> AppMessage {
         return AppMessage::Content(ContentMessage::Export);
     }
 
+    // 收藏切换（仅域名和收藏页面）
+    if matches!(app.current_page, Page::Domains | Page::Favorites)
+        && key.modifiers.is_empty()
+        && key.code == KeyCode::Char('f')
+    {
+        return AppMessage::Content(ContentMessage::ToggleFavorite);
+    }
+
     // 根据当前页面处理特定按键
     match &app.current_page {
         Page::Toolbox => handle_toolbox_keys(key),

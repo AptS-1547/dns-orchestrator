@@ -5,6 +5,7 @@
 mod accounts;
 mod dns_records;
 mod domains;
+pub mod favorites;
 mod modal;
 mod settings;
 mod toolbox;
@@ -12,6 +13,7 @@ mod toolbox;
 pub use accounts::AccountsState;
 pub use dns_records::DnsRecordsState;
 pub use domains::DomainsState;
+pub use favorites::FavoritesState;
 pub use modal::{
     Modal, ModalState, get_all_dns_servers, get_all_providers, get_all_record_types,
     get_credential_fields,

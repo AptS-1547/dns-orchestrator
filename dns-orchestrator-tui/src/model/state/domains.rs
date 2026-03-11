@@ -70,6 +70,7 @@ impl DomainsState {
                 provider: ProviderType::Aliyun,
                 status: DomainStatus::Active,
                 record_count: Some(15),
+                is_favorite: true,
             },
             Domain {
                 id: "dom_2".to_string(),
@@ -78,6 +79,7 @@ impl DomainsState {
                 provider: ProviderType::Aliyun,
                 status: DomainStatus::Active,
                 record_count: Some(8),
+                is_favorite: false,
             },
             Domain {
                 id: "dom_3".to_string(),
@@ -86,6 +88,7 @@ impl DomainsState {
                 provider: ProviderType::Cloudflare,
                 status: DomainStatus::Pending,
                 record_count: Some(3),
+                is_favorite: false,
             },
         ];
         self.loading = false;

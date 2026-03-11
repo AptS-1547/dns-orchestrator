@@ -2,10 +2,10 @@
 
 use super::keys::{
     AccountsTexts, ActionTexts, AddAccountModalTexts, CommonTexts, ConfirmDeleteTexts,
-    DnsRecordsTexts, DomainsTexts, HelpActionTexts, HelpTexts, HintTexts, HomeTexts, KeyNames,
-    LanguageTexts, ModalTexts, NavTexts, PaginationTexts, SettingsTexts, StatusBarTexts,
-    ThemeTexts, ToolModalLabels, ToolModalPlaceholders, ToolModalStatus, ToolModalTitles,
-    ToolModalsTexts, ToolboxTabTexts, ToolboxTexts, Translations,
+    DnsRecordsTexts, DomainsTexts, FavoritesTexts, HelpActionTexts, HelpTexts, HintTexts,
+    HomeTexts, KeyNames, LanguageTexts, ModalTexts, NavTexts, PaginationTexts, SettingsTexts,
+    StatusBarTexts, ThemeTexts, ToolModalLabels, ToolModalPlaceholders, ToolModalStatus,
+    ToolModalTitles, ToolModalsTexts, ToolboxTabTexts, ToolboxTexts, Translations,
 };
 
 pub const TRANSLATIONS: Translations = Translations {
@@ -70,6 +70,7 @@ pub const TRANSLATIONS: Translations = Translations {
         home: "主页",
         accounts: "账号",
         domains: "域名",
+        favorites: "收藏",
         toolbox: "工具箱",
         settings: "设置",
     },
@@ -107,6 +108,11 @@ pub const TRANSLATIONS: Translations = Translations {
         status_paused: "暂停",
         status_pending: "待验证",
         status_error: "异常",
+    },
+
+    favorites: FavoritesTexts {
+        no_favorites: "暂无收藏域名",
+        hint_add: "在域名页面按 f 添加收藏",
     },
 
     dns_records: DnsRecordsTexts {
@@ -249,6 +255,7 @@ pub const TRANSLATIONS: Translations = Translations {
             add: "添加",
             edit: "编辑",
             delete: "删除",
+            favorite: "切换收藏",
         },
     },
 };

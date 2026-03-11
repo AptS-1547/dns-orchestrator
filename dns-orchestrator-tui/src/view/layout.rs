@@ -85,6 +85,7 @@ fn render_page_content(app: &App, frame: &mut Frame, area: Rect) {
     let page_title = match &app.current_page {
         Page::Home => texts.nav.home,
         Page::Domains => texts.nav.domains,
+        Page::Favorites => texts.nav.favorites,
         Page::DnsRecords { .. } => texts.dns_records.title,
         Page::Accounts => texts.nav.accounts,
         Page::Toolbox => texts.nav.toolbox,
@@ -104,6 +105,7 @@ fn render_page_content(app: &App, frame: &mut Frame, area: Rect) {
     match &app.current_page {
         Page::Home => pages::home::render(app, frame, inner_area),
         Page::Domains => pages::domains::render(app, frame, inner_area),
+        Page::Favorites => pages::favorites::render(app, frame, inner_area),
         Page::Accounts => pages::accounts::render(app, frame, inner_area),
         Page::Toolbox => pages::toolbox::render(app, frame, inner_area),
         Page::Settings => pages::settings::render(app, frame, inner_area),

@@ -1,8 +1,8 @@
 //! 应用主状态结构
 
 use super::{
-    AccountsState, DnsRecordsState, DomainsState, FocusPanel, ModalState, NavigationState, Page,
-    SettingsState, ToolboxState,
+    AccountsState, DnsRecordsState, DomainsState, FavoritesState, FocusPanel, ModalState,
+    NavigationState, Page, SettingsState, ToolboxState,
 };
 
 /// 应用主状态
@@ -27,6 +27,8 @@ pub struct App {
     pub accounts: AccountsState,
     /// 域名页面状态
     pub domains: DomainsState,
+    /// 收藏页面状态
+    pub favorites: FavoritesState,
     /// DNS 记录页面状态
     pub dns_records: DnsRecordsState,
     /// 工具箱页面状态
@@ -49,6 +51,7 @@ impl App {
             status_message: None,
             accounts: AccountsState::new(),
             domains: DomainsState::new(),
+            favorites: FavoritesState::new(),
             dns_records: DnsRecordsState::new(),
             toolbox: ToolboxState::new(),
             settings: SettingsState::new(),

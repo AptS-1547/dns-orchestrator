@@ -59,6 +59,11 @@ pub fn update(app: &mut App, msg: ContentMessage) {
         ContentMessage::ToggleNext => {
             handle_toggle_next(app);
         }
+
+        // ========== 收藏操作 ==========
+        ContentMessage::ToggleFavorite => {
+            handle_toggle_favorite(app);
+        }
     }
 }
 
@@ -71,6 +76,9 @@ fn handle_select_previous(app: &mut App) {
         }
         Page::Domains => {
             app.domains.select_previous();
+        }
+        Page::Favorites => {
+            app.favorites.select_previous();
         }
         Page::DnsRecords { .. } => {
             app.dns_records.select_previous();
@@ -93,6 +101,9 @@ fn handle_select_next(app: &mut App) {
         Page::Domains => {
             app.domains.select_next();
         }
+        Page::Favorites => {
+            app.favorites.select_next();
+        }
         Page::DnsRecords { .. } => {
             app.dns_records.select_next();
         }
@@ -114,6 +125,9 @@ fn handle_select_first(app: &mut App) {
         Page::Domains => {
             app.domains.select_first();
         }
+        Page::Favorites => {
+            app.favorites.select_first();
+        }
         Page::DnsRecords { .. } => {
             app.dns_records.select_first();
         }
@@ -128,6 +142,9 @@ fn handle_select_last(app: &mut App) {
         }
         Page::Domains => {
             app.domains.select_last();
+        }
+        Page::Favorites => {
+            app.favorites.select_last();
         }
         Page::DnsRecords { .. } => {
             app.dns_records.select_last();
@@ -161,6 +178,23 @@ fn handle_confirm(app: &mut App) {
                     domain_id,
                 };
                 app.clear_status(); // 切换页面时清除状态消息
+            }
+        }
+        Page::Favorites => {
+            // 进入 DNS 记录页面（同 Domains）
+            if let Some(domain) = app.favorites.selected_domain() {
+                let account_id = domain.account_id.clone();
+                let domain_id = domain.id.clone();
+
+                app.dns_records
+                    .set_domain(account_id.clone(), domain_id.clone());
+                app.dns_records.load_mock_data();
+
+                app.current_page = Page::DnsRecords {
+                    account_id,
+                    domain_id,
+                };
+                app.clear_status();
             }
         }
         Page::DnsRecords { .. } => {
@@ -331,5 +365,45 @@ fn handle_toggle_next(app: &mut App) {
             };
             crate::view::theme::set_theme_index(theme_index);
         }
+    }
+}
+
+// ========== 收藏操作处理 ==========
+
+fn handle_toggle_favorite(app: &mut App) {
+    match &app.current_page {
+        Page::Domains => {
+            if let Some(domain) = app.domains.domains.get_mut(app.domains.selected) {
+                domain.is_favorite = !domain.is_favorite;
+                let name = domain.name.clone();
+                if domain.is_favorite {
+                    app.set_status(format!("★ {name}"));
+                } else {
+                    app.set_status(format!("☆ {name}"));
+                }
+            }
+        }
+        Page::Favorites => {
+            if let Some(fav_domain) = app.favorites.selected_domain() {
+                let account_id = fav_domain.account_id.clone();
+                let domain_id = fav_domain.id.clone();
+                let name = fav_domain.name.clone();
+
+                // 在主域名列表中翻转收藏状态
+                if let Some(domain) = app
+                    .domains
+                    .domains
+                    .iter_mut()
+                    .find(|d| d.id == domain_id && d.account_id == account_id)
+                {
+                    domain.is_favorite = false;
+                }
+
+                // 重建收藏列表
+                app.favorites.rebuild(&app.domains.domains);
+                app.set_status(format!("☆ {name}"));
+            }
+        }
+        _ => {}
     }
 }

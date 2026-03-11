@@ -168,6 +168,7 @@ fn page_from_nav_id(id: NavItemId) -> Page {
     match id {
         NavItemId::Home => Page::Home,
         NavItemId::Domains => Page::Domains,
+        NavItemId::Favorites => Page::Favorites,
         NavItemId::Accounts => Page::Accounts,
         NavItemId::Toolbox => Page::Toolbox,
         NavItemId::Settings => Page::Settings,

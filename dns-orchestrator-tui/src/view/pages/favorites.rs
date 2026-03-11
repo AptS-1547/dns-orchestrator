@@ -1,4 +1,4 @@
-//! 域名列表页面视图
+//! 收藏域名列表页面视图
 
 use ratatui::{
     Frame,
@@ -12,9 +12,9 @@ use crate::i18n::t;
 use crate::model::App;
 use crate::view::theme::colors;
 
-/// 渲染域名列表页面
+/// 渲染收藏页面
 pub fn render(app: &App, frame: &mut Frame, area: Rect) {
-    if app.domains.domains.is_empty() {
+    if app.favorites.domains.is_empty() {
         render_empty(frame, area);
     } else {
         render_list(app, frame, area);
@@ -28,12 +28,12 @@ fn render_empty(frame: &mut Frame, area: Rect) {
     let content = vec![
         Line::from(""),
         Line::styled(
-            format!("  {}", texts.domains.no_domains),
+            format!("  {}", texts.favorites.no_favorites),
             Style::default().fg(c.muted),
         ),
         Line::from(""),
         Line::styled(
-            format!("  {}", texts.accounts.add_account),
+            format!("  {}", texts.favorites.hint_add),
             Style::default().fg(c.muted),
         ),
     ];
@@ -42,17 +42,17 @@ fn render_empty(frame: &mut Frame, area: Rect) {
     frame.render_widget(paragraph, area);
 }
 
-/// 渲染域名列表
+/// 渲染收藏域名列表
 fn render_list(app: &App, frame: &mut Frame, area: Rect) {
     let texts = t();
     let c = colors();
     let items: Vec<ListItem> = app
-        .domains
+        .favorites
         .domains
         .iter()
         .enumerate()
         .map(|(i, domain)| {
-            let is_selected = i == app.domains.selected;
+            let is_selected = i == app.favorites.selected;
             let status_icon = match domain.status {
                 crate::model::domain::DomainStatus::Active => "●",
                 _ => "○",
@@ -66,6 +66,8 @@ fn render_list(app: &App, frame: &mut Frame, area: Rect) {
                 .record_count
                 .map(|count| format!(" ({} {})", count, texts.domains.record_count))
                 .unwrap_or_default();
+
+            let provider_tag = format!(" [{}]", domain.provider.display_name());
 
             let style = if is_selected {
                 Style::default()
@@ -82,25 +84,25 @@ fn render_list(app: &App, frame: &mut Frame, area: Rect) {
                 Style::default().fg(status_color)
             };
 
-            let dim_style = if is_selected {
-                Style::default().fg(c.selected_fg).bg(c.selected_bg)
-            } else {
-                Style::default().fg(c.muted)
-            };
-
-            let fav_icon = if domain.is_favorite { "★ " } else { "  " };
             let fav_style = if is_selected {
                 Style::default().fg(Color::Yellow).bg(c.selected_bg)
             } else {
                 Style::default().fg(Color::Yellow)
             };
 
+            let dim_style = if is_selected {
+                Style::default().fg(c.selected_fg).bg(c.selected_bg)
+            } else {
+                Style::default().fg(c.muted)
+            };
+
             let line = Line::from(vec![
                 Span::raw("  "),
-                Span::styled(fav_icon, fav_style),
+                Span::styled("★ ", fav_style),
                 Span::styled(status_icon, status_style),
                 Span::raw(" "),
                 Span::styled(&domain.name, style),
+                Span::styled(provider_tag, dim_style),
                 Span::styled(record_count, dim_style),
             ]);
 
@@ -113,7 +115,7 @@ fn render_list(app: &App, frame: &mut Frame, area: Rect) {
         .highlight_style(Style::default());
 
     let mut state = ListState::default();
-    state.select(Some(app.domains.selected));
+    state.select(Some(app.favorites.selected));
 
     frame.render_stateful_widget(list, area, &mut state);
 }

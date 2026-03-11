@@ -16,8 +16,13 @@ pub fn update(app: &mut App, msg: NavigationMessage) {
 
         NavigationMessage::Confirm => {
             if let Some(id) = app.navigation.current_id() {
-                app.current_page = page_from_nav_id(id);
-                app.clear_status(); // 切换页面时清除状态消息
+                let page = page_from_nav_id(id);
+                // 进入收藏页面时重建收藏列表
+                if matches!(page, Page::Favorites) {
+                    app.favorites.rebuild(&app.domains.domains);
+                }
+                app.current_page = page;
+                app.clear_status();
             }
         }
 
@@ -39,6 +44,7 @@ fn page_from_nav_id(id: NavItemId) -> Page {
     match id {
         NavItemId::Home => Page::Home,
         NavItemId::Domains => Page::Domains,
+        NavItemId::Favorites => Page::Favorites,
         NavItemId::Accounts => Page::Accounts,
         NavItemId::Toolbox => Page::Toolbox,
         NavItemId::Settings => Page::Settings,

@@ -24,6 +24,8 @@ pub struct Translations {
     pub accounts: AccountsTexts,
     /// 域名页面文本
     pub domains: DomainsTexts,
+    /// 收藏页面文本
+    pub favorites: FavoritesTexts,
     /// DNS 记录页面文本
     pub dns_records: DnsRecordsTexts,
     /// 工具箱页面文本（仅主页面，不含弹窗）
@@ -113,6 +115,7 @@ pub struct NavTexts {
     pub home: &'static str,
     pub accounts: &'static str,
     pub domains: &'static str,
+    pub favorites: &'static str,
     pub toolbox: &'static str,
     pub settings: &'static str,
 }
@@ -154,6 +157,12 @@ pub struct DomainsTexts {
     pub status_paused: &'static str,
     pub status_pending: &'static str,
     pub status_error: &'static str,
+}
+
+/// 收藏页面文本
+pub struct FavoritesTexts {
+    pub no_favorites: &'static str,
+    pub hint_add: &'static str,
 }
 
 /// DNS 记录页面文本
@@ -344,4 +353,5 @@ pub struct HelpActionTexts {
     pub add: &'static str,
     pub edit: &'static str,
     pub delete: &'static str,
+    pub favorite: &'static str,
 }

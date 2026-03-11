@@ -73,9 +73,10 @@ fn get_hints(app: &App) -> Vec<(&'static str, &'static str)> {
                 hints.push(("Alt+a", texts.common.add));
                 hints.push(("Alt+d", texts.common.delete));
             }
-            Page::Domains => {
+            Page::Domains | Page::Favorites => {
                 hints.push((texts.hints.keys.arrows_ud, texts.hints.actions.move_up_down));
                 hints.push((texts.hints.keys.enter, texts.common.confirm));
+                hints.push(("f", texts.help.actions.favorite));
             }
             Page::DnsRecords { .. } => {
                 hints.push((texts.hints.keys.arrows_ud, texts.hints.actions.move_up_down));

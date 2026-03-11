@@ -120,7 +120,6 @@
 //!
 //!         NavItem {
 //!             id: NavItemId,          // 唯一标识
-//!             label: &'static str,    // 显示文本
 //!             icon: &'static str,     // 图标
 //!         }
 //!
@@ -207,6 +206,6 @@ pub use focus::FocusPanel;
 pub use navigation::{NavItemId, NavigationState};
 pub use page::Page;
 pub use state::{
-    AccountsState, DnsRecordsState, DomainsState, ModalState, SettingsState, ToolboxState,
-    ToolboxTab,
+    AccountsState, DnsRecordsState, DomainsState, FavoritesState, ModalState, SettingsState,
+    ToolboxState, ToolboxTab,
 };

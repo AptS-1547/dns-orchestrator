@@ -8,6 +8,8 @@ pub enum Page {
     Home,
     /// 域名列表
     Domains,
+    /// 收藏域名
+    Favorites,
     /// DNS 记录页面
     DnsRecords {
         account_id: String,
@@ -27,6 +29,7 @@ impl Page {
         match self {
             Page::Home => "Home",
             Page::Domains => "Domains",
+            Page::Favorites => "Favorites",
             Page::DnsRecords { .. } => "DNS Records",
             Page::Accounts => "Accounts",
             Page::Toolbox => "Toolbox",

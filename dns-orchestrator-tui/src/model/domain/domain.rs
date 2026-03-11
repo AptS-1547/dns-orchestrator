@@ -36,4 +36,6 @@ pub struct Domain {
     pub status: DomainStatus,
     /// 该域名下的记录数量
     pub record_count: Option<u32>,
+    /// 是否已收藏
+    pub is_favorite: bool,
 }

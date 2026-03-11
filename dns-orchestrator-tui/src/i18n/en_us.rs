@@ -2,10 +2,10 @@
 
 use super::keys::{
     AccountsTexts, ActionTexts, AddAccountModalTexts, CommonTexts, ConfirmDeleteTexts,
-    DnsRecordsTexts, DomainsTexts, HelpActionTexts, HelpTexts, HintTexts, HomeTexts, KeyNames,
-    LanguageTexts, ModalTexts, NavTexts, PaginationTexts, SettingsTexts, StatusBarTexts,
-    ThemeTexts, ToolModalLabels, ToolModalPlaceholders, ToolModalStatus, ToolModalTitles,
-    ToolModalsTexts, ToolboxTabTexts, ToolboxTexts, Translations,
+    DnsRecordsTexts, DomainsTexts, FavoritesTexts, HelpActionTexts, HelpTexts, HintTexts,
+    HomeTexts, KeyNames, LanguageTexts, ModalTexts, NavTexts, PaginationTexts, SettingsTexts,
+    StatusBarTexts, ThemeTexts, ToolModalLabels, ToolModalPlaceholders, ToolModalStatus,
+    ToolModalTitles, ToolModalsTexts, ToolboxTabTexts, ToolboxTexts, Translations,
 };
 
 pub const TRANSLATIONS: Translations = Translations {
@@ -70,6 +70,7 @@ pub const TRANSLATIONS: Translations = Translations {
         home: "Home",
         accounts: "Accounts",
         domains: "Domains",
+        favorites: "Favorites",
         toolbox: "Toolbox",
         settings: "Settings",
     },
@@ -107,6 +108,11 @@ pub const TRANSLATIONS: Translations = Translations {
         status_paused: "Paused",
         status_pending: "Pending",
         status_error: "Error",
+    },
+
+    favorites: FavoritesTexts {
+        no_favorites: "No favorited domains",
+        hint_add: "Press f on Domains page to add favorites",
     },
 
     dns_records: DnsRecordsTexts {
@@ -249,6 +255,7 @@ pub const TRANSLATIONS: Translations = Translations {
             add: "Add",
             edit: "Edit",
             delete: "Delete",
+            favorite: "Toggle favorite",
         },
     },
 };
