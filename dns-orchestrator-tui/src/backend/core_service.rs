@@ -86,6 +86,11 @@ impl CoreService {
         DomainService::new(self.ctx.clone(), self.domain_metadata_service.clone())
     }
 
+    /// 获取域名元数据服务
+    pub fn domain_metadata(&self) -> Arc<DomainMetadataService> {
+        self.domain_metadata_service.clone()
+    }
+
     // ========== DNS 记录管理 ==========
 
     /// 获取 DNS 记录服务

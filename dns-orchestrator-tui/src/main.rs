@@ -19,31 +19,17 @@
 //! 其执行：
 //! fn `main()` {
 //!
-//!     init_terminal()         // 首先初始化终端，以为 terminal: Terminal<...>
-//!     model::App:new()        // 创建 APP 实例
-//!     app::run()              // 运行 app.rs 主循环
-//!     restore_terminal()      // 无论成功与否，都恢复终端
+//!     Runtime::new()              // 创建 Tokio 异步运行时
+//!     CoreService::new()          // 创建后端核心服务
+//!     core_service.initialize()   // 异步初始化（恢复账号等）
+//!     init_terminal()             // 初始化终端，TerminalGuard 在 drop 时自动恢复
+//!     model::App::new(...)        // 创建 APP 实例（注入 CoreService 和 Handle）
+//!     app::run()                  // 运行 app.rs 主循环
 //!
 //! }
 //!
-//!
-//!
-//! 当启动程序时，main.rs：
-//!     `init_terminal()`         // from util/terminal.rs
-//!
-//!     有：
-//!         · enable_raw_mode()
-//!             - 以关闭终端行缓冲模式、关闭回显与允许读取单个按键事件
-//!         · execute!(io::stdout , EnterAlternateScreen)?
-//!             - 切换到 备用屏幕
-//!         · 返回 Terminal 对象
-//!
-//!
-//!     App:new()               // from model/app.rs
-//!     创建终端初始状态（在 /app.rs 下细嗦）
-//!
-//!
-//!     进入主循环 app::run()   // from /app.rs
+//! Runtime 在 main 栈帧上存活，事件循环不在 `block_on` 内运行，
+//! 因此 Update 层可安全使用 `Handle::block_on` 调用 async 后端方法。
 
 mod app;
 mod backend;
@@ -55,17 +41,28 @@ mod update;
 mod util;
 mod view;
 
+use std::sync::Arc;
+
 use anyhow::Result;
 
 use util::{TerminalGuard, init_terminal};
 
 fn main() -> Result<(), anyhow::Error> {
-    // 1. 初始化终端，TerminalGuard 在 drop 时自动恢复
+    // 1. 创建异步运行时和后端服务
+    let rt = tokio::runtime::Runtime::new()?;
+    let core_service = Arc::new(backend::CoreService::new());
+
+    // 2. 异步初始化（恢复账号等），不静默吞掉错误
+    if let Err(e) = rt.block_on(core_service.initialize()) {
+        eprintln!("Warning: initialization failed: {e}");
+    }
+
+    // 3. 初始化终端，TerminalGuard 在 drop 时自动恢复
     let mut guard = TerminalGuard(init_terminal()?);
 
-    // 2. 创建应用实例
-    let mut app = model::App::new();
+    // 4. 创建应用实例（注入 CoreService 和 Runtime Handle）
+    let mut app = model::App::new(core_service, rt.handle().clone());
 
-    // 3. 运行主循环并返回结果
+    // 5. 运行主循环并返回结果
     app::run(&mut guard.0, &mut app)
 }

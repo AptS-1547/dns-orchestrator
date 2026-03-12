@@ -27,13 +27,13 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
             spans.push(Span::styled(" │ ", Style::default().fg(c.muted)));
         }
         spans.push(Span::styled(
-            key.to_string(),
+            (*key).to_string(),
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         ));
         spans.push(Span::raw(" "));
-        spans.push(Span::styled(desc.to_string(), Style::default().fg(c.muted)));
+        spans.push(Span::styled((*desc).to_string(), Style::default().fg(c.muted)));
     }
 
     // 如果有状态消息，显示在右侧

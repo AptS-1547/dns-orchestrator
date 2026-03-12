@@ -4,6 +4,7 @@
 
 use crate::message::ContentMessage;
 use crate::model::{App, Page};
+use dns_orchestrator_core::types::DomainMetadataUpdate;
 
 /// 处理内容面板消息
 pub fn update(app: &mut App, msg: ContentMessage) {
@@ -374,12 +375,25 @@ fn handle_toggle_favorite(app: &mut App) {
     match &app.current_page {
         Page::Domains => {
             if let Some(domain) = app.domains.domains.get_mut(app.domains.selected) {
-                domain.is_favorite = !domain.is_favorite;
-                let name = domain.name.clone();
-                if domain.is_favorite {
-                    app.set_status(format!("★ {name}"));
-                } else {
-                    app.set_status(format!("☆ {name}"));
+                // 调用后端 toggle，用返回值同步本地状态
+                let result = app.rt_handle.block_on(
+                    app.core_service
+                        .domain_metadata()
+                        .toggle_favorite(&domain.account_id, &domain.id),
+                );
+                match result {
+                    Ok(is_fav) => {
+                        domain.is_favorite = is_fav;
+                        let name = domain.name.clone();
+                        if is_fav {
+                            app.set_status(format!("★ {name}"));
+                        } else {
+                            app.set_status(format!("☆ {name}"));
+                        }
+                    }
+                    Err(e) => {
+                        app.set_status(format!("Error: {e}"));
+                    }
                 }
             }
         }
@@ -389,19 +403,36 @@ fn handle_toggle_favorite(app: &mut App) {
                 let domain_id = fav_domain.id.clone();
                 let name = fav_domain.name.clone();
 
-                // 在主域名列表中翻转收藏状态
-                if let Some(domain) = app
-                    .domains
-                    .domains
-                    .iter_mut()
-                    .find(|d| d.id == domain_id && d.account_id == account_id)
-                {
-                    domain.is_favorite = false;
+                // 显式 unfavorite（而非 toggle），避免状态不一致时语义错误
+                let update = DomainMetadataUpdate {
+                    is_favorite: Some(false),
+                    tags: None,
+                    color: None,
+                    note: None,
+                };
+                let result = app.rt_handle.block_on(
+                    app.core_service
+                        .domain_metadata()
+                        .update_metadata(&account_id, &domain_id, update),
+                );
+                match result {
+                    Ok(()) => {
+                        // 同步本地状态
+                        if let Some(domain) = app
+                            .domains
+                            .domains
+                            .iter_mut()
+                            .find(|d| d.id == domain_id && d.account_id == account_id)
+                        {
+                            domain.is_favorite = false;
+                        }
+                        app.favorites.rebuild(&app.domains.domains);
+                        app.set_status(format!("☆ {name}"));
+                    }
+                    Err(e) => {
+                        app.set_status(format!("Error: {e}"));
+                    }
                 }
-
-                // 重建收藏列表
-                app.favorites.rebuild(&app.domains.domains);
-                app.set_status(format!("☆ {name}"));
             }
         }
         _ => {}

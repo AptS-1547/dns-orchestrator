@@ -68,6 +68,7 @@
 //!         提供的服务：
 //!             - account()             账号管理（统一服务）
 //!             - domain()              域名管理
+//!             - domain_metadata()     域名元数据管理（收藏、标签等）
 //!             - dns()                 DNS 记录管理
 //!             - provider_metadata()   服务商元数据
 //!
@@ -128,11 +129,11 @@
 //! 五、数据流
 //! ═══════════════════════════════════════════════════════════════════════════
 //!
-//!     用户在弹窗中点击"确认"
+//!     用户操作（按键 / 弹窗确认）
 //!         ↓
-//!     Update 层处理 ModalMessage::Confirm
+//!     Update 层处理消息
 //!         ↓
-//!     调用 CoreService 的相应方法（异步）
+//!     通过 Handle::block_on 调用 CoreService 的异步方法
 //!         ↓
 //!     CoreService 调用 dns-orchestrator-core 的服务
 //!         ↓
@@ -140,7 +141,7 @@
 //!         ↓
 //!     返回结果
 //!         ↓
-//!     Update 层更新 Model 状态
+//!     Update 层同步本地 Model 状态
 //!         ↓
 //!     View 层重新渲染
 //!
@@ -151,3 +152,5 @@ mod config_service;
 mod core_service;
 mod credential_service;
 mod domain_metadata_repository;
+
+pub use core_service::CoreService;

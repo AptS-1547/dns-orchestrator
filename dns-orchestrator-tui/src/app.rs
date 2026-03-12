@@ -11,11 +11,13 @@
 //!     should_quit: bool = false,                      // 决定应用是否应该退出
 //!     focus: FocusPanel::Navigation,                  // 当前焦点在哪个面板
 //!     navigation: NavigationState{
-//!         items: [Home , Domains , Accounts , Toolbox , Settings],
+//!         items: [Home , Domains , ★ Favorites , Accounts , ─── , Toolbox , Settings],
 //!         selected = 0                                    // 当前选中第几项，默认为 0
 //!     },
 //!     current_page = Page::Home,                      // 当前应该显示哪个页面，默认为 Home
 //!     status_message = None,                          // 状态栏消息
+//!     core_service: Arc<CoreService>,                 // 后端核心服务
+//!     rt_handle: Handle,                              // Tokio runtime handle
 //!
 //! }
 //!
