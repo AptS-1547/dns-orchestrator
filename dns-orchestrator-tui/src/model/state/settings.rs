@@ -28,6 +28,14 @@ impl Theme {
     pub fn prev(self) -> Theme {
         self.next() // 只有两个选项，prev 和 next 相同
     }
+
+    /// 获取主题对应的索引（0=Dark, 1=Light），用于同步到 view 层
+    pub fn index(self) -> u8 {
+        match self {
+            Theme::Dark => 0,
+            Theme::Light => 1,
+        }
+    }
 }
 
 /// 分页模式枚举

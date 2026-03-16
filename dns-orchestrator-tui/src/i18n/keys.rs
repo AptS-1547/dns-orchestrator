@@ -152,6 +152,7 @@ pub struct AccountsTexts {
 pub struct DomainsTexts {
     pub title: &'static str,
     pub no_domains: &'static str,
+    pub hint_add_account: &'static str,
     pub record_count: &'static str,
     pub status_active: &'static str,
     pub status_paused: &'static str,
@@ -172,6 +173,7 @@ pub struct DnsRecordsTexts {
     pub edit_record: &'static str,
     pub delete_record: &'static str,
     pub no_records: &'static str,
+    pub hint_add_record: &'static str,
     pub name: &'static str,
     pub value: &'static str,
     pub ttl: &'static str,

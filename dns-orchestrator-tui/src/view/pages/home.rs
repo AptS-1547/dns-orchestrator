@@ -13,7 +13,7 @@ use crate::model::App;
 use crate::view::theme::colors;
 
 /// 渲染首页
-pub fn render(_app: &App, frame: &mut Frame, area: Rect) {
+pub fn render(app: &App, frame: &mut Frame, area: Rect) {
     let texts = t();
     let c = colors();
 
@@ -61,7 +61,7 @@ pub fn render(_app: &App, frame: &mut Frame, area: Rect) {
     let accounts_content = Paragraph::new(vec![
         Line::from(""),
         Line::from(Span::styled(
-            "  0",
+            format!("  {}", app.accounts.accounts.len()),
             Style::default()
                 .fg(Color::Green)
                 .add_modifier(Modifier::BOLD),
@@ -84,7 +84,7 @@ pub fn render(_app: &App, frame: &mut Frame, area: Rect) {
     let domains_content = Paragraph::new(vec![
         Line::from(""),
         Line::from(Span::styled(
-            "  0",
+            format!("  {}", app.domains.domains.len()),
             Style::default()
                 .fg(Color::Blue)
                 .add_modifier(Modifier::BOLD),

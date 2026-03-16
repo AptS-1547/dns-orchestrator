@@ -32,8 +32,6 @@ pub enum ContentMessage {
     Export,
 
     // ========== 工具箱专用 ==========
-    /// 切换工具标签页
-    SwitchTab,
     /// 执行工具
     Execute,
 

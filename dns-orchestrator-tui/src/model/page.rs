@@ -1,5 +1,12 @@
 //! 页面状态定义
 
+/// 进入 `DnsRecords` 页面的来源
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DnsRecordsSource {
+    Domains,
+    Favorites,
+}
+
 /// 页面枚举
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Page {
@@ -14,6 +21,7 @@ pub enum Page {
     DnsRecords {
         account_id: String,
         domain_id: String,
+        source: DnsRecordsSource,
     },
     /// 账号管理
     Accounts,
@@ -24,19 +32,6 @@ pub enum Page {
 }
 
 impl Page {
-    /// 获取页面标题
-    pub fn title(&self) -> &'static str {
-        match self {
-            Page::Home => "Home",
-            Page::Domains => "Domains",
-            Page::Favorites => "Favorites",
-            Page::DnsRecords { .. } => "DNS Records",
-            Page::Accounts => "Accounts",
-            Page::Toolbox => "Toolbox",
-            Page::Settings => "Settings",
-        }
-    }
-
     /// 是否是详情页面（需要返回按钮）
     pub fn is_detail_page(&self) -> bool {
         matches!(self, Page::DnsRecords { .. })

@@ -12,18 +12,6 @@ pub enum DomainStatus {
     Unknown,
 }
 
-impl DomainStatus {
-    /// 获取状态显示文本
-    pub fn display_name(&self) -> &'static str {
-        match self {
-            DomainStatus::Active => "正常",
-            DomainStatus::Paused => "已暂停",
-            DomainStatus::Pending => "待生效",
-            DomainStatus::Error => "异常",
-            DomainStatus::Unknown => "未知",
-        }
-    }
-}
 
 /// 域名（来自服务商）
 #[derive(Debug, Clone)]

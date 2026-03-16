@@ -39,20 +39,10 @@ pub struct DefaultKeymap;
 
 impl DefaultKeymap {
     // 全局
-    pub const QUIT: KeyBinding = KeyBinding::key(KeyCode::Char('q'));
     pub const FORCE_QUIT: KeyBinding = KeyBinding::ctrl(KeyCode::Char('c'));
     pub const HELP: KeyBinding = KeyBinding::alt(KeyCode::Char('h'));
     pub const REFRESH: KeyBinding = KeyBinding::alt(KeyCode::Char('r'));
     pub const BACK: KeyBinding = KeyBinding::key(KeyCode::Esc);
-
-    // 面板切换
-    pub const FOCUS_LEFT: KeyBinding = KeyBinding::key(KeyCode::Left);
-    pub const FOCUS_RIGHT: KeyBinding = KeyBinding::key(KeyCode::Right);
-
-    // 导航
-    pub const NAV_UP: KeyBinding = KeyBinding::key(KeyCode::Up);
-    pub const NAV_DOWN: KeyBinding = KeyBinding::key(KeyCode::Down);
-    pub const NAV_CONFIRM: KeyBinding = KeyBinding::key(KeyCode::Enter);
 
     // 操作
     pub const ACTION_ADD: KeyBinding = KeyBinding::alt(KeyCode::Char('a'));

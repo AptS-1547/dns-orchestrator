@@ -106,7 +106,7 @@ mod modal;
 mod navigation;
 
 use crate::message::AppMessage;
-use crate::model::{App, NavItemId, Page};
+use crate::model::{App, DnsRecordsSource, NavItemId, Page};
 
 /// 处理应用消息，更新状态
 pub fn update(app: &mut App, msg: AppMessage) {
@@ -139,9 +139,13 @@ pub fn update(app: &mut App, msg: AppMessage) {
             if app.modal.is_open() {
                 app.modal.close();
                 app.clear_status();
-            } else if app.current_page.is_detail_page() {
-                // 如果在详情页，返回列表页
-                app.current_page = Page::Domains;
+            } else if let Page::DnsRecords { source, .. } = &app.current_page {
+                // 根据来源返回对应页面
+                let back_page = match source {
+                    DnsRecordsSource::Domains => Page::Domains,
+                    DnsRecordsSource::Favorites => Page::Favorites,
+                };
+                app.current_page = back_page;
                 app.clear_status();
             }
         }

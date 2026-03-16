@@ -3,7 +3,7 @@
 //! 处理内容面板中的各种操作消息
 
 use crate::message::ContentMessage;
-use crate::model::{App, Page};
+use crate::model::{App, DnsRecordsSource, Page};
 use dns_orchestrator_core::types::DomainMetadataUpdate;
 
 /// 处理内容面板消息
@@ -46,9 +46,6 @@ pub fn update(app: &mut App, msg: ContentMessage) {
         }
 
         // ========== 工具箱专用 ==========
-        ContentMessage::SwitchTab => {
-            handle_switch_tab(app);
-        }
         ContentMessage::Execute => {
             handle_execute(app);
         }
@@ -177,12 +174,13 @@ fn handle_confirm(app: &mut App) {
                 app.current_page = Page::DnsRecords {
                     account_id,
                     domain_id,
+                    source: DnsRecordsSource::Domains,
                 };
                 app.clear_status(); // 切换页面时清除状态消息
             }
         }
         Page::Favorites => {
-            // 进入 DNS 记录页面（同 Domains）
+            // 进入 DNS 记录页面（从收藏进入）
             if let Some(domain) = app.favorites.selected_domain() {
                 let account_id = domain.account_id.clone();
                 let domain_id = domain.id.clone();
@@ -194,6 +192,7 @@ fn handle_confirm(app: &mut App) {
                 app.current_page = Page::DnsRecords {
                     account_id,
                     domain_id,
+                    source: DnsRecordsSource::Favorites,
                 };
                 app.clear_status();
             }
@@ -301,30 +300,23 @@ fn handle_export(app: &mut App) {
 
 // ========== 工具箱处理 ==========
 
-fn handle_switch_tab(app: &mut App) {
-    if matches!(app.current_page, Page::Toolbox) {
-        app.toolbox.next_tab();
-        app.set_status(format!("Tool: {}", app.toolbox.current_tab.name()));
-    }
-}
 
 fn handle_execute(app: &mut App) {
-    use crate::model::state::ToolboxTab;
+    use crate::model::state::{QueryToolType, ToolboxTab};
 
     if matches!(app.current_page, Page::Toolbox) {
-        // 根据当前选中的工具打开对应弹窗
         match app.toolbox.current_tab {
             ToolboxTab::DnsLookup => {
                 app.modal.show_dns_lookup();
             }
             ToolboxTab::Whois => {
-                app.modal.show_whois_lookup();
+                app.modal.show_query_tool(QueryToolType::WhoisLookup);
             }
             ToolboxTab::SslCheck => {
-                app.modal.show_ssl_check();
+                app.modal.show_query_tool(QueryToolType::SslCheck);
             }
             ToolboxTab::IpLookup => {
-                app.modal.show_ip_lookup();
+                app.modal.show_query_tool(QueryToolType::IpLookup);
             }
             ToolboxTab::HttpHeaderCheck => {
                 app.modal.show_http_header_check();
@@ -333,7 +325,7 @@ fn handle_execute(app: &mut App) {
                 app.modal.show_dns_propagation();
             }
             ToolboxTab::DnssecCheck => {
-                app.modal.show_dnssec_check();
+                app.modal.show_query_tool(QueryToolType::DnssecCheck);
             }
         }
     }
@@ -344,13 +336,8 @@ fn handle_execute(app: &mut App) {
 fn handle_toggle_prev(app: &mut App) {
     if matches!(app.current_page, Page::Settings) {
         app.settings.toggle_prev();
-        // 同步主题到 view 层（定义索引值 0=Dark, 1=Light）
         if app.settings.current_item() == Some(crate::model::state::SettingItem::Theme) {
-            let theme_index = match app.settings.theme {
-                crate::model::state::Theme::Dark => 0,
-                crate::model::state::Theme::Light => 1,
-            };
-            crate::view::theme::set_theme_index(theme_index);
+            crate::view::theme::set_theme_index(app.settings.theme.index());
         }
     }
 }
@@ -358,13 +345,8 @@ fn handle_toggle_prev(app: &mut App) {
 fn handle_toggle_next(app: &mut App) {
     if matches!(app.current_page, Page::Settings) {
         app.settings.toggle_next();
-        // 同步主题到 view 层（定义索引值 0=Dark, 1=Light）
         if app.settings.current_item() == Some(crate::model::state::SettingItem::Theme) {
-            let theme_index = match app.settings.theme {
-                crate::model::state::Theme::Dark => 0,
-                crate::model::state::Theme::Light => 1,
-            };
-            crate::view::theme::set_theme_index(theme_index);
+            crate::view::theme::set_theme_index(app.settings.theme.index());
         }
     }
 }
@@ -374,17 +356,25 @@ fn handle_toggle_next(app: &mut App) {
 fn handle_toggle_favorite(app: &mut App) {
     match &app.current_page {
         Page::Domains => {
-            if let Some(domain) = app.domains.domains.get_mut(app.domains.selected) {
-                // 调用后端 toggle，用返回值同步本地状态
+            // 先进行克隆，避免长期持有可变借用
+            let selected = app.domains.selected;
+            let info = app.domains.domains.get(selected).map(|d| {
+                (d.account_id.clone(), d.id.clone(), d.name.clone())
+            });
+
+            if let Some((account_id, domain_id, name)) = info {
                 let result = app.rt_handle.block_on(
                     app.core_service
                         .domain_metadata()
-                        .toggle_favorite(&domain.account_id, &domain.id),
+                        .toggle_favorite(&account_id, &domain_id),
                 );
                 match result {
                     Ok(is_fav) => {
-                        domain.is_favorite = is_fav;
-                        let name = domain.name.clone();
+                        if let Some(domain) = app.domains.domains.get_mut(selected) {
+                            domain.is_favorite = is_fav;
+                        }
+                        // 同步收藏列表
+                        app.favorites.rebuild(&app.domains.domains);
                         if is_fav {
                             app.set_status(format!("★ {name}"));
                         } else {

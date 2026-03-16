@@ -87,14 +87,8 @@ pub struct ToolboxState {
     pub current_tab: ToolboxTab,
     /// 可见标签页的起始索引（用于滚动）
     pub visible_start: usize,
-    /// 输入内容
-    pub input: String,
     /// 是否正在执行
     pub loading: bool,
-    /// 执行结果
-    pub result: Option<String>,
-    /// 错误信息
-    pub error: Option<String>,
 }
 
 /// 可见标签页数量
@@ -110,14 +104,12 @@ impl ToolboxState {
     pub fn next_tab(&mut self) {
         self.current_tab = self.current_tab.next();
         self.adjust_visible_range();
-        self.clear_result();
     }
 
     /// 切换到上一个标签页
     pub fn prev_tab(&mut self) {
         self.current_tab = self.current_tab.prev();
         self.adjust_visible_range();
-        self.clear_result();
     }
 
     /// 调整可见范围，确保当前标签页在可见区域内
@@ -146,27 +138,4 @@ impl ToolboxState {
         VISIBLE_TAB_COUNT
     }
 
-    /// 清除结果
-    pub fn clear_result(&mut self) {
-        self.result = None;
-        self.error = None;
-    }
-
-    /// 设置输入内容
-    pub fn set_input(&mut self, input: String) {
-        self.input = input;
-    }
-
-    /// 获取当前工具的提示文本
-    pub fn placeholder(&self) -> &'static str {
-        match self.current_tab {
-            ToolboxTab::IpLookup => "Enter IP or domain",
-            ToolboxTab::HttpHeaderCheck => "Enter URL (e.g., https://example.com)",
-            ToolboxTab::Whois
-            | ToolboxTab::DnsLookup
-            | ToolboxTab::SslCheck
-            | ToolboxTab::DnsPropagation
-            | ToolboxTab::DnssecCheck => "Enter domain (e.g., example.com)",
-        }
-    }
 }

@@ -1,6 +1,6 @@
 //! 主题和样式定义
 
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::Color;
 use std::sync::atomic::{AtomicU8, Ordering};
 
 // 默认为 0 (Dark)，相应地，1 为 Light
@@ -10,20 +10,12 @@ static CURRENT_THEME: AtomicU8 = AtomicU8::new(0);
 /// 定义索引值 0 = Dark, 1 = Light
 /// 这个函数接受 u8 而不是 Theme 类型
 pub fn set_theme_index(index: u8) {
-    CURRENT_THEME.store(index, Ordering::SeqCst);
-}
-
-/// 主题枚举
-#[derive(Debug, Clone, Copy, Default)]
-pub enum Theme {
-    #[default]
-    Dark,
-    Light,
+    CURRENT_THEME.store(index, Ordering::Relaxed);
 }
 
 /// 获取当前主题的颜色方案
 pub fn colors() -> ThemeColors {
-    match CURRENT_THEME.load(Ordering::SeqCst) {
+    match CURRENT_THEME.load(Ordering::Relaxed) {
         0 => ThemeColors::dark(),
         _ => ThemeColors::light(),
     }
@@ -81,51 +73,3 @@ impl ThemeColors {
     }
 }
 
-/// 常用样式
-pub struct Styles;
-
-impl Styles {
-    /// 普通边框样式
-    pub fn border() -> Style {
-        Style::default().fg(Color::Rgb(62, 62, 62))
-    }
-
-    /// 焦点边框样式
-    pub fn border_focused() -> Style {
-        Style::default().fg(Color::Rgb(0, 122, 204))
-    }
-
-    /// 选中项样式
-    pub fn selected() -> Style {
-        Style::default()
-            .bg(Color::Rgb(38, 79, 120))
-            .fg(Color::White)
-            .add_modifier(Modifier::BOLD)
-    }
-
-    /// 标题样式
-    pub fn title() -> Style {
-        Style::default()
-            .fg(Color::Rgb(212, 212, 212))
-            .add_modifier(Modifier::BOLD)
-    }
-
-    /// 状态栏样式
-    pub fn statusbar() -> Style {
-        Style::default()
-            .bg(Color::Rgb(0, 122, 204))
-            .fg(Color::White)
-    }
-
-    /// 快捷键提示样式
-    pub fn hint_key() -> Style {
-        Style::default()
-            .fg(Color::Yellow)
-            .add_modifier(Modifier::BOLD)
-    }
-
-    /// 快捷键说明样式
-    pub fn hint_desc() -> Style {
-        Style::default().fg(Color::Rgb(180, 180, 180))
-    }
-}

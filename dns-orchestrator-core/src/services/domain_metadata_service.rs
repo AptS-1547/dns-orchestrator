@@ -236,7 +236,7 @@ impl DomainMetadataService {
         cleaned_tags.sort();
         cleaned_tags.dedup();
 
-        metadata.tags = cleaned_tags.clone();
+        metadata.tags.clone_from(&cleaned_tags);
         metadata.touch();
 
         self.save_metadata(account_id, domain_id, metadata).await?;

@@ -59,7 +59,7 @@ impl CredentialStore for KeyringCredentialStore {
             .map_err(|e| CoreError::CredentialError(format!("Failed to deserialize: {e}")))?;
 
         // 更新缓存
-        *self.cache.lock().await = credentials.clone();
+        self.cache.lock().await.clone_from(&credentials);
 
         Ok(credentials)
     }
@@ -71,7 +71,7 @@ impl CredentialStore for KeyringCredentialStore {
         self.save_raw_json(&json).await?;
 
         // 更新缓存
-        *self.cache.lock().await = credentials.clone();
+        self.cache.lock().await.clone_from(credentials);
 
         Ok(())
     }

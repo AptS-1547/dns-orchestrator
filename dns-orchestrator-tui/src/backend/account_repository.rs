@@ -102,7 +102,7 @@ impl AccountRepository for JsonAccountRepository {
         let accounts = self.load_from_file().await?;
 
         // 更新缓存
-        *self.cache.lock().await = accounts.clone();
+        self.cache.lock().await.clone_from(&accounts);
 
         Ok(accounts)
     }

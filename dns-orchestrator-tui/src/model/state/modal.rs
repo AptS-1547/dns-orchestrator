@@ -343,33 +343,6 @@ pub enum Modal {
         /// 是否正在查询
         loading: bool,
     },
-    /// WHOIS 查询工具
-    WhoisLookup {
-        /// 域名输入
-        domain: String,
-        /// 查询结果
-        result: Option<String>,
-        /// 是否正在查询
-        loading: bool,
-    },
-    /// SSL 证书检查工具
-    SslCheck {
-        /// 域名输入
-        domain: String,
-        /// 查询结果
-        result: Option<String>,
-        /// 是否正在查询
-        loading: bool,
-    },
-    /// IP 查询工具
-    IpLookup {
-        /// IP 或域名输入
-        input: String,
-        /// 查询结果
-        result: Option<String>,
-        /// 是否正在查询
-        loading: bool,
-    },
     /// HTTP 头检查工具
     HttpHeaderCheck {
         /// URL 输入
@@ -391,15 +364,6 @@ pub enum Modal {
         record_type_index: usize,
         /// 焦点：0=域名, 1=记录类型
         focus: usize,
-        /// 查询结果
-        result: Option<String>,
-        /// 是否正在查询
-        loading: bool,
-    },
-    /// DNSSEC 验证工具
-    DnssecCheck {
-        /// 域名输入
-        domain: String,
         /// 查询结果
         result: Option<String>,
         /// 是否正在查询
@@ -521,32 +485,6 @@ impl ModalState {
         });
     }
 
-    /// 显示 WHOIS 查询工具弹窗
-    pub fn show_whois_lookup(&mut self) {
-        self.active = Some(Modal::WhoisLookup {
-            domain: String::new(),
-            result: None,
-            loading: false,
-        });
-    }
-
-    /// 显示 SSL 证书检查工具弹窗
-    pub fn show_ssl_check(&mut self) {
-        self.active = Some(Modal::SslCheck {
-            domain: String::new(),
-            result: None,
-            loading: false,
-        });
-    }
-
-    /// 显示 IP 查询工具弹窗
-    pub fn show_ip_lookup(&mut self) {
-        self.active = Some(Modal::IpLookup {
-            input: String::new(),
-            result: None,
-            loading: false,
-        });
-    }
 
     /// 显示 HTTP 头检查工具弹窗
     pub fn show_http_header_check(&mut self) {
@@ -565,15 +503,6 @@ impl ModalState {
             domain: String::new(),
             record_type_index: 0,
             focus: 0,
-            result: None,
-            loading: false,
-        });
-    }
-
-    /// 显示 DNSSEC 验证工具弹窗
-    pub fn show_dnssec_check(&mut self) {
-        self.active = Some(Modal::DnssecCheck {
-            domain: String::new(),
             result: None,
             loading: false,
         });

@@ -103,6 +103,7 @@ pub const TRANSLATIONS: Translations = Translations {
     domains: DomainsTexts {
         title: "Domains",
         no_domains: "No domains",
+        hint_add_account: "Please add an account first",
         record_count: "records",
         status_active: "Active",
         status_paused: "Paused",
@@ -121,6 +122,7 @@ pub const TRANSLATIONS: Translations = Translations {
         edit_record: "Edit Record",
         delete_record: "Delete Record",
         no_records: "No DNS records",
+        hint_add_record: "Press Alt+a to add a record, or Esc to go back",
         name: "Name",
         value: "Value",
         ttl: "TTL",

@@ -71,15 +71,21 @@
 //!             // 以及各页面状态：
 //!             pub accounts: AccountsState,        // 账号页面状态
 //!             pub domains: DomainsState,          // 域名页面状态
+//!             pub favorites: FavoritesState,      // 收藏页面状态
 //!             pub dns_records: DnsRecordsState,   // DNS 记录 页面状态
 //!             pub toolbox: ToolboxState,          // 工具箱页面状态
 //!             pub settings: SettingsState,        // 设置页面状态
 //!
-//!             pub modal: ModalState               // 弹窗状态
+//!             pub modal: ModalState,              // 弹窗状态
+//!
+//!             // 后端服务：
+//!             pub core_service: Arc<CoreService>, // 核心业务服务
+//!             pub rt_handle: Handle,              // Tokio runtime handle
 //!         }
 //!
 //!     使用：
-//!         - 在 main.rs 中创建：let mut app = model::App::new();
+//!         - 在 main.rs 中创建：
+//!           let mut app = model::App::new(core_service, rt_handle);
 //!         - 在 update/mod.rs 中修改：app.should_quit = true;
 //!         - 在 view/mod.rs 中读取：pub fn render(app: &App, ...)
 //!
@@ -147,7 +153,7 @@
 //! ═══════════════════════════════════════════════════════════════════════════
 //!
 //!     在 src/model/page.rs 中定义页面枚举：
-//!         - Home, Domains, Accounts, Toolbox, Settings（列表页）
+//!         - Home, Domains, Favorites, Accounts, Toolbox, Settings（列表页）
 //!         - DnsRecords { account_id, domain_id }（携带数据的详情页）
 //!
 //!     核心方法：
@@ -204,7 +210,7 @@ pub mod domain;
 pub use app::App;
 pub use focus::FocusPanel;
 pub use navigation::{NavItemId, NavigationState};
-pub use page::Page;
+pub use page::{DnsRecordsSource, Page};
 pub use state::{
     AccountsState, DnsRecordsState, DomainsState, FavoritesState, ModalState, SettingsState,
     ToolboxState, ToolboxTab,

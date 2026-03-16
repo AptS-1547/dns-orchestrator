@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use crate::view::theme::Theme;
+use crate::model::state::Theme;
 
 /// 应用配置
 #[derive(Debug, Clone)]

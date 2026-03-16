@@ -22,15 +22,14 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
 
 /// 渲染空状态
 fn render_empty(frame: &mut Frame, area: Rect) {
+    use crate::i18n::t;
+    let texts = t();
     let c = colors();
     let content = vec![
         Line::from(""),
-        Line::styled("  No DNS records found.", Style::default().fg(c.muted)),
+        Line::styled(texts.dns_records.no_records, Style::default().fg(c.muted)),
         Line::from(""),
-        Line::styled(
-            "  Press Alt+a to add a new record, or Esc to go back.",
-            Style::default().fg(c.muted),
-        ),
+        Line::styled(texts.dns_records.hint_add_record, Style::default().fg(c.muted)),
     ];
 
     let paragraph = Paragraph::new(content);
@@ -50,10 +49,10 @@ fn render_list(app: &App, frame: &mut Frame, area: Rect) {
             let record_type = record.data.record_type().as_str();
             let record_value = record.data.display_value();
 
-            // 截断过长的值
+            // 截断过长的值（按字符而非字节截断，避免 UTF-8 panic）
             let max_value_len = 40;
-            let display_value = if record_value.len() > max_value_len {
-                format!("{}...", &record_value[..max_value_len])
+            let display_value = if record_value.chars().count() > max_value_len {
+                format!("{}...", record_value.chars().take(max_value_len).collect::<String>())
             } else {
                 record_value
             };

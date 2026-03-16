@@ -103,6 +103,7 @@ pub const TRANSLATIONS: Translations = Translations {
     domains: DomainsTexts {
         title: "域名",
         no_domains: "暂无域名",
+        hint_add_account: "请先添加一个账号",
         record_count: "条记录",
         status_active: "活跃",
         status_paused: "暂停",
@@ -121,6 +122,7 @@ pub const TRANSLATIONS: Translations = Translations {
         edit_record: "编辑记录",
         delete_record: "删除记录",
         no_records: "暂无 DNS 记录",
+        hint_add_record: "按 Alt+a 添加记录，按 Esc 返回",
         name: "名称",
         value: "值",
         ttl: "TTL",

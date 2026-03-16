@@ -5,6 +5,7 @@ use crate::model::App;
 use crate::model::state::{Modal, get_all_providers, get_credential_fields};
 
 /// 处理弹窗消息
+#[allow(clippy::match_same_arms)] // 各 Modal 变体分开匹配便于未来独立处理
 pub fn update(app: &mut App, msg: ModalMessage) {
     let Some(ref mut modal) = app.modal.active else {
         return;
@@ -12,17 +13,15 @@ pub fn update(app: &mut App, msg: ModalMessage) {
 
     match modal {
         Modal::AddAccount { .. } => handle_add_account(app, msg),
+        Modal::EditAccount { .. } => handle_simple_modal(app, msg),
         Modal::ConfirmDelete { .. } => handle_confirm_delete(app, msg),
+        Modal::AddDnsRecord { .. } => handle_simple_modal(app, msg),
+        Modal::EditDnsRecord { .. } => handle_simple_modal(app, msg),
         Modal::DnsLookup { .. } => handle_dns_lookup(app, msg),
-        Modal::WhoisLookup { .. } => handle_whois_lookup(app, msg),
-        Modal::SslCheck { .. } => handle_ssl_check(app, msg),
-        Modal::IpLookup { .. } => handle_ip_lookup(app, msg),
         Modal::HttpHeaderCheck { .. } => handle_http_header_check(app, msg),
         Modal::DnsPropagation { .. } => handle_dns_propagation(app, msg),
-        Modal::DnssecCheck { .. } => handle_dnssec_check(app, msg),
         Modal::QueryTool { .. } => handle_query_tool(app, msg),
         Modal::Error { .. } | Modal::Help => handle_simple_modal(app, msg),
-        _ => {}
     }
 }
 
@@ -315,144 +314,6 @@ fn handle_dns_lookup(app: &mut App, msg: ModalMessage) {
     }
 }
 
-/// 处理 WHOIS 查询工具弹窗
-fn handle_whois_lookup(app: &mut App, msg: ModalMessage) {
-    let Some(Modal::WhoisLookup {
-        ref mut domain,
-        ref mut result,
-        ref mut loading,
-    }) = app.modal.active
-    else {
-        return;
-    };
-
-    match msg {
-        ModalMessage::Close => {
-            app.modal.close();
-            app.clear_status();
-        }
-
-        ModalMessage::Confirm => {
-            if domain.is_empty() {
-                app.set_status("Please enter a domain name");
-                return;
-            }
-
-            *loading = true;
-            // TODO: 实际执行 WHOIS 查询
-            *result = Some(format!(
-                "WHOIS Lookup for {domain}\nResult: (To be implemented)"
-            ));
-            *loading = false;
-
-            let domain_clone = domain.clone();
-            app.set_status(format!("WHOIS query completed: {domain_clone}"));
-        }
-
-        ModalMessage::Input(ch) => {
-            domain.push(ch);
-        }
-
-        ModalMessage::Backspace => {
-            domain.pop();
-        }
-
-        _ => {}
-    }
-}
-
-/// 处理 SSL 证书检查工具弹窗
-fn handle_ssl_check(app: &mut App, msg: ModalMessage) {
-    let Some(Modal::SslCheck {
-        ref mut domain,
-        ref mut result,
-        ref mut loading,
-    }) = app.modal.active
-    else {
-        return;
-    };
-
-    match msg {
-        ModalMessage::Close => {
-            app.modal.close();
-            app.clear_status();
-        }
-
-        ModalMessage::Confirm => {
-            if domain.is_empty() {
-                app.set_status("Please enter a domain name");
-                return;
-            }
-
-            *loading = true;
-            // TODO: 实际执行 SSL 证书检查
-            *result = Some(format!(
-                "SSL Certificate Check for {domain}\nResult: (To be implemented)"
-            ));
-            *loading = false;
-
-            let domain_clone = domain.clone();
-            app.set_status(format!("SSL check completed: {domain_clone}"));
-        }
-
-        ModalMessage::Input(ch) => {
-            domain.push(ch);
-        }
-
-        ModalMessage::Backspace => {
-            domain.pop();
-        }
-
-        _ => {}
-    }
-}
-
-/// 处理 IP 查询工具弹窗
-fn handle_ip_lookup(app: &mut App, msg: ModalMessage) {
-    let Some(Modal::IpLookup {
-        ref mut input,
-        ref mut result,
-        ref mut loading,
-    }) = app.modal.active
-    else {
-        return;
-    };
-
-    match msg {
-        ModalMessage::Close => {
-            app.modal.close();
-            app.clear_status();
-        }
-
-        ModalMessage::Confirm => {
-            if input.is_empty() {
-                app.set_status("Please enter an IP address or domain");
-                return;
-            }
-
-            *loading = true;
-            // TODO: 实际执行 IP 查询
-            *result = Some(format!(
-                "IP Lookup for {input}\nResult: (To be implemented)"
-            ));
-            *loading = false;
-
-            let input_clone = input.clone();
-            app.set_status(format!("IP lookup completed: {input_clone}"));
-        }
-
-        ModalMessage::Input(ch) => {
-            input.push(ch);
-        }
-
-        ModalMessage::Backspace => {
-            input.pop();
-        }
-
-        _ => {}
-    }
-}
-
 /// 处理 HTTP 头检查工具弹窗
 fn handle_http_header_check(app: &mut App, msg: ModalMessage) {
     let Some(Modal::HttpHeaderCheck {
@@ -617,52 +478,6 @@ fn handle_dns_propagation(app: &mut App, msg: ModalMessage) {
             if *focus == 0 {
                 domain.pop();
             }
-        }
-
-        _ => {}
-    }
-}
-
-/// 处理 DNSSEC 验证工具弹窗
-fn handle_dnssec_check(app: &mut App, msg: ModalMessage) {
-    let Some(Modal::DnssecCheck {
-        ref mut domain,
-        ref mut result,
-        ref mut loading,
-    }) = app.modal.active
-    else {
-        return;
-    };
-
-    match msg {
-        ModalMessage::Close => {
-            app.modal.close();
-            app.clear_status();
-        }
-
-        ModalMessage::Confirm => {
-            if domain.is_empty() {
-                app.set_status("Please enter a domain name");
-                return;
-            }
-
-            *loading = true;
-            // TODO: 实际执行 DNSSEC 验证
-            *result = Some(format!(
-                "DNSSEC Check for {domain}\nResult: (To be implemented)"
-            ));
-            *loading = false;
-
-            let domain_clone = domain.clone();
-            app.set_status(format!("DNSSEC check completed: {domain_clone}"));
-        }
-
-        ModalMessage::Input(ch) => {
-            domain.push(ch);
-        }
-
-        ModalMessage::Backspace => {
-            domain.pop();
         }
 
         _ => {}

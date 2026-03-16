@@ -27,15 +27,9 @@ fn render_empty(frame: &mut Frame, area: Rect) {
     let c = colors();
     let content = vec![
         Line::from(""),
-        Line::styled(
-            format!("  {}", texts.domains.no_domains),
-            Style::default().fg(c.muted),
-        ),
+        Line::styled(texts.domains.no_domains, Style::default().fg(c.muted)),
         Line::from(""),
-        Line::styled(
-            format!("  {}", texts.accounts.add_account),
-            Style::default().fg(c.muted),
-        ),
+        Line::styled(texts.domains.hint_add_account, Style::default().fg(c.muted)),
     ];
 
     let paragraph = ratatui::widgets::Paragraph::new(content);

@@ -191,11 +191,10 @@ fn handle_modal_keys(key: KeyEvent, app: &App) -> AppMessage {
         Modal::AddAccount { focus, .. } => handle_add_account_keys(key, *focus),
         Modal::ConfirmDelete { .. } => handle_confirm_delete_keys(key),
         Modal::DnsLookup { focus, .. } => handle_dns_lookup_keys(key, *focus),
-        Modal::WhoisLookup { .. }
-        | Modal::SslCheck { .. }
-        | Modal::IpLookup { .. }
-        | Modal::DnssecCheck { .. }
-        | Modal::QueryTool { .. } => handle_simple_tool_keys(key),
+        Modal::QueryTool { .. } => handle_simple_tool_keys(key),
+        Modal::EditAccount { .. } | Modal::AddDnsRecord { .. } | Modal::EditDnsRecord { .. } => {
+            handle_simple_tool_keys(key)
+        }
         Modal::HttpHeaderCheck { focus, .. } => handle_http_header_check_keys(key, *focus),
         Modal::DnsPropagation { focus, .. } => handle_dns_propagation_keys(key, *focus),
         Modal::Help | Modal::Error { .. } => {
@@ -205,7 +204,6 @@ fn handle_modal_keys(key: KeyEvent, app: &App) -> AppMessage {
                 _ => AppMessage::Noop,
             }
         }
-        _ => AppMessage::Noop,
     }
 }
 

@@ -178,27 +178,6 @@ pub fn render(app: &App, frame: &mut Frame, area: Rect) {
         ),
     ]));
 
-    // 显示结果或错误
-    if let Some(ref result) = app.toolbox.result {
-        lines.push(Line::from(""));
-        lines.push(Line::styled(
-            format!("  {}:", texts.common.result),
-            Style::default().fg(c.success),
-        ));
-        lines.push(Line::styled(
-            format!("  {result}"),
-            Style::default().fg(c.fg),
-        ));
-    }
-
-    if let Some(ref error) = app.toolbox.error {
-        lines.push(Line::from(""));
-        lines.push(Line::styled(
-            format!("  {}: {}", texts.common.error, error),
-            Style::default().fg(c.error),
-        ));
-    }
-
     let paragraph = Paragraph::new(lines);
     frame.render_widget(paragraph, area);
 }
