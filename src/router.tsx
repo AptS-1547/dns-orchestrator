@@ -1,16 +1,10 @@
 /**
  * 路由配置
+ * 所有页面组件使用 lazy 懒加载，按路由拆分 chunk
  */
 
 import { createBrowserRouter, Navigate } from "react-router-dom"
-import { AccountsPage } from "@/components/accounts/AccountsPage"
-import { DnsRecordPage } from "@/components/domains/DnsRecordPage"
-import { DomainSelectorPage } from "@/components/domains/DomainSelectorPage"
-import { FavoriteDomainsPage } from "@/components/domains/FavoriteDomainsPage"
-import { HomePage } from "@/components/home/HomePage"
 import { RootLayout } from "@/components/layout/RootLayout"
-import { SettingsPage } from "@/components/settings/SettingsPage"
-import { ToolboxPage } from "@/components/toolbox/ToolboxPage"
 
 export const router = createBrowserRouter([
   {
@@ -19,31 +13,49 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <HomePage />,
+        lazy: () => import("@/components/home/HomePage").then((m) => ({ Component: m.HomePage })),
       },
       {
         path: "domains",
-        element: <DomainSelectorPage />,
+        lazy: () =>
+          import("@/components/domains/DomainSelectorPage").then((m) => ({
+            Component: m.DomainSelectorPage,
+          })),
       },
       {
         path: "domains/:accountId/:domainId",
-        element: <DnsRecordPage />,
+        lazy: () =>
+          import("@/components/domains/DnsRecordPage").then((m) => ({
+            Component: m.DnsRecordPage,
+          })),
       },
       {
         path: "favorites",
-        element: <FavoriteDomainsPage />,
+        lazy: () =>
+          import("@/components/domains/FavoriteDomainsPage").then((m) => ({
+            Component: m.FavoriteDomainsPage,
+          })),
       },
       {
         path: "accounts",
-        element: <AccountsPage />,
+        lazy: () =>
+          import("@/components/accounts/AccountsPage").then((m) => ({
+            Component: m.AccountsPage,
+          })),
       },
       {
         path: "settings",
-        element: <SettingsPage />,
+        lazy: () =>
+          import("@/components/settings/SettingsPage").then((m) => ({
+            Component: m.SettingsPage,
+          })),
       },
       {
         path: "toolbox",
-        element: <ToolboxPage />,
+        lazy: () =>
+          import("@/components/toolbox/ToolboxPage").then((m) => ({
+            Component: m.ToolboxPage,
+          })),
       },
       {
         // 404 重定向到首页

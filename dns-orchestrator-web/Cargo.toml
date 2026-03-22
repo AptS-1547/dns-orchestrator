@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-web"
-version = "1.10.0"
+version = "1.10.1"
 description = "DNS Orchestrator built with Actix-web"
 license = "MIT"
 authors = ["AptS-1547 <apts-1547@esaps.net>"]
@@ -10,20 +10,32 @@ publish = false
 [dependencies]
 migration.workspace = true
 actix-service = "2.0.3"
-actix-web = "4.12.1"
-anyhow = { version = "1.0.101", features = ["backtrace"] }
+actix-web = "4.13.0"
+anyhow = { version = "1.0.102", features = ["backtrace"] }
 chrono = { workspace = true, features = ["clock"] }
 num_cpus = { version = "1.17.0", default-features = false }
-rustls = "0.23.36"
-sea-orm = { version = "2.0.0-rc.32", default-features = false, features = ["sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "macros", "runtime-tokio-rustls", "chrono"] }
+rustls = "0.23.37"
+sea-orm = { version = "2.0.0-rc.37", default-features = false, features = [
+    "sqlx-mysql",
+    "sqlx-postgres",
+    "sqlx-sqlite",
+    "macros",
+    "runtime-tokio-rustls",
+    "chrono",
+] }
 serde.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
-toml = "0.9.12"
+toml = "1"
 tracing = { version = "0.1.44", default-features = false }
 tracing-appender = "0.2.4"
 tracing-attributes = "0.1.31"
-tracing-subscriber = { version = "0.3.22", default-features = false, features = ["env-filter", "fmt", "ansi", "json"] }
+tracing-subscriber = { version = "0.3.23", default-features = false, features = [
+    "env-filter",
+    "fmt",
+    "ansi",
+    "json",
+] }
 uuid.workspace = true
 
 [lints]

@@ -406,12 +406,19 @@ export const useDnsStore = create<DnsState>((set, get) => ({
         const deletedIds = new Set(
           request.recordIds.filter((id) => !result.failures.some((f) => f.recordId === id))
         )
-        set((state) => ({
-          records: state.records.filter((r) => !deletedIds.has(r.id)),
-          totalCount: Math.max(0, state.totalCount - result.successCount),
+        const remainingRecords = get().records.filter((r) => !deletedIds.has(r.id))
+        const newTotalCount = Math.max(0, get().totalCount - result.successCount)
+        set({
+          records: remainingRecords,
+          totalCount: newTotalCount,
           selectedRecordIds: new Set(),
           isSelectMode: false,
-        }))
+        })
+
+        // 批量删除后，如果本地记录为空但服务器还有数据，重新加载
+        if (remainingRecords.length === 0 && newTotalCount > 0) {
+          get().fetchRecords(accountId, domainId)
+        }
 
         if (result.failedCount === 0) {
           toast.success(i18n.t("dns.batchDeleteSuccess", { count: result.successCount }))

@@ -6,9 +6,7 @@ use async_trait::async_trait;
 use rmcp::{
     ErrorData as McpError, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
-    model::{
-        CallToolResult, Content, Implementation, ProtocolVersion, ServerCapabilities, ServerInfo,
-    },
+    model::{CallToolResult, Content, ProtocolVersion, ServerCapabilities, ServerInfo},
     tool, tool_handler, tool_router,
 };
 use std::sync::Arc;
@@ -433,20 +431,16 @@ impl DnsOrchestratorMcp {
 #[tool_handler]
 impl ServerHandler for DnsOrchestratorMcp {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: ProtocolVersion::LATEST,
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: Implementation::from_build_env(),
-            instructions: Some(
+        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+            .with_protocol_version(ProtocolVersion::LATEST)
+            .with_instructions(
                 "DNS Orchestrator MCP Server - Access DNS accounts and records across multiple providers \
                  (Cloudflare, Aliyun, DNSPod, Huaweicloud). \
                  Use list_accounts to see available accounts, list_domains to see domains, \
                  and list_records to view DNS records. \
                  Network diagnostic tools (dns_lookup, whois_lookup, ip_lookup, dns_propagation_check, dnssec_check) \
-                 work without any account configuration."
-                    .into(),
-            ),
-        }
+                 work without any account configuration.",
+            )
     }
 }
 

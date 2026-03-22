@@ -59,7 +59,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 log = "0.4"
 
 # HTTP
-reqwest = { version = "0.12", default-features = false, features = ["json"] }
+reqwest = { version = "0.13", default-features = false, features = ["json"] }
 
 # Crypto
 sha2 = "0.10"
@@ -70,8 +70,8 @@ urlencoding = "2.1"
 
 # ORM — pinned to 2.0.0-rc.32 for sea-query v1 API and improved SQLite support.
 # Upgrade to stable 2.0 once released.
-sea-orm = { version = "2.0.0-rc.32", default-features = false }
-sea-orm-migration = { version = "~2.0.0-rc.32", default-features = false }
+sea-orm = { version = "2.0.0-rc.37", default-features = false }
+sea-orm-migration = { version = "~2.0.0-rc.37", default-features = false }
 
 # Tauri
 tauri = "2"

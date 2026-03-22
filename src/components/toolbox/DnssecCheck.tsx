@@ -1,18 +1,8 @@
-import {
-  AlertCircle,
-  Key,
-  Loader2,
-  Search,
-  Shield,
-  ShieldAlert,
-  ShieldCheck,
-  XCircle,
-} from "lucide-react"
+import { AlertCircle, Key, Shield, ShieldAlert, ShieldCheck, XCircle } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -22,12 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useEnterKeyHandler } from "@/hooks/useEnterKeyHandler"
 import { useIsMobile } from "@/hooks/useMediaQuery"
 import type { DnssecResult } from "@/types"
-import { HistoryChips } from "./HistoryChips"
 import { toolboxService, useToolboxQuery } from "./hooks/useToolboxQuery"
-import { CopyableText, ToolCard } from "./shared"
+import { CopyableText, QueryInput, ToolCard } from "./shared"
 
 export function DnssecCheck() {
   const { t } = useTranslation()
@@ -50,8 +38,6 @@ export function DnssecCheck() {
       query: trimmed,
     })
   }
-
-  const handleKeyDown = useEnterKeyHandler(handleCheck)
 
   // 获取验证状态徽章
   const getValidationBadge = (status: string) => {
@@ -89,38 +75,23 @@ export function DnssecCheck() {
 
   return (
     <ToolCard title={t("toolbox.dnssec.title")}>
-      {/* 查询输入 */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          placeholder={t("toolbox.dnssec.domainPlaceholder")}
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="flex-1"
-        />
-        <Input
-          placeholder={t("toolbox.dnssec.nameserverPlaceholder")}
-          value={nameserver}
-          onChange={(e) => setNameserver(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="flex-1"
-        />
-        <Button onClick={handleCheck} disabled={isLoading} className="w-full sm:w-auto">
-          {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Search className="mr-2 h-4 w-4" />
-          )}
-          {t("toolbox.check")}
-        </Button>
-      </div>
-
-      {/* 历史记录 */}
-      <HistoryChips
-        type="dnssec"
-        onSelect={(item) => {
-          setDomain(item.query)
-        }}
+      <QueryInput
+        value={domain}
+        onChange={setDomain}
+        onSubmit={handleCheck}
+        isLoading={isLoading}
+        placeholder={t("toolbox.dnssec.domainPlaceholder")}
+        historyType="dnssec"
+        onHistorySelect={(item) => setDomain(item.query)}
+        buttonText={t("toolbox.check")}
+        extraInput={
+          <Input
+            placeholder={t("toolbox.dnssec.nameserverPlaceholder")}
+            value={nameserver}
+            onChange={(e) => setNameserver(e.target.value)}
+            className="flex-1"
+          />
+        }
       />
 
       {/* 结果展示 */}

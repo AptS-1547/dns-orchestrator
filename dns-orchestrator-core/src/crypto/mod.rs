@@ -12,7 +12,7 @@ use aes_gcm::{
 };
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use pbkdf2::pbkdf2_hmac_array;
-use rand::RngCore;
+use rand::Rng;
 use sha2::Sha256;
 
 use crate::error::{CoreError, CoreResult};

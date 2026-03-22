@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-provider"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 license = "MIT"
 description = "DNS provider abstraction library for multiple cloud platforms (Cloudflare, Aliyun, DNSPod, Huaweicloud)"
@@ -16,7 +16,7 @@ rust-version = "1.89"
 default = ["rustls", "all-providers"]
 # TLS 后端选择（二选一）
 native-tls = ["reqwest/native-tls"]
-rustls = ["reqwest/rustls-tls"]
+rustls = ["reqwest/rustls"]
 # 按需启用 providers
 cloudflare = []
 aliyun = []

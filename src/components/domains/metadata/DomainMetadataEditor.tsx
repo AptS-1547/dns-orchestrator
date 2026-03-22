@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 import { useDomainStore } from "@/stores"
 import type { DomainMetadata } from "@/types"
 import { DomainColorPicker } from "./DomainColorPicker"
-import { TagInputCombobox } from "./TagInputCombobox"
+import { TagInputCombobox } from "../batch/TagInputCombobox"
 
 interface DomainMetadataEditorProps {
   accountId: string

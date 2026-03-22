@@ -722,10 +722,39 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # 发布 Release（所有构建完成后将 draft 改为正式发布）
+  publish-release:
+    if: github.event_name == 'push'
+    needs: [update-latest-json]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Publish draft release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const tagName = context.ref.replace('refs/tags/', '');
+            const draft = releases.find(r => r.tag_name === tagName && r.draft);
+            if (!draft) {
+              core.setFailed(`Draft release for ${tagName} not found`);
+              return;
+            }
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: draft.id,
+              draft: false,
+            });
+            core.info(`Published release ${tagName} (id: ${draft.id})`);
+
   # 更新 Homebrew Cask
   update-homebrew-cask:
     if: github.event_name == 'push'
-    needs: [release-macos]
+    needs: [publish-release]
     runs-on: ubuntu-latest
 
     steps:
@@ -829,7 +858,7 @@ jobs:
   # 更新 Homebrew Formula (MCP CLI)
   update-homebrew-formula:
     if: github.event_name == 'push'
-    needs: [release-mcp]
+    needs: [publish-release]
     runs-on: ubuntu-latest
 
     steps:
@@ -943,32 +972,3 @@ jobs:
               content: Buffer.from(cleanFormula).toString('base64'),
               sha: fileSha
             });
-
-  # 发布 Release（所有构建完成后将 draft 改为正式发布）
-  publish-release:
-    if: github.event_name == 'push'
-    needs: [update-latest-json, update-homebrew-cask, update-homebrew-formula]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Publish draft release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: releases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-            const tagName = context.ref.replace('refs/tags/', '');
-            const draft = releases.find(r => r.tag_name === tagName && r.draft);
-            if (!draft) {
-              core.setFailed(`Draft release for ${tagName} not found`);
-              return;
-            }
-            await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: draft.id,
-              draft: false,
-            });
-            core.info(`Published release ${tagName} (id: ${draft.id})`);
