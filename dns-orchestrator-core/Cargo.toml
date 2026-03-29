@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "Core business logic for DNS Orchestrator"
@@ -42,7 +42,7 @@ pbkdf2 = { version = "0.12", features = ["simple"] }
 sha2.workspace = true
 base64 = "0.22"
 hex.workspace = true
-rand = "0.9"
+rand = "0.10"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "macros"] }

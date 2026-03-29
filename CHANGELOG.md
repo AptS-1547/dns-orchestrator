@@ -5,6 +5,42 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.10.1] - 2026-03-22
+
+### Added
+- DNS 记录表单配置驱动模式（`record-type-configs.ts`，新增记录类型只需添加配置项）
+- domainStore slice 拆分（domainBatchSlice、domainFilterSlice、domainMetadataSlice、domainUiSlice）
+- 路由懒加载（所有页面组件动态导入）
+- Vite 构建分 chunk（vendor-react、vendor-radix、vendor-tauri、vendor-i18n）
+- DNS 记录表格独立子组件（DeleteDialogs、DnsPagination、useInfiniteScroll）
+- 通用响应式按钮组件（responsive-button）
+
+### Changed
+- 前端组件目录结构重组（`account/` → `accounts/`、`domain/` → `domains/`，按职责细分子目录）
+- DNS 记录表单代码从 600+ 行精简至约 300 行
+- DomainBatchActionBar 从 330 行重构为 94 行，标签操作抽取为 TagOperationDialog
+- 工具箱组件统一使用 QueryInput，消除重复代码
+- Release workflow 调整：先发布再更新包管理器
+- reqwest feature flag 统一：`rustls-tls` → `rustls`
+
+### Fixed
+- 批量删除 DNS 记录后本地记录为空时未重新加载的问题
+
+### Security
+- aws-lc-sys 0.37.1 → 0.39.0：修复 PKCS7_verify 证书链/签名验证绕过、AES-CCM 时间侧信道、X.509 名称约束绕过、CRL 分发点范围检查错误（5 个 High）
+- quinn-proto 0.11.13 → 0.11.14：修复未认证远程 DoS（1 个 High）
+- tar 0.4.44 → 0.4.45：修复 symlink chmod 目录遍历和 PAX size headers 忽略（2 个 Moderate）
+- rustls-webpki 0.103.9 → 0.103.10：修复证书撤销执行 bug（1 个 Moderate）
+
+### Dependencies
+- reqwest 0.12 → 0.13
+- rmcp 0.15 → 1.2
+- sea-orm 2.0.0-rc.32 → 2.0.0-rc.37
+- schemars 1.0 → 1.2
+- rand 0.9 → 0.10
+- toml 0.9.12 → 1
+- rollup 安全更新（npm_and_yarn 组）
+
 ## [1.10.0] - 2026-02-15
 
 ### Added
@@ -329,6 +365,7 @@
 - DNS 记录 CRUD 操作
 - 跨平台支持（macOS、Windows、Linux、Android）
 
+[1.10.1]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/AptS-1547/dns-orchestrator/compare/v1.8.0...v1.9.0

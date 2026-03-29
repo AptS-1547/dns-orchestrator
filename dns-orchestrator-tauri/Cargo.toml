@@ -65,7 +65,7 @@ cocoa = "0.26"
 [target."cfg(target_os = \"android\")".dependencies]
 tauri-plugin-stronghold = "2"
 tauri-plugin-apk-installer.workspace = true
-reqwest = { workspace = true, features = ["rustls-tls", "stream"] }
+reqwest = { workspace = true, features = ["rustls", "stream"] }
 minisign-verify = "0.2"
 
 [dev-dependencies]

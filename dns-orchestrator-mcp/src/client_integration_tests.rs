@@ -48,12 +48,11 @@ async fn spawn_default() -> (
 }
 
 fn call_params(name: &str, args: &serde_json::Value) -> CallToolRequestParams {
-    CallToolRequestParams {
-        meta: None,
-        name: name.to_string().into(),
-        arguments: args.as_object().cloned(),
-        task: None,
+    let mut params = CallToolRequestParams::new(name.to_string());
+    if let Some(obj) = args.as_object().cloned() {
+        params = params.with_arguments(obj);
     }
+    params
 }
 
 fn extract_text(result: &rmcp::model::CallToolResult) -> &str {

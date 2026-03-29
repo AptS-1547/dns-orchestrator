@@ -1,6 +1,6 @@
 [package]
 name = "dns-orchestrator-mcp"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2024"
 license = "MIT"
 description = "MCP Server for DNS Orchestrator - AI agent interface"
@@ -24,7 +24,7 @@ dns-orchestrator-app = { workspace = true, features = [
 ] }
 
 # MCP SDK
-rmcp = { version = "0.15", features = ["server", "transport-io"] }
+rmcp = { version = "1.2", features = ["server", "transport-io"] }
 
 # Async runtime
 tokio = { workspace = true, features = [
@@ -37,7 +37,7 @@ tokio = { workspace = true, features = [
 # Serialization
 serde.workspace = true
 serde_json.workspace = true
-schemars = "1.0"
+schemars = "1.2"
 
 # Async trait
 async-trait.workspace = true
@@ -58,7 +58,7 @@ dns-orchestrator-provider = { workspace = true, features = [
     "all-providers",
     "rustls",
 ] }
-rmcp = { version = "0.15", features = ["client"] }
+rmcp = { version = "1.2", features = ["client"] }
 anyhow = "1"
 
 [lints]
