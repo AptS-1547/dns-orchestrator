@@ -21,7 +21,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use dns_orchestrator_core::error::{CoreError, CoreResult};
 use dns_orchestrator_core::services::{
     AccountService, DnsService, DomainMetadataService, DomainService, ImportExportService,
-    MigrationResult, MigrationService, ProviderMetadataService, ServiceContext,
+    MigrationResult, MigrationService, ProviderMetadataService, RestoreResult, ServiceContext,
 };
 use dns_orchestrator_core::traits::{
     AccountRepository, CredentialStore, DomainMetadataRepository, InMemoryProviderRegistry,
@@ -91,7 +91,7 @@ impl AppState {
     /// stages that may become fallible.
     pub async fn run_startup(&self, hooks: &dyn StartupHooks) -> CoreResult<()> {
         self.run_migration(hooks).await;
-        self.run_account_restore().await;
+        let _ = self.run_account_restore().await;
         Ok(())
     }
 
@@ -165,21 +165,16 @@ impl AppState {
 
     /// Run account restoration and set `restore_completed` to `true` when done.
     ///
-    /// Restoration errors are logged and do not panic.
-    pub async fn run_account_restore(&self) {
-        match self.account_service.restore_accounts().await {
-            Ok(result) => {
-                log::info!(
-                    "Account restoration complete: {} succeeded, {} failed",
-                    result.success_count,
-                    result.error_count
-                );
-            }
-            Err(e) => {
-                log::error!("Failed to restore accounts: {e}");
-            }
-        }
+    /// Returns the detailed restoration result containing per-account errors for frontend display.
+    pub async fn run_account_restore(&self) -> CoreResult<RestoreResult> {
+        let result = self.account_service.restore_accounts().await?;
+        log::info!(
+            "Account restoration complete: {} succeeded, {} failed",
+            result.success_count,
+            result.error_count
+        );
         self.restore_completed.store(true, Ordering::SeqCst);
+        Ok(result)
     }
 }
 
